@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.UI.Xaml;
 using Nexus.App.Services;
 using Nexus.App.ViewModels;
+using Nexus.App.ViewModels.Stammdaten;
 using Nexus.App.Views;
 using Nexus.Infrastructure;
 using Serilog;
@@ -51,7 +52,15 @@ public partial class App : Microsoft.UI.Xaml.Application
         builder.Services.AddInfrastructure(builder.Configuration);
 
         builder.Services.AddSingleton<INavigationService, NavigationService>();
+        builder.Services.AddSingleton<IDialogService, DialogService>();
+
         builder.Services.AddTransient<DashboardViewModel>();
+        builder.Services.AddTransient<KundenListViewModel>();
+        builder.Services.AddTransient<KundeEditViewModel>();
+        builder.Services.AddTransient<LieferantenListViewModel>();
+        builder.Services.AddTransient<LieferantEditViewModel>();
+        builder.Services.AddTransient<ArtikelListViewModel>();
+        builder.Services.AddTransient<ArtikelEditViewModel>();
 
         return builder.Build();
     }

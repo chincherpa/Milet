@@ -10,7 +10,7 @@ namespace Nexus.IntegrationTests;
 
 public sealed class NumberRangeServiceTests : IAsyncLifetime
 {
-    private readonly MsSqlContainer _container = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
+    private MsSqlContainer? _container;
     private DbContextOptions<NexusDbContext> _options = null!;
 
     public async ValueTask InitializeAsync()
@@ -20,6 +20,7 @@ public sealed class NumberRangeServiceTests : IAsyncLifetime
             Assert.Skip("Docker nicht verfügbar — Testcontainers-Integrationstest übersprungen.");
         }
 
+        _container = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
         await _container.StartAsync();
 
         _options = new DbContextOptionsBuilder<NexusDbContext>()
@@ -32,7 +33,13 @@ public sealed class NumberRangeServiceTests : IAsyncLifetime
         await db.SaveChangesAsync();
     }
 
-    public async ValueTask DisposeAsync() => await _container.DisposeAsync();
+    public async ValueTask DisposeAsync()
+    {
+        if (_container is not null)
+        {
+            await _container.DisposeAsync();
+        }
+    }
 
     private static bool DockerVerfuegbar()
     {
