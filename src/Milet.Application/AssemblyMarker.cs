@@ -1,4 +1,4 @@
-namespace Nexus.Application;
+namespace Milet.Application;
 
 /// <summary>
 /// Marker für Assembly-Scanning (FluentValidation-Registrierung, Tests).

@@ -1,9 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Nexus.App.Services;
-using Nexus.Application.Stammdaten;
+using Milet.App.Services;
+using Milet.Application.Stammdaten;
 
-namespace Nexus.App.ViewModels.Stammdaten;
+namespace Milet.App.ViewModels.Stammdaten;
 
 public sealed partial class LieferantenListViewModel : ObservableObject
 {

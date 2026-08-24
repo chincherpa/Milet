@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using Nexus.Application.Abstractions;
-using Nexus.Infrastructure.Persistence;
+using Milet.Application.Abstractions;
+using Milet.Infrastructure.Persistence;
 
-namespace Nexus.Infrastructure.Services;
+namespace Milet.Infrastructure.Services;
 
 /// <summary>
 /// Vergibt Nummern über ein atomares UPDATE ... OUTPUT auf genau einer Zeile (via TOP(1)-CTE) —
@@ -10,7 +10,7 @@ namespace Nexus.Infrastructure.Services;
 /// (siehe Architektur-Plan §2.6). Existieren für denselben Code sowohl ein jahresbezogener
 /// als auch ein jahresloser Kreis, gewinnt der jahresbezogene.
 /// </summary>
-public sealed class NumberRangeService(IDbContextFactory<NexusDbContext> dbContextFactory) : INumberRangeService
+public sealed class NumberRangeService(IDbContextFactory<MiletDbContext> dbContextFactory) : INumberRangeService
 {
     private sealed record VergebeneNummer(int NaechsteNummer, string Format);
 

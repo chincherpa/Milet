@@ -1,7 +1,7 @@
-using Nexus.Application.Stammdaten;
+using Milet.Application.Stammdaten;
 using Xunit;
 
-namespace Nexus.Application.Tests;
+namespace Milet.Application.Tests;
 
 public class StammdatenValidatorTests
 {

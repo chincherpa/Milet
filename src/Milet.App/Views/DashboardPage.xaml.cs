@@ -1,8 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml.Controls;
-using Nexus.App.ViewModels;
+using Milet.App.ViewModels;
 
-namespace Nexus.App.Views;
+namespace Milet.App.Views;
 
 public sealed partial class DashboardPage : Page
 {

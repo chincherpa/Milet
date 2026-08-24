@@ -1,13 +1,13 @@
-using Nexus.Infrastructure.Persistence;
+using Milet.Infrastructure.Persistence;
 using Xunit;
 
-namespace Nexus.IntegrationTests;
+namespace Milet.IntegrationTests;
 
 public class SmokeTests
 {
     [Fact]
     public void DbContext_Typ_IstVorhanden()
     {
-        Assert.NotNull(typeof(NexusDbContext));
+        Assert.NotNull(typeof(MiletDbContext));
     }
 }

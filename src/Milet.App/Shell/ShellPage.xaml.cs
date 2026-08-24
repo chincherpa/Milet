@@ -1,10 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml.Controls;
-using Nexus.App.Services;
-using Nexus.App.ViewModels;
-using Nexus.App.Views;
+using Milet.App.Services;
+using Milet.App.ViewModels;
+using Milet.App.Views;
 
-namespace Nexus.App.Shell;
+namespace Milet.App.Shell;
 
 public sealed partial class ShellPage : Page
 {

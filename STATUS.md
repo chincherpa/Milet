@@ -1,4 +1,4 @@
-# Nexus — Projektstatus
+# Milet — Projektstatus
 
 Stand: 2026-08-24. Plan: `C:\Users\lulef\.claude\plans\ich-m-chte-ein-warenwirtschaftssystem-immutable-sutton.md`
 
@@ -7,13 +7,13 @@ Stand: 2026-08-24. Plan: `C:\Users\lulef\.claude\plans\ich-m-chte-ein-warenwirts
 ### Umgebung
 - .NET 10 SDK (10.0.400) user-lokal installiert, `dotnet-ef` global installiert
 - nuget.org als Paketquelle eingerichtet
-- SQL-Zugriff: LocalDB `(localdb)\MSSQLLocalDB`, DB "Nexus" (kein Docker/SQL Server auf dieser Maschine — Details in Memory `nexus-dev-umgebung`)
+- SQL-Zugriff: LocalDB `(localdb)\MSSQLLocalDB`, DB "Milet" (kein Docker/SQL Server auf dieser Maschine — Details in Memory `nexus-dev-umgebung`)
 
 ### Phase 0 — Scaffold ✅ vollständig verifiziert
 - Solution mit 6 Projekten (Domain/Application/Infrastructure/App/Tools.Migrator) + 3 Testprojekten
 - `Directory.Build.props` / `Directory.Packages.props` (Central Package Management)
 - WinUI-3-Shell mit NavigationView, DashboardPage, generischer `NavigationService`
-- `NexusDbContext` + `DesignTimeDbContextFactory` (dotnet-ef läuft ohne WinUI als Startprojekt)
+- `MiletDbContext` + `DesignTimeDbContextFactory` (dotnet-ef läuft ohne WinUI als Startprojekt)
 - Tests laufen im MTP-Modus (`global.json` → `test.runner`), da .NET 10 VSTest-Weg für `dotnet test` abgeschafft hat
 - **Verifiziert:** Build (App x64 + alle Tests), Migration angewendet, App-Fenster startet und schließt sauber
 

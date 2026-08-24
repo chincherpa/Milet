@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Nexus.Infrastructure.Persistence;
-using Nexus.Infrastructure.Persistence.Seed;
+using Milet.Infrastructure.Persistence;
+using Milet.Infrastructure.Persistence.Seed;
 
 var configuration = new ConfigurationBuilder()
     .SetBasePath(AppContext.BaseDirectory)
@@ -10,18 +10,18 @@ var configuration = new ConfigurationBuilder()
 
 var connectionString = Environment.GetEnvironmentVariable("NEXUS_CONNECTIONSTRING")
     ?? args.FirstOrDefault(a => a.StartsWith("--connection=", StringComparison.Ordinal))?["--connection=".Length..]
-    ?? configuration.GetConnectionString("Nexus")
+    ?? configuration.GetConnectionString("Milet")
     ?? throw new InvalidOperationException(
-        "Keine Verbindungszeichenfolge. ConnectionStrings:Nexus in appsettings.json setzen " +
+        "Keine Verbindungszeichenfolge. ConnectionStrings:Milet in appsettings.json setzen " +
         "oder NEXUS_CONNECTIONSTRING als Umgebungsvariable.");
 
-var options = new DbContextOptionsBuilder<NexusDbContext>()
+var options = new DbContextOptionsBuilder<MiletDbContext>()
     .UseSqlServer(connectionString)
     .Options;
 
-await using var db = new NexusDbContext(options);
+await using var db = new MiletDbContext(options);
 
-Console.WriteLine("Nexus Migrator");
+Console.WriteLine("Milet Migrator");
 Console.WriteLine($"Ziel: {db.Database.GetDbConnection().DataSource} / {db.Database.GetDbConnection().Database}");
 
 var pending = (await db.Database.GetPendingMigrationsAsync()).ToList();

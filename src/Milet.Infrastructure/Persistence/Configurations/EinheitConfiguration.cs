@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Nexus.Domain.Entities.Stammdaten;
+using Milet.Domain.Entities.Stammdaten;
 
-namespace Nexus.Infrastructure.Persistence.Configurations;
+namespace Milet.Infrastructure.Persistence.Configurations;
 
 public sealed class EinheitConfiguration : IEntityTypeConfiguration<Einheit>
 {

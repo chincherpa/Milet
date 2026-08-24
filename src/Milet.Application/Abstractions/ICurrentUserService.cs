@@ -1,4 +1,4 @@
-namespace Nexus.Application.Abstractions;
+namespace Milet.Application.Abstractions;
 
 /// <summary>
 /// Liefert den angemeldeten Benutzer für Audit-Felder und Rechteprüfung.

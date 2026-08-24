@@ -1,9 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace Nexus.App.ViewModels;
+namespace Milet.App.ViewModels;
 
 public sealed partial class DashboardViewModel : ObservableObject
 {
     [ObservableProperty]
-    public partial string Begruessung { get; set; } = "Willkommen bei Nexus Warenwirtschaft";
+    public partial string Begruessung { get; set; } = "Willkommen bei Milet Warenwirtschaft";
 }

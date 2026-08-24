@@ -10,6 +10,6 @@
     <PackageReference Include="Testcontainers.MsSql" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Nexus.Infrastructure\Nexus.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Milet.Infrastructure\Milet.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

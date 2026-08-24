@@ -1,6 +1,6 @@
 using Microsoft.UI.Xaml.Controls;
 
-namespace Nexus.App.Services;
+namespace Milet.App.Services;
 
 public sealed class NavigationService : INavigationService
 {

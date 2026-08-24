@@ -1,4 +1,4 @@
-namespace Nexus.Application.Common;
+namespace Milet.Application.Common;
 
 public sealed class NotFoundException(string entitaet, object id)
     : Exception($"{entitaet} (Id {id}) wurde nicht gefunden.")

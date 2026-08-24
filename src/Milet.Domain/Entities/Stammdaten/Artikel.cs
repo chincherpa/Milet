@@ -1,6 +1,6 @@
-using Nexus.Domain.Common;
+using Milet.Domain.Common;
 
-namespace Nexus.Domain.Entities.Stammdaten;
+namespace Milet.Domain.Entities.Stammdaten;
 
 public class Artikel : AuditableEntity, IHasRowVersion
 {

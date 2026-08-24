@@ -1,25 +1,25 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Nexus.Application.Abstractions;
-using Nexus.Application.Stammdaten;
-using Nexus.Infrastructure.Persistence;
-using Nexus.Infrastructure.Persistence.Interceptors;
-using Nexus.Infrastructure.Services;
+using Milet.Application.Abstractions;
+using Milet.Application.Stammdaten;
+using Milet.Infrastructure.Persistence;
+using Milet.Infrastructure.Persistence.Interceptors;
+using Milet.Infrastructure.Services;
 
-namespace Nexus.Infrastructure;
+namespace Milet.Infrastructure;
 
 public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("Nexus")
-            ?? throw new InvalidOperationException("ConnectionStrings:Nexus fehlt in der Konfiguration.");
+        var connectionString = configuration.GetConnectionString("Milet")
+            ?? throw new InvalidOperationException("ConnectionStrings:Milet fehlt in der Konfiguration.");
 
         services.AddSingleton<ICurrentUserService, SystemCurrentUserService>();
         services.AddSingleton<AuditSaveChangesInterceptor>();
 
-        services.AddDbContextFactory<NexusDbContext>((sp, options) =>
+        services.AddDbContextFactory<MiletDbContext>((sp, options) =>
             options.UseSqlServer(connectionString)
                 .AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>()));
 

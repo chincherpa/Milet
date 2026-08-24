@@ -1,9 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
-using Nexus.App.ViewModels.Stammdaten;
+using Milet.App.ViewModels.Stammdaten;
 
-namespace Nexus.App.Views.Stammdaten;
+namespace Milet.App.Views.Stammdaten;
 
 public sealed partial class KundeEditPage : Page
 {

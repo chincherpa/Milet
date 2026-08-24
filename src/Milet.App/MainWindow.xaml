@@ -1,7 +1,7 @@
 <Window
-    x:Class="Nexus.App.MainWindow"
+    x:Class="Milet.App.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="Nexus Warenwirtschaft">
+    Title="Milet Warenwirtschaft">
     <Frame x:Name="RootFrame" />
 </Window>

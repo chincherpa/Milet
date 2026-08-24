@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Nexus.Domain.Entities.Admin;
+using Milet.Domain.Entities.Admin;
 
-namespace Nexus.Infrastructure.Persistence.Configurations;
+namespace Milet.Infrastructure.Persistence.Configurations;
 
 public sealed class NummernkreisConfiguration : IEntityTypeConfiguration<Nummernkreis>
 {

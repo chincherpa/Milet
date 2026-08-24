@@ -1,4 +1,4 @@
-namespace Nexus.Domain.Common;
+namespace Milet.Domain.Common;
 
 /// <summary>
 /// Aggregate Roots mit optimistischer Concurrency (SQL Server rowversion).

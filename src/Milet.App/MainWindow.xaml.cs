@@ -1,7 +1,7 @@
 using Microsoft.UI.Xaml;
-using Nexus.App.Shell;
+using Milet.App.Shell;
 
-namespace Nexus.App;
+namespace Milet.App;
 
 public sealed partial class MainWindow : Window
 {

@@ -1,6 +1,6 @@
 using Microsoft.UI.Xaml.Data;
 
-namespace Nexus.App.Converters;
+namespace Milet.App.Converters;
 
 public sealed class StringNotEmptyToBoolConverter : IValueConverter
 {

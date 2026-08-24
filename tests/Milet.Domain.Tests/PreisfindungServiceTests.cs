@@ -1,8 +1,8 @@
-using Nexus.Domain.Entities.Stammdaten;
-using Nexus.Domain.Services;
+using Milet.Domain.Entities.Stammdaten;
+using Milet.Domain.Services;
 using Xunit;
 
-namespace Nexus.Domain.Tests;
+namespace Milet.Domain.Tests;
 
 public class PreisfindungServiceTests
 {

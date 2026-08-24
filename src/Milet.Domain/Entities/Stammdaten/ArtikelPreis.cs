@@ -1,4 +1,4 @@
-namespace Nexus.Domain.Entities.Stammdaten;
+namespace Milet.Domain.Entities.Stammdaten;
 
 /// <summary>
 /// Staffelpreis eines Artikels in einer Preisliste. AbMenge 1 = Grundpreis.

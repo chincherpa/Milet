@@ -5,13 +5,13 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Nexus.Infrastructure.Persistence;
+using Milet.Infrastructure.Persistence;
 
 #nullable disable
 
-namespace Nexus.Infrastructure.Persistence.Migrations
+namespace Milet.Infrastructure.Persistence.Migrations
 {
-    [DbContext(typeof(NexusDbContext))]
+    [DbContext(typeof(MiletDbContext))]
     [Migration("20260824194033_InitialCreate")]
     partial class InitialCreate
     {
@@ -25,7 +25,7 @@ namespace Nexus.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("Nexus.Domain.Entities.Admin.Nummernkreis", b =>
+            modelBuilder.Entity("Milet.Domain.Entities.Admin.Nummernkreis", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -58,7 +58,7 @@ namespace Nexus.Infrastructure.Persistence.Migrations
                     b.ToTable("Nummernkreise", (string)null);
                 });
 
-            modelBuilder.Entity("Nexus.Domain.Entities.Stammdaten.Artikel", b =>
+            modelBuilder.Entity("Milet.Domain.Entities.Stammdaten.Artikel", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -144,7 +144,7 @@ namespace Nexus.Infrastructure.Persistence.Migrations
                     b.ToTable("Artikel", (string)null);
                 });
 
-            modelBuilder.Entity("Nexus.Domain.Entities.Stammdaten.ArtikelPreis", b =>
+            modelBuilder.Entity("Milet.Domain.Entities.Stammdaten.ArtikelPreis", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -176,7 +176,7 @@ namespace Nexus.Infrastructure.Persistence.Migrations
                     b.ToTable("ArtikelPreise", (string)null);
                 });
 
-            modelBuilder.Entity("Nexus.Domain.Entities.Stammdaten.Einheit", b =>
+            modelBuilder.Entity("Milet.Domain.Entities.Stammdaten.Einheit", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -205,7 +205,7 @@ namespace Nexus.Infrastructure.Persistence.Migrations
                     b.ToTable("Einheiten", (string)null);
                 });
 
-            modelBuilder.Entity("Nexus.Domain.Entities.Stammdaten.Kunde", b =>
+            modelBuilder.Entity("Milet.Domain.Entities.Stammdaten.Kunde", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -286,7 +286,7 @@ namespace Nexus.Infrastructure.Persistence.Migrations
                     b.ToTable("Kunden", (string)null);
                 });
 
-            modelBuilder.Entity("Nexus.Domain.Entities.Stammdaten.Lieferant", b =>
+            modelBuilder.Entity("Milet.Domain.Entities.Stammdaten.Lieferant", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -348,7 +348,7 @@ namespace Nexus.Infrastructure.Persistence.Migrations
                     b.ToTable("Lieferanten", (string)null);
                 });
 
-            modelBuilder.Entity("Nexus.Domain.Entities.Stammdaten.MwStSatz", b =>
+            modelBuilder.Entity("Milet.Domain.Entities.Stammdaten.MwStSatz", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -376,7 +376,7 @@ namespace Nexus.Infrastructure.Persistence.Migrations
                     b.ToTable("MwStSaetze", (string)null);
                 });
 
-            modelBuilder.Entity("Nexus.Domain.Entities.Stammdaten.Preisliste", b =>
+            modelBuilder.Entity("Milet.Domain.Entities.Stammdaten.Preisliste", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -400,7 +400,7 @@ namespace Nexus.Infrastructure.Persistence.Migrations
                     b.ToTable("Preislisten", (string)null);
                 });
 
-            modelBuilder.Entity("Nexus.Domain.Entities.Stammdaten.Versandart", b =>
+            modelBuilder.Entity("Milet.Domain.Entities.Stammdaten.Versandart", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -422,7 +422,7 @@ namespace Nexus.Infrastructure.Persistence.Migrations
                     b.ToTable("Versandarten", (string)null);
                 });
 
-            modelBuilder.Entity("Nexus.Domain.Entities.Stammdaten.Zahlungsbedingung", b =>
+            modelBuilder.Entity("Milet.Domain.Entities.Stammdaten.Zahlungsbedingung", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -450,15 +450,15 @@ namespace Nexus.Infrastructure.Persistence.Migrations
                     b.ToTable("Zahlungsbedingungen", (string)null);
                 });
 
-            modelBuilder.Entity("Nexus.Domain.Entities.Stammdaten.Artikel", b =>
+            modelBuilder.Entity("Milet.Domain.Entities.Stammdaten.Artikel", b =>
                 {
-                    b.HasOne("Nexus.Domain.Entities.Stammdaten.Einheit", "Einheit")
+                    b.HasOne("Milet.Domain.Entities.Stammdaten.Einheit", "Einheit")
                         .WithMany()
                         .HasForeignKey("EinheitId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Nexus.Domain.Entities.Stammdaten.MwStSatz", "MwStSatz")
+                    b.HasOne("Milet.Domain.Entities.Stammdaten.MwStSatz", "MwStSatz")
                         .WithMany()
                         .HasForeignKey("MwStSatzId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -469,15 +469,15 @@ namespace Nexus.Infrastructure.Persistence.Migrations
                     b.Navigation("MwStSatz");
                 });
 
-            modelBuilder.Entity("Nexus.Domain.Entities.Stammdaten.ArtikelPreis", b =>
+            modelBuilder.Entity("Milet.Domain.Entities.Stammdaten.ArtikelPreis", b =>
                 {
-                    b.HasOne("Nexus.Domain.Entities.Stammdaten.Artikel", "Artikel")
+                    b.HasOne("Milet.Domain.Entities.Stammdaten.Artikel", "Artikel")
                         .WithMany()
                         .HasForeignKey("ArtikelId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Nexus.Domain.Entities.Stammdaten.Preisliste", "Preisliste")
+                    b.HasOne("Milet.Domain.Entities.Stammdaten.Preisliste", "Preisliste")
                         .WithMany("Preise")
                         .HasForeignKey("PreislisteId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -488,19 +488,19 @@ namespace Nexus.Infrastructure.Persistence.Migrations
                     b.Navigation("Preisliste");
                 });
 
-            modelBuilder.Entity("Nexus.Domain.Entities.Stammdaten.Kunde", b =>
+            modelBuilder.Entity("Milet.Domain.Entities.Stammdaten.Kunde", b =>
                 {
-                    b.HasOne("Nexus.Domain.Entities.Stammdaten.Preisliste", "Preisliste")
+                    b.HasOne("Milet.Domain.Entities.Stammdaten.Preisliste", "Preisliste")
                         .WithMany()
                         .HasForeignKey("PreislisteId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Nexus.Domain.Entities.Stammdaten.Zahlungsbedingung", "Zahlungsbedingung")
+                    b.HasOne("Milet.Domain.Entities.Stammdaten.Zahlungsbedingung", "Zahlungsbedingung")
                         .WithMany()
                         .HasForeignKey("ZahlungsbedingungId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.OwnsOne("Nexus.Domain.ValueObjects.Adresse", "Adresse", b1 =>
+                    b.OwnsOne("Milet.Domain.ValueObjects.Adresse", "Adresse", b1 =>
                         {
                             b1.Property<int>("KundeId")
                                 .HasColumnType("int");
@@ -556,14 +556,14 @@ namespace Nexus.Infrastructure.Persistence.Migrations
                     b.Navigation("Zahlungsbedingung");
                 });
 
-            modelBuilder.Entity("Nexus.Domain.Entities.Stammdaten.Lieferant", b =>
+            modelBuilder.Entity("Milet.Domain.Entities.Stammdaten.Lieferant", b =>
                 {
-                    b.HasOne("Nexus.Domain.Entities.Stammdaten.Zahlungsbedingung", "Zahlungsbedingung")
+                    b.HasOne("Milet.Domain.Entities.Stammdaten.Zahlungsbedingung", "Zahlungsbedingung")
                         .WithMany()
                         .HasForeignKey("ZahlungsbedingungId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.OwnsOne("Nexus.Domain.ValueObjects.Adresse", "Adresse", b1 =>
+                    b.OwnsOne("Milet.Domain.ValueObjects.Adresse", "Adresse", b1 =>
                         {
                             b1.Property<int>("LieferantId")
                                 .HasColumnType("int");
@@ -617,7 +617,7 @@ namespace Nexus.Infrastructure.Persistence.Migrations
                     b.Navigation("Zahlungsbedingung");
                 });
 
-            modelBuilder.Entity("Nexus.Domain.Entities.Stammdaten.Preisliste", b =>
+            modelBuilder.Entity("Milet.Domain.Entities.Stammdaten.Preisliste", b =>
                 {
                     b.Navigation("Preise");
                 });

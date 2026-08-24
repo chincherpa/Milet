@@ -1,14 +1,14 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/Nexus.App/Nexus.App.csproj" />
-    <Project Path="src/Nexus.Application/Nexus.Application.csproj" />
-    <Project Path="src/Nexus.Domain/Nexus.Domain.csproj" />
-    <Project Path="src/Nexus.Infrastructure/Nexus.Infrastructure.csproj" />
-    <Project Path="src/Nexus.Tools.Migrator/Nexus.Tools.Migrator.csproj" />
+    <Project Path="src/Milet.App/Milet.App.csproj" />
+    <Project Path="src/Milet.Application/Milet.Application.csproj" />
+    <Project Path="src/Milet.Domain/Milet.Domain.csproj" />
+    <Project Path="src/Milet.Infrastructure/Milet.Infrastructure.csproj" />
+    <Project Path="src/Milet.Tools.Migrator/Milet.Tools.Migrator.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/Nexus.Application.Tests/Nexus.Application.Tests.csproj" />
-    <Project Path="tests/Nexus.Domain.Tests/Nexus.Domain.Tests.csproj" />
-    <Project Path="tests/Nexus.IntegrationTests/Nexus.IntegrationTests.csproj" />
+    <Project Path="tests/Milet.Application.Tests/Milet.Application.Tests.csproj" />
+    <Project Path="tests/Milet.Domain.Tests/Milet.Domain.Tests.csproj" />
+    <Project Path="tests/Milet.IntegrationTests/Milet.IntegrationTests.csproj" />
   </Folder>
 </Solution>

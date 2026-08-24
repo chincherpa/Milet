@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using Nexus.Domain.Entities.Admin;
-using Nexus.Domain.Entities.Stammdaten;
+using Milet.Domain.Entities.Admin;
+using Milet.Domain.Entities.Stammdaten;
 
-namespace Nexus.Infrastructure.Persistence.Seed;
+namespace Milet.Infrastructure.Persistence.Seed;
 
 /// <summary>
 /// Grunddaten, ohne die das System nicht sinnvoll bedienbar ist: Einheiten, MwSt-Sätze,
@@ -11,7 +11,7 @@ namespace Nexus.Infrastructure.Persistence.Seed;
 /// </summary>
 public static class StammdatenSeed
 {
-    public static async Task ApplyAsync(NexusDbContext db, CancellationToken ct = default)
+    public static async Task ApplyAsync(MiletDbContext db, CancellationToken ct = default)
     {
         if (!await db.Einheiten.AnyAsync(ct))
         {

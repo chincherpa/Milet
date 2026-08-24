@@ -2,12 +2,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FluentValidation;
 using Microsoft.UI.Xaml.Navigation;
-using Nexus.App.Services;
-using Nexus.App.ViewModels;
-using Nexus.Application.Common;
-using Nexus.Application.Stammdaten;
+using Milet.App.Services;
+using Milet.App.ViewModels;
+using Milet.Application.Common;
+using Milet.Application.Stammdaten;
 
-namespace Nexus.App.ViewModels.Stammdaten;
+namespace Milet.App.ViewModels.Stammdaten;
 
 public sealed partial class KundeEditViewModel : ObservableObject, INavigationAware
 {

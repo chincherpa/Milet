@@ -1,6 +1,6 @@
-using Nexus.Domain.Entities.Stammdaten;
+using Milet.Domain.Entities.Stammdaten;
 
-namespace Nexus.Domain.Services;
+namespace Milet.Domain.Services;
 
 /// <summary>
 /// Ergebnis der Preisfindung für eine Belegposition.

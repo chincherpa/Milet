@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
-using Nexus.Domain.Entities.Admin;
-using Nexus.Domain.Entities.Stammdaten;
+using Milet.Domain.Entities.Admin;
+using Milet.Domain.Entities.Stammdaten;
 
-namespace Nexus.Infrastructure.Persistence;
+namespace Milet.Infrastructure.Persistence;
 
-public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : DbContext(options)
+public sealed class MiletDbContext(DbContextOptions<MiletDbContext> options) : DbContext(options)
 {
     public DbSet<Einheit> Einheiten => Set<Einheit>();
 
@@ -28,6 +28,6 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : D
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.ApplyConfigurationsFromAssembly(typeof(NexusDbContext).Assembly);
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(MiletDbContext).Assembly);
     }
 }

@@ -1,7 +1,7 @@
-using Nexus.Application;
+using Milet.Application;
 using Xunit;
 
-namespace Nexus.Application.Tests;
+namespace Milet.Application.Tests;
 
 public class SmokeTests
 {

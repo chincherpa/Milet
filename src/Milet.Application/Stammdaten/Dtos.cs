@@ -1,4 +1,4 @@
-namespace Nexus.Application.Stammdaten;
+namespace Milet.Application.Stammdaten;
 
 public sealed record AdresseDto
 {

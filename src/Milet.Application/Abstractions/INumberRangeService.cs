@@ -1,4 +1,4 @@
-namespace Nexus.Application.Abstractions;
+namespace Milet.Application.Abstractions;
 
 public interface INumberRangeService
 {

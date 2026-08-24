@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <RootNamespace>Nexus.Domain</RootNamespace>
+    <RootNamespace>Milet.Domain</RootNamespace>
   </PropertyGroup>
 </Project>

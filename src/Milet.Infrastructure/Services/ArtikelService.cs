@@ -1,16 +1,16 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
-using Nexus.Application.Abstractions;
-using Nexus.Application.Common;
-using Nexus.Application.Stammdaten;
-using Nexus.Domain.Entities.Stammdaten;
-using Nexus.Infrastructure.Persistence;
-using Nexus.Infrastructure.Services.Mapping;
+using Milet.Application.Abstractions;
+using Milet.Application.Common;
+using Milet.Application.Stammdaten;
+using Milet.Domain.Entities.Stammdaten;
+using Milet.Infrastructure.Persistence;
+using Milet.Infrastructure.Services.Mapping;
 
-namespace Nexus.Infrastructure.Services;
+namespace Milet.Infrastructure.Services;
 
 public sealed class ArtikelService(
-    IDbContextFactory<NexusDbContext> dbContextFactory,
+    IDbContextFactory<MiletDbContext> dbContextFactory,
     INumberRangeService numberRangeService) : IArtikelService
 {
     private static readonly ArtikelValidator Validator = new();

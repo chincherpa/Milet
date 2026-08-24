@@ -1,4 +1,4 @@
-namespace Nexus.Domain.Entities.Admin;
+namespace Milet.Domain.Entities.Admin;
 
 /// <summary>
 /// Nummernkreis für Stammdaten- und Belegnummern.

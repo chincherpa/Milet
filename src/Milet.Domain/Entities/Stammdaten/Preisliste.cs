@@ -1,4 +1,4 @@
-namespace Nexus.Domain.Entities.Stammdaten;
+namespace Milet.Domain.Entities.Stammdaten;
 
 public class Preisliste
 {

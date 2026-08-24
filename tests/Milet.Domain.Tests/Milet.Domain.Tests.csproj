@@ -10,6 +10,6 @@
     <PackageReference Include="NSubstitute" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Nexus.Domain\Nexus.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Milet.Domain\Milet.Domain.csproj" />
   </ItemGroup>
 </Project>

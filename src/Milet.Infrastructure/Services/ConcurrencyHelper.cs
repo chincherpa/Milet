@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using Nexus.Application.Common;
+using Milet.Application.Common;
 
-namespace Nexus.Infrastructure.Services;
+namespace Milet.Infrastructure.Services;
 
 internal static class ConcurrencyHelper
 {

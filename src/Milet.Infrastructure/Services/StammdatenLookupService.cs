@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
-using Nexus.Application.Stammdaten;
-using Nexus.Infrastructure.Persistence;
+using Milet.Application.Stammdaten;
+using Milet.Infrastructure.Persistence;
 
-namespace Nexus.Infrastructure.Services;
+namespace Milet.Infrastructure.Services;
 
-public sealed class StammdatenLookupService(IDbContextFactory<NexusDbContext> dbContextFactory) : IStammdatenLookupService
+public sealed class StammdatenLookupService(IDbContextFactory<MiletDbContext> dbContextFactory) : IStammdatenLookupService
 {
     public async Task<StammdatenLookups> LadeLookupsAsync(CancellationToken ct = default)
     {

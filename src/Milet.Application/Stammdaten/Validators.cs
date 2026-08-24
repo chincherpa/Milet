@@ -1,6 +1,6 @@
 using FluentValidation;
 
-namespace Nexus.Application.Stammdaten;
+namespace Milet.Application.Stammdaten;
 
 public sealed class AdresseValidator : AbstractValidator<AdresseDto>
 {

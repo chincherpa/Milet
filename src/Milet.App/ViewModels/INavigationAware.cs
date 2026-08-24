@@ -1,6 +1,6 @@
 using Microsoft.UI.Xaml.Navigation;
 
-namespace Nexus.App.ViewModels;
+namespace Milet.App.ViewModels;
 
 /// <summary>
 /// ViewModels, die den Navigationsparameter (z. B. eine Id) auswerten müssen, implementieren dies.

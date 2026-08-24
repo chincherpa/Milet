@@ -1,8 +1,8 @@
-using Nexus.Application.Stammdaten;
-using Nexus.Domain.Entities.Stammdaten;
-using Nexus.Domain.ValueObjects;
+using Milet.Application.Stammdaten;
+using Milet.Domain.Entities.Stammdaten;
+using Milet.Domain.ValueObjects;
 
-namespace Nexus.Infrastructure.Services.Mapping;
+namespace Milet.Infrastructure.Services.Mapping;
 
 internal static class StammdatenMapping
 {

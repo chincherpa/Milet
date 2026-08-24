@@ -2,11 +2,11 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FluentValidation;
 using Microsoft.UI.Xaml.Navigation;
-using Nexus.App.Services;
-using Nexus.Application.Common;
-using Nexus.Application.Stammdaten;
+using Milet.App.Services;
+using Milet.Application.Common;
+using Milet.Application.Stammdaten;
 
-namespace Nexus.App.ViewModels.Stammdaten;
+namespace Milet.App.ViewModels.Stammdaten;
 
 public sealed partial class LieferantEditViewModel : ObservableObject, INavigationAware
 {

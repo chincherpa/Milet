@@ -1,4 +1,4 @@
-namespace Nexus.Application.Common;
+namespace Milet.Application.Common;
 
 /// <summary>
 /// Der Datensatz wurde zwischenzeitlich von einem anderen Benutzer geändert oder gelöscht.

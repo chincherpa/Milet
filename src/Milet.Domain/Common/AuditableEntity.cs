@@ -1,4 +1,4 @@
-namespace Nexus.Domain.Common;
+namespace Milet.Domain.Common;
 
 /// <summary>
 /// Basisklasse für alle Entitäten mit Audit-Feldern.

@@ -2,14 +2,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.UI.Xaml;
-using Nexus.App.Services;
-using Nexus.App.ViewModels;
-using Nexus.App.ViewModels.Stammdaten;
-using Nexus.App.Views;
-using Nexus.Infrastructure;
+using Milet.App.Services;
+using Milet.App.ViewModels;
+using Milet.App.ViewModels.Stammdaten;
+using Milet.App.Views;
+using Milet.Infrastructure;
 using Serilog;
 
-namespace Nexus.App;
+namespace Milet.App;
 
 public partial class App : Microsoft.UI.Xaml.Application
 {

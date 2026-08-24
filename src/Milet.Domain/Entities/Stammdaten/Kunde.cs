@@ -1,7 +1,7 @@
-using Nexus.Domain.Common;
-using Nexus.Domain.ValueObjects;
+using Milet.Domain.Common;
+using Milet.Domain.ValueObjects;
 
-namespace Nexus.Domain.Entities.Stammdaten;
+namespace Milet.Domain.Entities.Stammdaten;
 
 public class Kunde : AuditableEntity, IHasRowVersion
 {

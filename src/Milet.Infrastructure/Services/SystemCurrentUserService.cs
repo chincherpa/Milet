@@ -1,6 +1,6 @@
-using Nexus.Application.Abstractions;
+using Milet.Application.Abstractions;
 
-namespace Nexus.Infrastructure.Services;
+namespace Milet.Infrastructure.Services;
 
 /// <summary>
 /// Platzhalter bis zum Login/RBAC in Phase 7 — meldet einen technischen "System"-Benutzer.

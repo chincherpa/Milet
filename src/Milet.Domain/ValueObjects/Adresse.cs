@@ -1,4 +1,4 @@
-namespace Nexus.Domain.ValueObjects;
+namespace Milet.Domain.ValueObjects;
 
 /// <summary>
 /// Adress-Werttyp. Wird als EF Owned Type eingebettet (Kunde, Lieferant, später Beleg-Snapshots).

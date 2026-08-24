@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Nexus.Application.Abstractions;
-using Nexus.Domain.Common;
+using Milet.Application.Abstractions;
+using Milet.Domain.Common;
 
-namespace Nexus.Infrastructure.Persistence.Interceptors;
+namespace Milet.Infrastructure.Persistence.Interceptors;
 
 public sealed class AuditSaveChangesInterceptor(ICurrentUserService currentUser) : SaveChangesInterceptor
 {

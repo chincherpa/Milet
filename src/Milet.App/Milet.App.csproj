@@ -4,7 +4,7 @@
     <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
-    <RootNamespace>Nexus.App</RootNamespace>
+    <RootNamespace>Milet.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>x64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -23,8 +23,8 @@
     <PackageReference Include="Serilog.Sinks.File" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Nexus.Application\Nexus.Application.csproj" />
-    <ProjectReference Include="..\Nexus.Infrastructure\Nexus.Infrastructure.csproj" />
+    <ProjectReference Include="..\Milet.Application\Milet.Application.csproj" />
+    <ProjectReference Include="..\Milet.Infrastructure\Milet.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
