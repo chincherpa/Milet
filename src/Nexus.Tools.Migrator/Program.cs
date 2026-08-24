@@ -1,0 +1,47 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Nexus.Infrastructure.Persistence;
+using Nexus.Infrastructure.Persistence.Seed;
+
+var configuration = new ConfigurationBuilder()
+    .SetBasePath(AppContext.BaseDirectory)
+    .AddJsonFile("appsettings.json", optional: true)
+    .Build();
+
+var connectionString = Environment.GetEnvironmentVariable("NEXUS_CONNECTIONSTRING")
+    ?? args.FirstOrDefault(a => a.StartsWith("--connection=", StringComparison.Ordinal))?["--connection=".Length..]
+    ?? configuration.GetConnectionString("Nexus")
+    ?? throw new InvalidOperationException(
+        "Keine Verbindungszeichenfolge. ConnectionStrings:Nexus in appsettings.json setzen " +
+        "oder NEXUS_CONNECTIONSTRING als Umgebungsvariable.");
+
+var options = new DbContextOptionsBuilder<NexusDbContext>()
+    .UseSqlServer(connectionString)
+    .Options;
+
+await using var db = new NexusDbContext(options);
+
+Console.WriteLine("Nexus Migrator");
+Console.WriteLine($"Ziel: {db.Database.GetDbConnection().DataSource} / {db.Database.GetDbConnection().Database}");
+
+var pending = (await db.Database.GetPendingMigrationsAsync()).ToList();
+if (pending.Count == 0)
+{
+    Console.WriteLine("Datenbank ist aktuell — keine ausstehenden Migrationen.");
+}
+else
+{
+    Console.WriteLine($"Ausstehende Migrationen ({pending.Count}):");
+    foreach (var migration in pending)
+    {
+        Console.WriteLine($"  - {migration}");
+    }
+
+    await db.Database.MigrateAsync();
+    Console.WriteLine("Migrationen erfolgreich angewendet.");
+}
+
+await StammdatenSeed.ApplyAsync(db);
+Console.WriteLine("Grunddaten (Einheiten, MwSt-Sätze, Zahlungsbedingungen, Nummernkreise) geprüft/angelegt.");
+
+return 0;
