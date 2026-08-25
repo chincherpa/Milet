@@ -26,6 +26,15 @@ public sealed class MiletDbContext(DbContextOptions<MiletDbContext> options) : D
 
     public DbSet<Nummernkreis> Nummernkreise => Set<Nummernkreis>();
 
+    public DbSet<Milet.Domain.Entities.Verkauf.Beleg> Belege => Set<Milet.Domain.Entities.Verkauf.Beleg>();
+    public DbSet<Milet.Domain.Entities.Verkauf.Angebot> Angebote => Set<Milet.Domain.Entities.Verkauf.Angebot>();
+    public DbSet<Milet.Domain.Entities.Verkauf.Auftrag> Auftraege => Set<Milet.Domain.Entities.Verkauf.Auftrag>();
+    public DbSet<Milet.Domain.Entities.Verkauf.Rechnung> Rechnungen => Set<Milet.Domain.Entities.Verkauf.Rechnung>();
+    public DbSet<Milet.Domain.Entities.Verkauf.BelegPosition> BelegPositionen => Set<Milet.Domain.Entities.Verkauf.BelegPosition>();
+    public DbSet<Milet.Domain.Entities.Verkauf.BelegSteuerSumme> BelegSteuerSummen => Set<Milet.Domain.Entities.Verkauf.BelegSteuerSumme>();
+    public DbSet<Milet.Domain.Entities.Finanzen.OffenerPosten> OffenePosten => Set<Milet.Domain.Entities.Finanzen.OffenerPosten>();
+    public DbSet<Firmenstamm> Firmenstamm => Set<Firmenstamm>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(MiletDbContext).Assembly);
