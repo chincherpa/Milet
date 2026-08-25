@@ -75,11 +75,16 @@ Per UI-Automation (Windows UIAutomation über PowerShell, da kein dediziertes Wi
 - **Automatisierungs-Erkenntnis (kein Produktbug, aber relevant falls hier nochmal per UIAutomation getestet wird):** `TextBox`/`NumberBox` mit `x:Bind TwoWay` committen ihren Wert erst bei echtem Fokusverlust. Ein `InvokePattern.Invoke()` auf einen Button bewegt den Fokus NICHT automatisch — vor dem Klick auf Speichern muss explizit `AutomationElement.SetFocus()` auf ein anderes Element aufgerufen werden, sonst bleibt der zuletzt getippte Wert uncommitted (führte zwischenzeitlich zu falschen Ergebnissen wie leerem Ort-Feld oder Preis=0 — bei echter Maus-/Tastaturbedienung tritt das nicht auf, da ein Klick immer den Fokus verschiebt).
 - Testdaten (UIA-Testkunde, UIA-Testartikel, UIA-Preisliste, Staffelpreis, Repro-/Final-Testdatensätze) nach Verifikation wieder aus der DB entfernt; einzig verbliebener Datensatz ist der ursprüngliche Kunde KD-10001.
 
+### Lieferanten-CRUD — live durchgetestet (2026-08-25) ✅
+Per UI-Automation gegen laufende App + LocalDB verifiziert, Ergebnisse per `sqlcmd` gegengeprüft:
+- Neu+Speichern: Nummernvergabe LF-70001 korrekt, alle Felder (Name, Adresse, Ort, Land, E-Mail) landen unverändert in der DB.
+- Bearbeiten: Formular lädt bestehende Daten korrekt, Änderung wird gespeichert und in Liste sichtbar.
+- Löschen: Bestätigungsdialog ("Lieferant '...' wirklich löschen?") zeigt korrekten Namen/Nummer, Ja löscht sauber (Liste leer, DB-Zeile weg), kein Absturz.
+- Testdaten nach Verifikation wieder entfernt (Tabelle Lieferanten ist wieder leer).
+
 ## Offen
 
-1. **Lieferanten-CRUD** noch nicht live durchgeklickt (Kunden/Artikel/Kleinstamm/Staffelpreise sind es, Lieferanten-Seite ist strukturell identisch zu Kunden, aber nicht separat verifiziert).
-
-2. **Phasen 2–7** (Verkauf+PDF, Lager, Einkauf, Finanzen+Mail, DATEV+Reporting, Admin) — noch nicht begonnen, siehe Plan-Datei für Details.
+1. **Phasen 2–7** (Verkauf+PDF, Lager, Einkauf, Finanzen+Mail, DATEV+Reporting, Admin) — noch nicht begonnen, siehe Plan-Datei für Details. Phase 1 (Stammdaten) ist damit komplett abgenommen.
 
 ## Gefixt während UI-Test (2026-08-25)
 - LocalDB-Datenbank hieß nach Projekt-Rename noch "Nexus" (Connection String erwartet "Milet") → "Fehler beim Laden" beim Öffnen der Kunden-Liste. Per `ALTER DATABASE ... MODIFY NAME` umbenannt (Seed-Daten erhalten), App neu gestartet — Kunden-Liste lädt jetzt.
