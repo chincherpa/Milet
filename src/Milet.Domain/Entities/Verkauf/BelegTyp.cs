@@ -5,4 +5,5 @@ public enum BelegTyp
     Angebot = 0,
     Auftrag = 1,
     Rechnung = 2,
+    Lieferschein = 3,
 }
