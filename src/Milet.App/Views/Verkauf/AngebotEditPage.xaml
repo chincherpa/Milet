@@ -1,0 +1,106 @@
+<Page
+    x:Class="Milet.App.Views.Verkauf.AngebotEditPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer Padding="24" IsEnabled="{x:Bind ViewModel.IstBearbeitbar, Mode=OneWay}">
+        <StackPanel MaxWidth="900" Spacing="16">
+            <TextBlock Text="Angebot" Style="{StaticResource TitleTextBlockStyle}" />
+            <InfoBar IsOpen="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}"
+                     Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay}" />
+
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" Header="Nummer" IsReadOnly="True" Text="{x:Bind ViewModel.BelegNummer, Mode=OneWay}" />
+                <CalendarDatePicker Grid.Column="1" Header="Datum" HorizontalAlignment="Stretch"
+                                     Date="{x:Bind ViewModel.BelegDatum, Mode=TwoWay}" />
+                <ComboBox Grid.Column="2" Header="Kunde *" HorizontalAlignment="Stretch"
+                          ItemsSource="{x:Bind ViewModel.Kunden, Mode=OneWay}"
+                          SelectedValue="{x:Bind ViewModel.KundeId, Mode=TwoWay}"
+                          SelectedValuePath="Id" DisplayMemberPath="Anzeige" />
+            </Grid>
+
+            <TextBlock Text="Positionen" Style="{StaticResource SubtitleTextBlockStyle}" />
+            <ListView MinHeight="160" MaxHeight="300" ItemsSource="{x:Bind ViewModel.Positionen, Mode=OneWay}"
+                      SelectedItem="{x:Bind ViewModel.PositionAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
+                <ListView.HeaderTemplate>
+                    <DataTemplate>
+                        <Grid Padding="4" ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" /><ColumnDefinition Width="100" />
+                                <ColumnDefinition Width="100" /><ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="100" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Bezeichnung" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="1" Text="Menge" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="2" Text="Einzelpreis" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="3" Text="Rabatt%" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="4" Text="Gesamt" FontWeight="SemiBold" />
+                        </Grid>
+                    </DataTemplate>
+                </ListView.HeaderTemplate>
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Padding="4" ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" /><ColumnDefinition Width="100" />
+                                <ColumnDefinition Width="100" /><ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="100" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding Bezeichnung}" />
+                            <TextBlock Grid.Column="1" Text="{Binding Menge}" />
+                            <TextBlock Grid.Column="2" Text="{Binding Einzelpreis}" />
+                            <TextBlock Grid.Column="3" Text="{Binding RabattProzent}" />
+                            <TextBlock Grid.Column="4" Text="{Binding GesamtNetto}" />
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" /><ColumnDefinition Width="120" />
+                    <ColumnDefinition Width="140" /><ColumnDefinition Width="120" />
+                    <ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ComboBox Grid.Column="0" Header="Artikel" HorizontalAlignment="Stretch"
+                          ItemsSource="{x:Bind ViewModel.ArtikelLookups, Mode=OneWay}"
+                          SelectedValue="{x:Bind ViewModel.PositionArtikelId, Mode=TwoWay}"
+                          SelectedValuePath="Id" DisplayMemberPath="Anzeige" />
+                <NumberBox Grid.Column="1" Header="Menge" Minimum="0" SpinButtonPlacementMode="Compact"
+                           Value="{x:Bind ViewModel.PositionMenge, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" />
+                <NumberBox Grid.Column="2" Header="Einzelpreis" Minimum="0" SpinButtonPlacementMode="Compact"
+                           Value="{x:Bind ViewModel.PositionEinzelpreis, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" />
+                <NumberBox Grid.Column="3" Header="Rabatt%" Minimum="0" Maximum="100" SpinButtonPlacementMode="Compact"
+                           Value="{x:Bind ViewModel.PositionRabattProzent, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" />
+                <Button Grid.Column="4" Content="Preisvorschlag" VerticalAlignment="Bottom" Command="{x:Bind ViewModel.PreisVorschlagCommand}" />
+                <Button Grid.Column="5" Content="Hinzufügen" VerticalAlignment="Bottom" Command="{x:Bind ViewModel.PositionHinzufuegenCommand}" />
+            </Grid>
+            <Button Content="Position entfernen" Command="{x:Bind ViewModel.PositionEntfernenCommand}" />
+
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" Header="Kopftext" AcceptsReturn="True" Height="60" Text="{x:Bind ViewModel.Kopftext, Mode=TwoWay}" />
+                <TextBox Grid.Column="1" Header="Fußtext" AcceptsReturn="True" Height="60" Text="{x:Bind ViewModel.Fusstext, Mode=TwoWay}" />
+            </Grid>
+
+            <StackPanel HorizontalAlignment="Right" Spacing="4">
+                <TextBlock Text="{x:Bind ViewModel.SummeNetto, Mode=OneWay}" />
+                <TextBlock Text="{x:Bind ViewModel.SummeMwSt, Mode=OneWay}" />
+                <TextBlock Text="{x:Bind ViewModel.SummeBrutto, Mode=OneWay}" FontWeight="Bold" />
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.SpeichernCommand}" />
+                <Button Content="{x:Bind ViewModel.UeberleitenButtonText, Mode=OneWay}" Visibility="{x:Bind ViewModel.ZeigtUeberleitenButton}" Command="{x:Bind ViewModel.UeberleitenCommand}" />
+                <Button Content="PDF" Command="{x:Bind ViewModel.PdfCommand}" />
+                <Button Content="Abbrechen" Command="{x:Bind ViewModel.AbbrechenCommand}" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

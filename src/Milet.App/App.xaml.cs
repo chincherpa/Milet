@@ -67,6 +67,9 @@ public partial class App : Microsoft.UI.Xaml.Application
         builder.Services.AddTransient<AngebotListViewModel>();
         builder.Services.AddTransient<AuftragListViewModel>();
         builder.Services.AddTransient<RechnungListViewModel>();
+        builder.Services.AddTransient<AngebotEditViewModel>();
+        builder.Services.AddTransient<AuftragEditViewModel>();
+        builder.Services.AddTransient<RechnungEditViewModel>();
 
         return builder.Build();
     }

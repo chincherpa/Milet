@@ -32,6 +32,9 @@ public sealed partial class ShellPage : Page
         _navigation.Register<AngebotListViewModel, AngebotListPage>();
         _navigation.Register<AuftragListViewModel, AuftragListPage>();
         _navigation.Register<RechnungListViewModel, RechnungListPage>();
+        _navigation.Register<AngebotEditViewModel, AngebotEditPage>();
+        _navigation.Register<AuftragEditViewModel, AuftragEditPage>();
+        _navigation.Register<RechnungEditViewModel, RechnungEditPage>();
 
         _navigation.Navigate<DashboardViewModel>();
     }
