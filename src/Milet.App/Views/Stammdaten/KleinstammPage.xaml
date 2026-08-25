@@ -2,6 +2,15 @@
     x:Class="Milet.App.Views.Stammdaten.KleinstammPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Page.Resources>
+        <Style x:Key="MasterListStyle" TargetType="ListView">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="4" />
+        </Style>
+    </Page.Resources>
     <Grid Padding="24" RowSpacing="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -20,7 +29,7 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <ListView Grid.Column="0" ItemsSource="{x:Bind ViewModel.EinheitenListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.EinheitAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
+                    <ListView Grid.Column="0" Style="{StaticResource MasterListStyle}" ItemsSource="{x:Bind ViewModel.EinheitenListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.EinheitAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
                         <ListView.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" Spacing="12" Padding="4">
@@ -53,7 +62,7 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <ListView Grid.Column="0" ItemsSource="{x:Bind ViewModel.MwStSaetzeListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.MwStSatzAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
+                    <ListView Grid.Column="0" Style="{StaticResource MasterListStyle}" ItemsSource="{x:Bind ViewModel.MwStSaetzeListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.MwStSatzAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
                         <ListView.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" Spacing="12" Padding="4">
@@ -87,7 +96,7 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <ListView Grid.Column="0" ItemsSource="{x:Bind ViewModel.ZahlungsbedingungenListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.ZahlungsbedingungAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
+                    <ListView Grid.Column="0" Style="{StaticResource MasterListStyle}" ItemsSource="{x:Bind ViewModel.ZahlungsbedingungenListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.ZahlungsbedingungAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
                         <ListView.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" Spacing="12" Padding="4">
@@ -121,7 +130,7 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <ListView Grid.Column="0" ItemsSource="{x:Bind ViewModel.VersandartenListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.VersandartAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
+                    <ListView Grid.Column="0" Style="{StaticResource MasterListStyle}" ItemsSource="{x:Bind ViewModel.VersandartenListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.VersandartAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
                         <ListView.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" Spacing="12" Padding="4">
@@ -146,18 +155,17 @@
             </PivotItem>
 
             <PivotItem Header="Preislisten">
-                <Grid ColumnSpacing="24" RowSpacing="24">
+                <Grid ColumnSpacing="24" RowSpacing="16">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="380" />
-                        <ColumnDefinition Width="360" />
-                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" MaxWidth="640" />
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <ListView Grid.Row="0" Grid.Column="0" ItemsSource="{x:Bind ViewModel.PreislistenListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.PreislisteAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
+                    <ListView Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Style="{StaticResource MasterListStyle}" ItemsSource="{x:Bind ViewModel.PreislistenListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.PreislisteAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
                         <ListView.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Name}" Padding="4" />
@@ -168,8 +176,14 @@
                     <StackPanel Grid.Row="0" Grid.Column="1" Spacing="12">
                         <InfoBar IsOpen="{x:Bind ViewModel.PreislisteFehler, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.PreislisteFehler, Mode=OneWay}" />
                         <TextBox Header="Name *" Text="{x:Bind ViewModel.PreislisteName, Mode=TwoWay}" />
-                        <CalendarDatePicker Header="Gültig von" Date="{x:Bind ViewModel.PreislisteGueltigVon, Mode=TwoWay, Converter={StaticResource DateOnlyToDateTimeOffsetConverter}}" />
-                        <CalendarDatePicker Header="Gültig bis" Date="{x:Bind ViewModel.PreislisteGueltigBis, Mode=TwoWay, Converter={StaticResource DateOnlyToDateTimeOffsetConverter}}" />
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <CalendarDatePicker Grid.Column="0" Header="Gültig von" HorizontalAlignment="Stretch" Date="{x:Bind ViewModel.PreislisteGueltigVon, Mode=TwoWay, Converter={StaticResource DateOnlyToDateTimeOffsetConverter}}" />
+                            <CalendarDatePicker Grid.Column="1" Header="Gültig bis" HorizontalAlignment="Stretch" Date="{x:Bind ViewModel.PreislisteGueltigBis, Mode=TwoWay, Converter={StaticResource DateOnlyToDateTimeOffsetConverter}}" />
+                        </Grid>
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <Button Content="Neu" Command="{x:Bind ViewModel.PreislisteNeuCommand}" />
                             <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.PreislisteSpeichernCommand}" />
@@ -177,9 +191,18 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Spacing="12">
-                        <TextBlock Text="Staffelpreise" Style="{StaticResource SubtitleTextBlockStyle}" />
-                        <ListView Height="160" ItemsSource="{x:Bind ViewModel.StaffelpreiseListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.StaffelpreisAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
+                    <Grid Grid.Row="1" Grid.Column="1" RowSpacing="12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="Staffelpreise" Style="{StaticResource SubtitleTextBlockStyle}" />
+
+                        <ListView Grid.Row="1" MinHeight="120" Style="{StaticResource MasterListStyle}" ItemsSource="{x:Bind ViewModel.StaffelpreiseListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.StaffelpreisAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
                             <ListView.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal" Spacing="12" Padding="4">
@@ -190,18 +213,26 @@
                                 </DataTemplate>
                             </ListView.ItemTemplate>
                         </ListView>
-                        <InfoBar IsOpen="{x:Bind ViewModel.StaffelpreisFehler, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.StaffelpreisFehler, Mode=OneWay}" />
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <ComboBox Header="Artikel *" Width="300" ItemsSource="{x:Bind ViewModel.ArtikelLookups, Mode=OneWay}" SelectedValue="{x:Bind ViewModel.StaffelpreisArtikelId, Mode=TwoWay}" SelectedValuePath="Id" DisplayMemberPath="Anzeige" />
-                            <NumberBox Header="Ab Menge *" Width="150" Value="{x:Bind ViewModel.StaffelpreisAbMenge, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" Minimum="0" SpinButtonPlacementMode="Inline" />
-                            <NumberBox Header="Preis *" Width="150" Value="{x:Bind ViewModel.StaffelpreisPreis, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" Minimum="0" SpinButtonPlacementMode="Inline" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="8">
+
+                        <InfoBar Grid.Row="2" IsOpen="{x:Bind ViewModel.StaffelpreisFehler, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.StaffelpreisFehler, Mode=OneWay}" />
+
+                        <Grid Grid.Row="3" ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="140" />
+                                <ColumnDefinition Width="140" />
+                            </Grid.ColumnDefinitions>
+                            <ComboBox Grid.Column="0" Header="Artikel *" HorizontalAlignment="Stretch" ItemsSource="{x:Bind ViewModel.ArtikelLookups, Mode=OneWay}" SelectedValue="{x:Bind ViewModel.StaffelpreisArtikelId, Mode=TwoWay}" SelectedValuePath="Id" DisplayMemberPath="Anzeige" />
+                            <NumberBox Grid.Column="1" Header="Ab Menge *" Value="{x:Bind ViewModel.StaffelpreisAbMenge, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" Minimum="0" SpinButtonPlacementMode="Compact" />
+                            <NumberBox Grid.Column="2" Header="Preis *" Value="{x:Bind ViewModel.StaffelpreisPreis, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" Minimum="0" SpinButtonPlacementMode="Compact" />
+                        </Grid>
+
+                        <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="8">
                             <Button Content="Neu" Command="{x:Bind ViewModel.StaffelpreisNeuCommand}" />
                             <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.StaffelpreisSpeichernCommand}" />
                             <Button Content="Löschen" Command="{x:Bind ViewModel.StaffelpreisLoeschenCommand}" />
                         </StackPanel>
-                    </StackPanel>
+                    </Grid>
                 </Grid>
             </PivotItem>
 
