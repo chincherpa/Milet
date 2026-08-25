@@ -45,6 +45,7 @@ public static class DependencyInjection
         services.AddScoped<IBelegService, BelegService>();
         services.AddScoped<IVerkaufLookupService, VerkaufLookupService>();
         services.AddScoped<IFirmenstammService, FirmenstammService>();
+        services.AddScoped<IBelegUeberleitungService, BelegUeberleitungService>();
 
         return services;
     }
