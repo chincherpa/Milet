@@ -25,6 +25,7 @@ public sealed class VerkaufLookupService(IDbContextFactory<MiletDbContext> dbCon
             .Select(a => new ArtikelVerkaufLookupDto(
                 a.Id,
                 $"{a.Artikelnummer} — {a.Bezeichnung}",
+                a.Bezeichnung,
                 a.Listenpreis,
                 a.MwStSatzId,
                 a.MwStSatz!.Satz,

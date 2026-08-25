@@ -146,7 +146,7 @@ public abstract partial class BelegEditViewModelBase : ObservableObject, INaviga
             PositionsNr = _naechstePositionsNr++,
             PositionsTyp = PositionsTyp.Artikel,
             ArtikelId = artikel.Id,
-            Bezeichnung = artikel.Anzeige,
+            Bezeichnung = artikel.Bezeichnung,
             EinheitKuerzel = artikel.EinheitKuerzel,
             Menge = PositionMenge,
             Einzelpreis = PositionEinzelpreis,

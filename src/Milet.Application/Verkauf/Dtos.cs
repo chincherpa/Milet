@@ -50,6 +50,8 @@ public sealed record BelegDto
 public sealed record ArtikelVerkaufLookupDto(
     int Id,
     string Anzeige,
+    /// <summary>Reine Artikelbezeichnung ohne Artikelnummer-Präfix — für Belegpositionen/Druck (im Gegensatz zu <see cref="Anzeige"/>, das für ComboBoxen gedacht ist).</summary>
+    string Bezeichnung,
     decimal Listenpreis,
     int MwStSatzId,
     decimal MwStSatzWert,
