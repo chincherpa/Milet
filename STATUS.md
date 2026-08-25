@@ -1,13 +1,13 @@
 # Milet — Projektstatus
 
-Stand: 2026-08-25. Plan: `C:\Users\lulef\.claude\plans\ich-m-chte-ein-warenwirtschaftssystem-immutable-sutton.md`
+Stand: 2026-08-25. Architekturplan: `PLAN.md`. Phase-2-Implementierungsplan: `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md`.
 
 ## Erledigt
 
 ### Umgebung
 - .NET 10 SDK (10.0.400) user-lokal installiert, `dotnet-ef` global installiert
 - nuget.org als Paketquelle eingerichtet
-- SQL-Zugriff: LocalDB `(localdb)\MSSQLLocalDB`, DB "Milet" (kein Docker/SQL Server auf dieser Maschine — Details in Memory `nexus-dev-umgebung`)
+- SQL-Zugriff: LocalDB `(localdb)\MSSQLLocalDB`, DB "Milet" (kein Docker/SQL Server auf dieser Maschine — Details in Memory `milet-dev-umgebung`)
 
 ### Phase 0 — Scaffold ✅ vollständig verifiziert
 - Solution mit 6 Projekten (Domain/Application/Infrastructure/App/Tools.Migrator) + 3 Testprojekten
@@ -82,15 +82,37 @@ Per UI-Automation gegen laufende App + LocalDB verifiziert, Ergebnisse per `sqlc
 - Löschen: Bestätigungsdialog ("Lieferant '...' wirklich löschen?") zeigt korrekten Namen/Nummer, Ja löscht sauber (Liste leer, DB-Zeile weg), kein Absturz.
 - Testdaten nach Verifikation wieder entfernt (Tabelle Lieferanten ist wieder leer).
 
+### Phase 2 — Verkauf+PDF ✅ (2026-08-25, Branch `phase2-verkauf-pdf`)
+Implementiert nach Plan `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md` (18 Tasks, TDD wo sinnvoll, jeder Task einzeln gebaut/getestet/committet):
+
+**Domain:** Beleg-TPH-Modell (`Beleg`-Basis + dünne Subklassen `Angebot`/`Auftrag`/`Rechnung`), `BelegPosition` (Snapshot-Felder, `UrsprungsPositionId`-Selbstreferenz für Belegfluss, `OffeneMenge()`-Berechnung), `BelegSteuerSumme`, `SteuerRechner` (Positions-/Steuergruppen-/Kopfsummen, `MidpointRounding.ToEven`), `Firmenstamm` (Briefkopf), `OffenerPosten` (minimal, nur Anlage). 20 neue Domain-Tests.
+
+**Application:** `IBelegService`/`IVerkaufLookupService`/`IBelegUeberleitungService`/`IRechnungBuchenService`, DTOs+Validatoren, `IPdfService`, `IFirmenstammService`. 5 neue Validator-Tests.
+
+**Infrastructure:** EF-Configurations (TPH-Discriminator, Owned-Adress-Snapshots, Unique-Index gefiltert auf nicht-leere Rechnungsnummer), Migration `VerkaufBelegModell`; `BelegImmutabilityInterceptor` (GoBD-Sperre gebuchter Belege); `BelegService` (Aggregat-Speichern: Beleg+Positionen+Steuersummen in einem Transaktions-Call); `VerkaufLookupService` (inkl. Preisfindung-Integration); `BelegUeberleitungService` (Angebot→Auftrag→Rechnung mit Offene-Mengen-Logik, Quellbeleg→`Erledigt` bei Vollübernahme); `RechnungBuchenService` (atomare RE-Nummer via bestehendem `NumberRangeService`, Fälligkeit, Offener-Posten-Anlage, eine Transaktion); QuestPDF `BelegPdfDocument` (ein Dokument für alle 3 Typen, Titel/Fälligkeit unterscheiden) + `PdfService`.
+
+**App (WinUI):** Verkauf-Menü (Angebote/Aufträge/Rechnungen) mit je eigener List-VM/Page (Muster wie Kunden/Lieferanten/Artikel); gemeinsame `BelegEditViewModelBase` (Kopf, Positionsgrid mit Artikel-Lookup+Preisfindung-Button, Live-Summen client-seitig vorberechnet, Speichern/Buchen/PDF/Überleiten/Abbrechen) + 3 dünne konkrete EditViewModels/Pages.
+
+**Verifiziert:** Domain 14/14, Application 14/14, IntegrationTests 4/4 grün (+4 Docker-Skips wie gehabt) — inkl. neuer PDF-Render-Smoke-Tests (3, laufen ohne Docker) und `RechnungBuchenServiceTests` (paralleles Buchen/Immutability, Docker-Skip lokal). **Live-UI-Abnahme (UIAutomation, End-to-End):** Angebot anlegen (Preisvorschlag-Button lädt korrekten Listenpreis) → Speichern (Nummer `AN-2026-000x`) → „→ Auftrag" (Positionen 1:1 übernommen, Angebot-Status → Erledigt) → „→ Rechnung" (Nummer leer bis Buchen) → Buchen (`RE-2026-000x` vergeben, Fälligkeit gesetzt, Status Gebucht) → Offener Posten in DB verifiziert (Betrag=OffenerBetrag=SummeBrutto) → PDF-Button öffnet nativen Speichern-Dialog ohne Absturz. Testdaten nach Verifikation wieder entfernt.
+
+**Zwei echte Bugs live gefunden+gefixt:**
+- Positions-`Bezeichnung` übernahm den ComboBox-Anzeigetext (`"ART-01010 — Name"`) statt des reinen Artikelnamens — wäre so aufs PDF durchgeschlagen. `ArtikelVerkaufLookupDto` um separates `Bezeichnung`-Feld ergänzt.
+- `IsEnabled="{x:Bind IstBearbeitbar}"` saß auf dem äußeren `ScrollViewer` und sperrte nach dem Buchen einer Rechnung auch PDF-/Abbrechen-Button mit. Fix: nur der editierbare Bereich (Kopf/Positionen) wird über einen `ContentControl`-Wrapper gesperrt (WinUI-`Panel`-Klassen wie `StackPanel`/`Grid` haben kein `IsEnabled`, nur `Control`-Klassen).
+- Nebenbei: `Firmenstamm.Id` kollidierte als Identity-Spalte mit dem expliziten Seed-`Id=1` (Singleton-Zeile) → `ValueGeneratedNever()` ergänzt, Migration neu erzeugt.
+
+**Hinweis Build-Tooling:** `sqlcmd` braucht `SET QUOTED_IDENTIFIER ON;` vor `DELETE`/`UPDATE` auf Tabellen mit gefilterten Indizes (z. B. `Belege`), sonst Meldung 1934.
+
 ## Offen
 
-1. **Phasen 2–7** (Verkauf+PDF, Lager, Einkauf, Finanzen+Mail, DATEV+Reporting, Admin) — noch nicht begonnen, siehe Plan-Datei für Details. Phase 1 (Stammdaten) ist damit komplett abgenommen.
+1. **Phasen 3–7** (Lager+Lieferschein, Einkauf, Finanzen+Mail, DATEV+Reporting, Admin) — noch nicht begonnen, siehe Plan-Datei für Details. Phase 1+2 sind damit komplett abgenommen.
 
 ## Gefixt während UI-Test (2026-08-25)
 - LocalDB-Datenbank hieß nach Projekt-Rename noch "Nexus" (Connection String erwartet "Milet") → "Fehler beim Laden" beim Öffnen der Kunden-Liste. Per `ALTER DATABASE ... MODIFY NAME` umbenannt (Seed-Daten erhalten), App neu gestartet — Kunden-Liste lädt jetzt.
 - Listenpreis-Präzision 4→2 Nachkommastellen (s. oben, Phase-1-Abnahme).
 - Absturz beim Löschen des letzten Staffelpreises einer Preisliste (`NullReferenceException` in WinUI ComboBox-Binding, s. oben, Phase-1-Abnahme) — vom Nutzer live entdeckt und gemeldet.
+- Phase 2: Positions-Bezeichnung + IsEnabled-Scoping (s. oben, Phase-2-Abnahme).
 
 ## Bekannte Risiken (aus Plan, weiterhin relevant)
-- Kein Docker auf dieser Maschine → Integrationstests mit Testcontainers laufen hier nur übersprungen, nicht tatsächlich ausgeführt. Vor Phase mit kritischen Transaktionstests (Lager, Buchungspipeline) sollte Docker verfügbar gemacht werden oder LocalDB-Fallback für Tests ergänzt werden.
-- QuestPDF-Lizenz, Graph-Auth, DATEV-Format — noch nicht relevant, erst ab Phase 2/5/6.
+- Kein Docker auf dieser Maschine → Integrationstests mit Testcontainers laufen hier nur übersprungen, nicht tatsächlich ausgeführt. Vor Phase mit kritischen Transaktionstests (Lager) sollte Docker verfügbar gemacht werden oder LocalDB-Fallback für Tests ergänzt werden.
+- Graph-Auth, DATEV-Format — noch nicht relevant, erst ab Phase 5/6. QuestPDF-Lizenz (Community, <1M USD Umsatz) bereits gesetzt (`PdfService`-statischer Konstruktor).
+- Lieferadresse ist in Phase 2 nicht im Belegeditor editierbar (immer 1:1 aus Kundenstamm übernommen) — bewusste Vereinfachung, relevant erst mit Lieferschein (Phase 3).
