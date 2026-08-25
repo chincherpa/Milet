@@ -74,3 +74,11 @@ public interface IPreislistenService
     Task<PreislisteDto> SpeichereAsync(PreislisteDto dto, CancellationToken ct = default);
     Task LoescheAsync(int id, CancellationToken ct = default);
 }
+
+/// <summary>Staffelpreise (ArtikelPreis) einer Preisliste.</summary>
+public interface IArtikelPreiseService
+{
+    Task<IReadOnlyList<ArtikelPreisDto>> ListeAsync(int preislisteId, CancellationToken ct = default);
+    Task<ArtikelPreisDto> SpeichereAsync(ArtikelPreisDto dto, CancellationToken ct = default);
+    Task LoescheAsync(int id, CancellationToken ct = default);
+}

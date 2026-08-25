@@ -13,6 +13,8 @@ public sealed partial class KleinstammViewModel : ObservableObject
     private readonly IZahlungsbedingungenService _zahlungsbedingungenService;
     private readonly IVersandartenService _versandartenService;
     private readonly IPreislistenService _preislistenService;
+    private readonly IArtikelPreiseService _artikelPreiseService;
+    private readonly IArtikelService _artikelService;
     private readonly IDialogService _dialogService;
 
     public KleinstammViewModel(
@@ -21,6 +23,8 @@ public sealed partial class KleinstammViewModel : ObservableObject
         IZahlungsbedingungenService zahlungsbedingungenService,
         IVersandartenService versandartenService,
         IPreislistenService preislistenService,
+        IArtikelPreiseService artikelPreiseService,
+        IArtikelService artikelService,
         IDialogService dialogService)
     {
         _einheitenService = einheitenService;
@@ -28,6 +32,8 @@ public sealed partial class KleinstammViewModel : ObservableObject
         _zahlungsbedingungenService = zahlungsbedingungenService;
         _versandartenService = versandartenService;
         _preislistenService = preislistenService;
+        _artikelPreiseService = artikelPreiseService;
+        _artikelService = artikelService;
         _dialogService = dialogService;
 
         _ = EinheitenLadenAsync();
@@ -35,6 +41,7 @@ public sealed partial class KleinstammViewModel : ObservableObject
         _ = ZahlungsbedingungenLadenAsync();
         _ = VersandartenLadenAsync();
         _ = PreislistenLadenAsync();
+        _ = ArtikelLookupsLadenAsync();
     }
 
     // ---- Einheiten ----
@@ -116,8 +123,8 @@ public sealed partial class KleinstammViewModel : ObservableObject
         try
         {
             await _einheitenService.LoescheAsync(einheit.Id);
-            await EinheitenLadenAsync();
             EinheitNeu();
+            await EinheitenLadenAsync();
         }
         catch (Exception ex)
         {
@@ -209,8 +216,8 @@ public sealed partial class KleinstammViewModel : ObservableObject
         try
         {
             await _mwStSaetzeService.LoescheAsync(satz.Id);
-            await MwStSaetzeLadenAsync();
             MwStSatzNeu();
+            await MwStSaetzeLadenAsync();
         }
         catch (Exception ex)
         {
@@ -302,8 +309,8 @@ public sealed partial class KleinstammViewModel : ObservableObject
         try
         {
             await _zahlungsbedingungenService.LoescheAsync(zb.Id);
-            await ZahlungsbedingungenLadenAsync();
             ZahlungsbedingungNeu();
+            await ZahlungsbedingungenLadenAsync();
         }
         catch (Exception ex)
         {
@@ -385,8 +392,8 @@ public sealed partial class KleinstammViewModel : ObservableObject
         try
         {
             await _versandartenService.LoescheAsync(versandart.Id);
-            await VersandartenLadenAsync();
             VersandartNeu();
+            await VersandartenLadenAsync();
         }
         catch (Exception ex)
         {
@@ -420,6 +427,13 @@ public sealed partial class KleinstammViewModel : ObservableObject
         PreislisteName = value?.Name ?? string.Empty;
         PreislisteGueltigVon = value?.GueltigVon;
         PreislisteGueltigBis = value?.GueltigBis;
+
+        StaffelpreisNeu();
+        StaffelpreiseListe = [];
+        if (value is { Id: > 0 })
+        {
+            _ = StaffelpreiseLadenAsync(value.Id);
+        }
     }
 
     [RelayCommand]
@@ -473,8 +487,113 @@ public sealed partial class KleinstammViewModel : ObservableObject
         try
         {
             await _preislistenService.LoescheAsync(preisliste.Id);
-            await PreislistenLadenAsync();
             PreislisteNeu();
+            await PreislistenLadenAsync();
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ZeigeFehlerAsync("Fehler beim Löschen", ex.Message);
+        }
+    }
+
+    // ---- Staffelpreise (ArtikelPreis je Preisliste) ----
+
+    [ObservableProperty]
+    public partial IReadOnlyList<LookupDto> ArtikelLookups { get; set; } = [];
+
+    [ObservableProperty]
+    public partial IReadOnlyList<ArtikelPreisDto> StaffelpreiseListe { get; set; } = [];
+
+    [ObservableProperty]
+    public partial ArtikelPreisDto? StaffelpreisAusgewaehlt { get; set; }
+
+    [ObservableProperty]
+    public partial int? StaffelpreisArtikelId { get; set; }
+
+    [ObservableProperty]
+    public partial decimal StaffelpreisAbMenge { get; set; } = 1;
+
+    [ObservableProperty]
+    public partial decimal StaffelpreisPreis { get; set; }
+
+    [ObservableProperty]
+    public partial string? StaffelpreisFehler { get; set; }
+
+    partial void OnStaffelpreisAusgewaehltChanged(ArtikelPreisDto? value)
+    {
+        StaffelpreisFehler = null;
+        StaffelpreisArtikelId = value?.ArtikelId;
+        StaffelpreisAbMenge = value?.AbMenge ?? 1;
+        StaffelpreisPreis = value?.Preis ?? 0;
+    }
+
+    [RelayCommand]
+    private async Task ArtikelLookupsLadenAsync()
+    {
+        var artikel = await _artikelService.SucheAsync(null);
+        ArtikelLookups = artikel.Select(a => new LookupDto(a.Id, $"{a.Artikelnummer} — {a.Bezeichnung}")).ToList();
+    }
+
+    [RelayCommand]
+    private async Task StaffelpreiseLadenAsync(int preislisteId) => StaffelpreiseListe = await _artikelPreiseService.ListeAsync(preislisteId);
+
+    [RelayCommand]
+    private void StaffelpreisNeu() => StaffelpreisAusgewaehlt = null;
+
+    [RelayCommand]
+    private async Task StaffelpreisSpeichernAsync()
+    {
+        StaffelpreisFehler = null;
+        if (PreislisteAusgewaehlt is not { Id: > 0 } preisliste)
+        {
+            StaffelpreisFehler = "Preisliste zuerst speichern.";
+            return;
+        }
+
+        var dto = new ArtikelPreisDto
+        {
+            Id = StaffelpreisAusgewaehlt?.Id ?? 0,
+            PreislisteId = preisliste.Id,
+            ArtikelId = StaffelpreisArtikelId ?? 0,
+            AbMenge = StaffelpreisAbMenge,
+            Preis = StaffelpreisPreis,
+        };
+
+        try
+        {
+            await _artikelPreiseService.SpeichereAsync(dto);
+            await StaffelpreiseLadenAsync(preisliste.Id);
+            StaffelpreisNeu();
+        }
+        catch (ValidationException ex)
+        {
+            StaffelpreisFehler = string.Join(Environment.NewLine, ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (Exception ex)
+        {
+            StaffelpreisFehler = ex.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task StaffelpreisLoeschenAsync()
+    {
+        if (StaffelpreisAusgewaehlt is not { } staffelpreis || PreislisteAusgewaehlt is not { Id: > 0 } preisliste)
+        {
+            return;
+        }
+
+        var bestaetigt = await _dialogService.BestaetigenAsync("Staffelpreis löschen", $"Staffelpreis ab Menge {staffelpreis.AbMenge} wirklich löschen?");
+        if (!bestaetigt)
+        {
+            return;
+        }
+
+        try
+        {
+            await _artikelPreiseService.LoescheAsync(staffelpreis.Id);
+            StaffelpreisNeu();
+            await StaffelpreiseLadenAsync(preisliste.Id);
         }
         catch (Exception ex)
         {

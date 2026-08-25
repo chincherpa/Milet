@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<IZahlungsbedingungenService, ZahlungsbedingungenService>();
         services.AddScoped<IVersandartenService, VersandartenService>();
         services.AddScoped<IPreislistenService, PreislistenService>();
+        services.AddScoped<IArtikelPreiseService, ArtikelPreiseService>();
 
         return services;
     }

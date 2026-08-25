@@ -146,14 +146,18 @@
             </PivotItem>
 
             <PivotItem Header="Preislisten">
-                <Grid ColumnSpacing="24">
+                <Grid ColumnSpacing="24" RowSpacing="24">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="380" />
                         <ColumnDefinition Width="360" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-                    <ListView Grid.Column="0" ItemsSource="{x:Bind ViewModel.PreislistenListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.PreislisteAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
+                    <ListView Grid.Row="0" Grid.Column="0" ItemsSource="{x:Bind ViewModel.PreislistenListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.PreislisteAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
                         <ListView.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Name}" Padding="4" />
@@ -161,7 +165,7 @@
                         </ListView.ItemTemplate>
                     </ListView>
 
-                    <StackPanel Grid.Column="1" Spacing="12">
+                    <StackPanel Grid.Row="0" Grid.Column="1" Spacing="12">
                         <InfoBar IsOpen="{x:Bind ViewModel.PreislisteFehler, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.PreislisteFehler, Mode=OneWay}" />
                         <TextBox Header="Name *" Text="{x:Bind ViewModel.PreislisteName, Mode=TwoWay}" />
                         <CalendarDatePicker Header="Gültig von" Date="{x:Bind ViewModel.PreislisteGueltigVon, Mode=TwoWay, Converter={StaticResource DateOnlyToDateTimeOffsetConverter}}" />
@@ -170,6 +174,32 @@
                             <Button Content="Neu" Command="{x:Bind ViewModel.PreislisteNeuCommand}" />
                             <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.PreislisteSpeichernCommand}" />
                             <Button Content="Löschen" Command="{x:Bind ViewModel.PreislisteLoeschenCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Spacing="12">
+                        <TextBlock Text="Staffelpreise" Style="{StaticResource SubtitleTextBlockStyle}" />
+                        <ListView Height="160" ItemsSource="{x:Bind ViewModel.StaffelpreiseListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.StaffelpreisAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="12" Padding="4">
+                                        <TextBlock Text="{Binding AbMenge}" Width="50" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding Preis}" Width="70" />
+                                        <TextBlock Text="{Binding ArtikelBezeichnung}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                        <InfoBar IsOpen="{x:Bind ViewModel.StaffelpreisFehler, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.StaffelpreisFehler, Mode=OneWay}" />
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <ComboBox Header="Artikel *" Width="300" ItemsSource="{x:Bind ViewModel.ArtikelLookups, Mode=OneWay}" SelectedValue="{x:Bind ViewModel.StaffelpreisArtikelId, Mode=TwoWay}" SelectedValuePath="Id" DisplayMemberPath="Anzeige" />
+                            <NumberBox Header="Ab Menge *" Width="150" Value="{x:Bind ViewModel.StaffelpreisAbMenge, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" Minimum="0" SpinButtonPlacementMode="Inline" />
+                            <NumberBox Header="Preis *" Width="150" Value="{x:Bind ViewModel.StaffelpreisPreis, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" Minimum="0" SpinButtonPlacementMode="Inline" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Neu" Command="{x:Bind ViewModel.StaffelpreisNeuCommand}" />
+                            <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.StaffelpreisSpeichernCommand}" />
+                            <Button Content="Löschen" Command="{x:Bind ViewModel.StaffelpreisLoeschenCommand}" />
                         </StackPanel>
                     </StackPanel>
                 </Grid>

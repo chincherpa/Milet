@@ -16,7 +16,7 @@ public sealed class ArtikelConfiguration : IEntityTypeConfiguration<Artikel>
         b.Property(a => a.Ean).HasMaxLength(20);
 
         b.Property(a => a.Einkaufspreis).HasPrecision(18, 4);
-        b.Property(a => a.Listenpreis).HasPrecision(18, 4);
+        b.Property(a => a.Listenpreis).HasPrecision(18, 2);
         b.Property(a => a.Gewicht).HasPrecision(18, 3);
         b.Property(a => a.Mindestbestand).HasPrecision(18, 3);
 

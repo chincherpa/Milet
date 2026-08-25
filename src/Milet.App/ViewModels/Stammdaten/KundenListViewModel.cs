@@ -80,6 +80,7 @@ public sealed partial class KundenListViewModel : ObservableObject
         try
         {
             await _kundenService.LoescheAsync(kunde.Id);
+            Ausgewaehlt = null;
             await LadenAsync();
         }
         catch (Exception ex)

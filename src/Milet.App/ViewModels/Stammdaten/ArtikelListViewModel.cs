@@ -80,6 +80,7 @@ public sealed partial class ArtikelListViewModel : ObservableObject
         try
         {
             await _artikelService.LoescheAsync(artikel.Id);
+            Ausgewaehlt = null;
             await LadenAsync();
         }
         catch (Exception ex)

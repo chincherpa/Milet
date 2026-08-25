@@ -95,3 +95,14 @@ public sealed class PreislisteValidator : AbstractValidator<PreislisteDto>
         RuleFor(p => p.Name).NotEmpty().WithMessage("Name ist erforderlich.").MaximumLength(100);
     }
 }
+
+public sealed class ArtikelPreisValidator : AbstractValidator<ArtikelPreisDto>
+{
+    public ArtikelPreisValidator()
+    {
+        RuleFor(p => p.PreislisteId).GreaterThan(0);
+        RuleFor(p => p.ArtikelId).GreaterThan(0).WithMessage("Artikel wählen.");
+        RuleFor(p => p.AbMenge).GreaterThan(0).WithMessage("Ab-Menge muss größer 0 sein.");
+        RuleFor(p => p.Preis).GreaterThanOrEqualTo(0);
+    }
+}

@@ -109,6 +109,16 @@ public sealed record PreislisteDto
     public DateOnly? GueltigBis { get; init; }
 }
 
+public sealed record ArtikelPreisDto
+{
+    public int Id { get; init; }
+    public int PreislisteId { get; init; }
+    public int ArtikelId { get; init; }
+    public string? ArtikelBezeichnung { get; init; }
+    public decimal AbMenge { get; init; } = 1;
+    public decimal Preis { get; init; }
+}
+
 public sealed record StammdatenLookups(
     IReadOnlyList<LookupDto> Einheiten,
     IReadOnlyList<LookupDto> MwStSaetze,

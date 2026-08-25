@@ -80,6 +80,7 @@ public sealed partial class LieferantenListViewModel : ObservableObject
         try
         {
             await _lieferantenService.LoescheAsync(lieferant.Id);
+            Ausgewaehlt = null;
             await LadenAsync();
         }
         catch (Exception ex)

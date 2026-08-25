@@ -227,3 +227,58 @@ public sealed class PreislistenService(IDbContextFactory<MiletDbContext> dbConte
         await db.SaveChangesDeletingAsync(nameof(Preisliste), id, ct);
     }
 }
+
+public sealed class ArtikelPreiseService(IDbContextFactory<MiletDbContext> dbContextFactory) : IArtikelPreiseService
+{
+    private static readonly ArtikelPreisValidator Validator = new();
+
+    public async Task<IReadOnlyList<ArtikelPreisDto>> ListeAsync(int preislisteId, CancellationToken ct = default)
+    {
+        await using var db = await dbContextFactory.CreateDbContextAsync(ct);
+        return await db.ArtikelPreise.AsNoTracking()
+            .Where(p => p.PreislisteId == preislisteId)
+            .OrderBy(p => p.AbMenge)
+            .Select(p => new ArtikelPreisDto
+            {
+                Id = p.Id,
+                PreislisteId = p.PreislisteId,
+                ArtikelId = p.ArtikelId,
+                ArtikelBezeichnung = p.Artikel!.Artikelnummer + " — " + p.Artikel.Bezeichnung,
+                AbMenge = p.AbMenge,
+                Preis = p.Preis,
+            })
+            .ToListAsync(ct);
+    }
+
+    public async Task<ArtikelPreisDto> SpeichereAsync(ArtikelPreisDto dto, CancellationToken ct = default)
+    {
+        await Validator.ValidateAndThrowAsync(dto, ct);
+        await using var db = await dbContextFactory.CreateDbContextAsync(ct);
+
+        var entity = dto.Id == 0 ? new ArtikelPreis() : await db.ArtikelPreise.FirstOrDefaultAsync(p => p.Id == dto.Id, ct)
+            ?? throw new NotFoundException(nameof(ArtikelPreis), dto.Id);
+
+        entity.PreislisteId = dto.PreislisteId;
+        entity.ArtikelId = dto.ArtikelId;
+        entity.AbMenge = dto.AbMenge;
+        entity.Preis = dto.Preis;
+
+        if (dto.Id == 0)
+        {
+            db.ArtikelPreise.Add(entity);
+        }
+
+        await db.SaveChangesAsync(ct);
+        return dto with { Id = entity.Id };
+    }
+
+    public async Task LoescheAsync(int id, CancellationToken ct = default)
+    {
+        await using var db = await dbContextFactory.CreateDbContextAsync(ct);
+        var entity = await db.ArtikelPreise.FirstOrDefaultAsync(p => p.Id == id, ct)
+            ?? throw new NotFoundException(nameof(ArtikelPreis), id);
+
+        db.ArtikelPreise.Remove(entity);
+        await db.SaveChangesDeletingAsync(nameof(ArtikelPreis), id, ct);
+    }
+}
