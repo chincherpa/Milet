@@ -47,6 +47,7 @@ public static class DependencyInjection
         services.AddScoped<IFirmenstammService, FirmenstammService>();
         services.AddScoped<IBelegUeberleitungService, BelegUeberleitungService>();
         services.AddScoped<IRechnungBuchenService, RechnungBuchenService>();
+        services.AddScoped<IPdfService, Pdf.PdfService>();
 
         return services;
     }
