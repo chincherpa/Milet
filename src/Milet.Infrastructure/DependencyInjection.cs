@@ -18,10 +18,13 @@ public static class DependencyInjection
 
         services.AddSingleton<ICurrentUserService, SystemCurrentUserService>();
         services.AddSingleton<AuditSaveChangesInterceptor>();
+        services.AddSingleton<BelegImmutabilityInterceptor>();
 
         services.AddDbContextFactory<MiletDbContext>((sp, options) =>
             options.UseSqlServer(connectionString)
-                .AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>()));
+                .AddInterceptors(
+                    sp.GetRequiredService<AuditSaveChangesInterceptor>(),
+                    sp.GetRequiredService<BelegImmutabilityInterceptor>()));
 
         services.AddScoped<INumberRangeService, NumberRangeService>();
 
