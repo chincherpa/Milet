@@ -1,0 +1,8 @@
+namespace Milet.Domain.Entities.Verkauf;
+
+public enum BelegTyp
+{
+    Angebot = 0,
+    Auftrag = 1,
+    Rechnung = 2,
+}
