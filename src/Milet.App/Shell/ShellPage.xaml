@@ -19,7 +19,13 @@
                     <NavigationViewItem Content="Einstellungen" Tag="einstellungen" Icon="Setting" />
                 </NavigationViewItem.MenuItems>
             </NavigationViewItem>
-            <NavigationViewItem Content="Verkauf" Tag="verkauf" Icon="Shop" IsEnabled="False" />
+            <NavigationViewItem Content="Verkauf" Tag="verkauf" Icon="Shop">
+                <NavigationViewItem.MenuItems>
+                    <NavigationViewItem Content="Angebote" Tag="angebote" Icon="Bookmarks" />
+                    <NavigationViewItem Content="Aufträge" Tag="auftraege" Icon="Accept" />
+                    <NavigationViewItem Content="Rechnungen" Tag="rechnungen" Icon="PostUpdate" />
+                </NavigationViewItem.MenuItems>
+            </NavigationViewItem>
             <NavigationViewItem Content="Einkauf" Tag="einkauf" Icon="Import" IsEnabled="False" />
             <NavigationViewItem Content="Lager" Tag="lager" Icon="Library" IsEnabled="False" />
             <NavigationViewItem Content="Finanzen" Tag="finanzen" Icon="Calculator" IsEnabled="False" />
