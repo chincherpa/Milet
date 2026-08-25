@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml;
 using Milet.App.Services;
 using Milet.App.ViewModels;
 using Milet.App.ViewModels.Stammdaten;
+using Milet.App.ViewModels.Verkauf;
 using Milet.App.Views;
 using Milet.Infrastructure;
 using Serilog;
@@ -45,7 +46,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         builder.Services.AddSerilog(logger => logger
             .MinimumLevel.Information()
             .WriteTo.File(
-                Path.Combine(AppContext.BaseDirectory, "logs", "nexus-.log"),
+                Path.Combine(AppContext.BaseDirectory, "logs", "milet-.log"),
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 14));
 
@@ -62,6 +63,10 @@ public partial class App : Microsoft.UI.Xaml.Application
         builder.Services.AddTransient<ArtikelListViewModel>();
         builder.Services.AddTransient<ArtikelEditViewModel>();
         builder.Services.AddTransient<KleinstammViewModel>();
+
+        builder.Services.AddTransient<AngebotListViewModel>();
+        builder.Services.AddTransient<AuftragListViewModel>();
+        builder.Services.AddTransient<RechnungListViewModel>();
 
         return builder.Build();
     }

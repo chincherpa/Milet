@@ -3,8 +3,10 @@ using Microsoft.UI.Xaml.Controls;
 using Milet.App.Services;
 using Milet.App.ViewModels;
 using Milet.App.ViewModels.Stammdaten;
+using Milet.App.ViewModels.Verkauf;
 using Milet.App.Views;
 using Milet.App.Views.Stammdaten;
+using Milet.App.Views.Verkauf;
 
 namespace Milet.App.Shell;
 
@@ -26,6 +28,10 @@ public sealed partial class ShellPage : Page
         _navigation.Register<ArtikelListViewModel, ArtikelListPage>();
         _navigation.Register<ArtikelEditViewModel, ArtikelEditPage>();
         _navigation.Register<KleinstammViewModel, KleinstammPage>();
+
+        _navigation.Register<AngebotListViewModel, AngebotListPage>();
+        _navigation.Register<AuftragListViewModel, AuftragListPage>();
+        _navigation.Register<RechnungListViewModel, RechnungListPage>();
 
         _navigation.Navigate<DashboardViewModel>();
     }
@@ -53,6 +59,15 @@ public sealed partial class ShellPage : Page
                 break;
             case "einstellungen":
                 _navigation.Navigate<KleinstammViewModel>();
+                break;
+            case "angebote":
+                _navigation.Navigate<AngebotListViewModel>();
+                break;
+            case "auftraege":
+                _navigation.Navigate<AuftragListViewModel>();
+                break;
+            case "rechnungen":
+                _navigation.Navigate<RechnungListViewModel>();
                 break;
         }
     }
