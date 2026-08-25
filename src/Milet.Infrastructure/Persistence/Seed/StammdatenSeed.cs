@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Milet.Domain.Entities.Admin;
 using Milet.Domain.Entities.Stammdaten;
+using Milet.Domain.ValueObjects;
 
 namespace Milet.Infrastructure.Persistence.Seed;
 
@@ -52,6 +53,17 @@ public static class StammdatenSeed
                 new Nummernkreis { Code = "RE", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "RE-{1}-{0:0000}" },
                 new Nummernkreis { Code = "GS", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "GS-{1}-{0:0000}" },
                 new Nummernkreis { Code = "BE", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "BE-{1}-{0:0000}" });
+        }
+
+        if (!await db.Firmenstamm.AnyAsync(ct))
+        {
+            db.Firmenstamm.Add(new Firmenstamm
+            {
+                Id = 1,
+                Firmenname = "Milet Handels GmbH",
+                Adresse = new Adresse { Name1 = "Milet Handels GmbH", Strasse = "Musterstraße 1", Plz = "12345", Ort = "Musterstadt", Land = "DE" },
+                UStIdNr = "DE123456789",
+            });
         }
 
         await db.SaveChangesAsync(ct);

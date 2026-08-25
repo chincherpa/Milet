@@ -25,10 +25,7 @@ namespace Milet.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Milet.Domain.Entities.Admin.Firmenstamm", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Bic")
                         .HasColumnType("nvarchar(max)");

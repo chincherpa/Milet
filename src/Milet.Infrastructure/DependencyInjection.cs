@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Milet.Application.Abstractions;
+using Milet.Application.Admin;
 using Milet.Application.Stammdaten;
 using Milet.Application.Verkauf;
 using Milet.Infrastructure.Persistence;
@@ -42,6 +43,8 @@ public static class DependencyInjection
         services.AddScoped<IArtikelPreiseService, ArtikelPreiseService>();
 
         services.AddScoped<IBelegService, BelegService>();
+        services.AddScoped<IVerkaufLookupService, VerkaufLookupService>();
+        services.AddScoped<IFirmenstammService, FirmenstammService>();
 
         return services;
     }

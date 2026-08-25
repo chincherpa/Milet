@@ -10,6 +10,8 @@ public sealed class FirmenstammConfiguration : IEntityTypeConfiguration<Firmenst
     {
         b.ToTable("Firmenstamm");
         b.HasKey(x => x.Id);
+        // Singleton-Zeile (immer Id = 1) — keine Identity-Spalte, der Aufrufer setzt die Id explizit.
+        b.Property(x => x.Id).ValueGeneratedNever();
         b.Property(x => x.Firmenname).HasMaxLength(100).IsRequired();
         b.OwnsOne(x => x.Adresse, a =>
         {

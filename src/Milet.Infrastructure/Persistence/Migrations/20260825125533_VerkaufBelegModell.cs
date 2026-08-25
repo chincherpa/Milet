@@ -65,8 +65,7 @@ namespace Milet.Infrastructure.Persistence.Migrations
                 name: "Firmenstamm",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Id = table.Column<int>(type: "int", nullable: false),
                     Firmenname = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Name1 = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Name2 = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
