@@ -1,8 +1,8 @@
-# Plan: „Nexus" — Warenwirtschaftssystem (.NET 10 / WinUI 3 / SQL Server)
+# Plan: „Milet" — Warenwirtschaftssystem (.NET 10 / WinUI 3 / SQL Server)
 
 ## Kontext
 
-Greenfield-Projekt in leerem Verzeichnis `d:\Projects\Nexus`. Ziel: deutsches Warenwirtschaftssystem (Orientierung „Rita Bosse") mit den Modulen Stammdaten, Verkauf, Einkauf, Lager, Finanzen, Reporting, Administration.
+Greenfield-Projekt in leerem Verzeichnis `d:\Projects\Milet`. Ziel: deutsches Warenwirtschaftssystem (Orientierung „Rita Bosse") mit den Modulen Stammdaten, Verkauf, Einkauf, Lager, Finanzen, Reporting, Administration.
 
 **Bestätigte Entscheidungen (Nutzer):**
 - .NET 10 LTS (statt 8/9 — beide nahe/über EOL)
@@ -17,21 +17,21 @@ Greenfield-Projekt in leerem Verzeichnis `d:\Projects\Nexus`. Ziel: deutsches Wa
 ## Solution-Struktur
 
 ```
-Nexus.sln
+Milet.sln
 Directory.Build.props / Directory.Packages.props (Central Package Management)
 src/
-  Nexus.Domain/           # keine Dependencies; Entities, Enums, ValueObjects,
+  Milet.Domain/           # keine Dependencies; Entities, Enums, ValueObjects,
                           # PreisfindungService, SteuerRechner, AuditableEntity
-  Nexus.Application/      # → Domain; Abstractions (IEmailService, IPdfService,
+  Milet.Application/      # → Domain; Abstractions (IEmailService, IPdfService,
                           # ICurrentUserService, INumberRangeService), Services+DTOs+Validators
                           # je Modul (Stammdaten, Verkauf, Einkauf, Lager, Finanzen, Reporting, Admin)
-  Nexus.Infrastructure/   # → Application; NexusDbContext, Configurations, Migrations,
+  Milet.Infrastructure/   # → Application; MiletDbContext, Configurations, Migrations,
                           # Interceptors, QuestPDF-Dokumente, GraphEmailService, DatevCsvWriter
-  Nexus.App/              # WinUI 3; Host-Builder-DI, ShellPage+NavigationView,
+  Milet.App/              # WinUI 3; Host-Builder-DI, ShellPage+NavigationView,
                           # Views/ViewModels je Modul, NavigationService, DialogService
-  Nexus.Tools.Migrator/   # Konsole: Migrationen anwenden + Seeds; Startup-Projekt für dotnet-ef
+  Milet.Tools.Migrator/   # Konsole: Migrationen anwenden + Seeds; Startup-Projekt für dotnet-ef
 tests/
-  Nexus.Domain.Tests / Nexus.Application.Tests / Nexus.IntegrationTests (Testcontainers.MsSql)
+  Milet.Domain.Tests / Milet.Application.Tests / Milet.IntegrationTests (Testcontainers.MsSql)
 ```
 
 Pakete: Microsoft.WindowsAppSDK 1.8.x, CommunityToolkit.Mvvm 8.4.x, CommunityToolkit.WinUI DataGrid, Microsoft.EntityFrameworkCore.SqlServer 10.x, FluentValidation 12.x, QuestPDF 2026.x, Microsoft.Graph 5.x + Microsoft.Identity.Client.Broker, Serilog, xunit.v3, NSubstitute, Testcontainers.MsSql.
@@ -97,7 +97,7 @@ Ein generischer `BelegUeberleitungService.Ueberleiten(sourceBelegId, targetTyp, 
 ## Architektur-Details
 
 - **Application**: Plain Services, Interface je Service, DTOs (records). FluentValidation explizit am Methodenanfang; zentrale ValidationException→ContentDialog.
-- **DbContext**: `IDbContextFactory<NexusDbContext>` (Singleton-Factory); **jede Service-Methode eigener kurzlebiger Context**; Reads `AsNoTracking`; Save re-attacht DTO mit Original-RowVersion.
+- **DbContext**: `IDbContextFactory<MiletDbContext>` (Singleton-Factory); **jede Service-Methode eigener kurzlebiger Context**; Reads `AsNoTracking`; Save re-attacht DTO mit Original-RowVersion.
 - **DI**: `Host.CreateApplicationBuilder` in App.xaml.cs, appsettings.json für Connection String; ViewModels transient, konstruktorinjiziert.
 - **Navigation**: NavigationView + NavigationService (Dictionary VM→Page, `Navigate<TViewModel>()`); je Modul Master-Detail (Liste mit DataGrid+Suche → Detailseite).
 - **RBAC**: eigene Benutzer/Rolle/Recht-Tabellen (PBKDF2), Login vor Shell, Rechte-Guard in Services UND UI-Sichtbarkeit.
@@ -136,10 +136,10 @@ Ein generischer `BelegUeberleitungService.Ueberleiten(sourceBelegId, targetTyp, 
 
 ## Kritische Dateien (Implementierung)
 
-- `src/Nexus.Domain/Entities/Belege/Beleg.cs` — TPH-Basis, Herzstück des Modells
-- `src/Nexus.Infrastructure/Persistence/NexusDbContext.cs` — Mappings, Interceptors, TPH/RowVersion
-- `src/Nexus.Application/Verkauf/BelegUeberleitungService.cs` — generische Überleitung mit Zeilenreferenzen
-- `src/Nexus.Application/Verkauf/RechnungBuchenService.cs` — Buchungstransaktion (Nummer, Freeze, OP)
-- `src/Nexus.App/App.xaml.cs` — Host-Builder, DI-Root, Navigations-Registry
+- `src/Milet.Domain/Entities/Belege/Beleg.cs` — TPH-Basis, Herzstück des Modells
+- `src/Milet.Infrastructure/Persistence/MiletDbContext.cs` — Mappings, Interceptors, TPH/RowVersion
+- `src/Milet.Application/Verkauf/BelegUeberleitungService.cs` — generische Überleitung mit Zeilenreferenzen
+- `src/Milet.Application/Verkauf/RechnungBuchenService.cs` — Buchungstransaktion (Nummer, Freeze, OP)
+- `src/Milet.App/App.xaml.cs` — Host-Builder, DI-Root, Navigations-Registry
 
 **Startpunkt: Phase 0.**

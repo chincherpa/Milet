@@ -8,12 +8,12 @@ var configuration = new ConfigurationBuilder()
     .AddJsonFile("appsettings.json", optional: true)
     .Build();
 
-var connectionString = Environment.GetEnvironmentVariable("NEXUS_CONNECTIONSTRING")
+var connectionString = Environment.GetEnvironmentVariable("MILET_CONNECTIONSTRING")
     ?? args.FirstOrDefault(a => a.StartsWith("--connection=", StringComparison.Ordinal))?["--connection=".Length..]
     ?? configuration.GetConnectionString("Milet")
     ?? throw new InvalidOperationException(
         "Keine Verbindungszeichenfolge. ConnectionStrings:Milet in appsettings.json setzen " +
-        "oder NEXUS_CONNECTIONSTRING als Umgebungsvariable.");
+        "oder MILET_CONNECTIONSTRING als Umgebungsvariable.");
 
 var options = new DbContextOptionsBuilder<MiletDbContext>()
     .UseSqlServer(connectionString)
