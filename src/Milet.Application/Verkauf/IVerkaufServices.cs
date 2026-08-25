@@ -16,12 +16,29 @@ public interface IVerkaufLookupService
 
 public interface IBelegUeberleitungService
 {
-    /// <summary>Kopiert alle offenen Positionen von <paramref name="quellBelegId"/> in einen neuen Beleg vom Typ <paramref name="zielTyp"/>.</summary>
     Task<BelegDto> UeberleitenAsync(int quellBelegId, Domain.Entities.Verkauf.BelegTyp zielTyp, CancellationToken ct = default);
+
+    /// <summary>Offene Menge je Position des Quellbelegs — Grundlage für die Auswahl im Teillieferungs-Dialog.</summary>
+    Task<IReadOnlyList<OffenePositionDto>> LadeOffenePositionenAsync(int quellBelegId, CancellationToken ct = default);
+
+    /// <summary>Wie <see cref="UeberleitenAsync"/>, aber mit expliziter (ggf. reduzierter) Menge je Quellposition statt automatisch voller offener Menge — Basis der Teillieferung. <paramref name="lagerortId"/> nur bei zielTyp Lieferschein erforderlich.</summary>
+    Task<BelegDto> UeberleitenMitAuswahlAsync(
+        int quellBelegId, Domain.Entities.Verkauf.BelegTyp zielTyp,
+        IReadOnlyDictionary<int, decimal> mengenJePosition, int? lagerortId, CancellationToken ct = default);
+
+    /// <summary>Führt mehrere Quellbelege (z. B. mehrere Lieferscheine gleichen Kunden) in einen Zielbeleg zusammen — Basis der Sammelrechnung.</summary>
+    Task<BelegDto> UeberleitenMehrereAsync(IReadOnlyList<int> quellBelegIds, Domain.Entities.Verkauf.BelegTyp zielTyp, CancellationToken ct = default);
 }
 
 public interface IRechnungBuchenService
 {
     /// <summary>Vergibt atomar die Rechnungsnummer, friert den Beleg ein, legt den Offenen Posten an.</summary>
     Task<BelegDto> BuchenAsync(int rechnungId, CancellationToken ct = default);
+}
+
+public interface ILieferscheinBuchenService
+{
+    /// <summary>Bucht: prüft/bucht Bestand atomar je Artikelposition, verknüpft ausgewählte Seriennummern, setzt Status Gebucht — eine Transaktion.</summary>
+    Task<BelegDto> BuchenAsync(
+        int lieferscheinId, IReadOnlyDictionary<int, IReadOnlyList<int>> seriennummernJePosition, CancellationToken ct = default);
 }
