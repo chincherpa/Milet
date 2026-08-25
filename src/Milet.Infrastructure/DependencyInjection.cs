@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Milet.Application.Abstractions;
 using Milet.Application.Stammdaten;
+using Milet.Application.Verkauf;
 using Milet.Infrastructure.Persistence;
 using Milet.Infrastructure.Persistence.Interceptors;
 using Milet.Infrastructure.Services;
@@ -39,6 +40,8 @@ public static class DependencyInjection
         services.AddScoped<IVersandartenService, VersandartenService>();
         services.AddScoped<IPreislistenService, PreislistenService>();
         services.AddScoped<IArtikelPreiseService, ArtikelPreiseService>();
+
+        services.AddScoped<IBelegService, BelegService>();
 
         return services;
     }
