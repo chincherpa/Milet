@@ -2,12 +2,14 @@
     x:Class="Milet.App.Views.Verkauf.AuftragEditPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <ScrollViewer Padding="24" IsEnabled="{x:Bind ViewModel.IstBearbeitbar, Mode=OneWay}">
+    <ScrollViewer Padding="24">
         <StackPanel MaxWidth="900" Spacing="16">
             <TextBlock Text="Auftrag" Style="{StaticResource TitleTextBlockStyle}" />
             <InfoBar IsOpen="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}"
                      Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay}" />
 
+            <!-- Nur der editierbare Bereich wird bei erledigtem/gebuchtem Beleg gesperrt — PDF/Überleiten/Abbrechen bleiben immer bedienbar. -->
+            <ContentControl IsEnabled="{x:Bind ViewModel.IstBearbeitbar, Mode=OneWay}"><StackPanel Spacing="16">
             <Grid ColumnSpacing="16">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -88,6 +90,7 @@
                 <TextBox Grid.Column="0" Header="Kopftext" AcceptsReturn="True" Height="60" Text="{x:Bind ViewModel.Kopftext, Mode=TwoWay}" />
                 <TextBox Grid.Column="1" Header="Fußtext" AcceptsReturn="True" Height="60" Text="{x:Bind ViewModel.Fusstext, Mode=TwoWay}" />
             </Grid>
+            </StackPanel></ContentControl>
 
             <StackPanel HorizontalAlignment="Right" Spacing="4">
                 <TextBlock Text="{x:Bind ViewModel.SummeNetto, Mode=OneWay}" />
@@ -96,7 +99,7 @@
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.SpeichernCommand}" />
+                <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" IsEnabled="{x:Bind ViewModel.IstBearbeitbar, Mode=OneWay}" Command="{x:Bind ViewModel.SpeichernCommand}" />
                 <Button Content="{x:Bind ViewModel.UeberleitenButtonText, Mode=OneWay}" Visibility="{x:Bind ViewModel.ZeigtUeberleitenButton}" Command="{x:Bind ViewModel.UeberleitenCommand}" />
                 <Button Content="PDF" Command="{x:Bind ViewModel.PdfCommand}" />
                 <Button Content="Abbrechen" Command="{x:Bind ViewModel.AbbrechenCommand}" />
