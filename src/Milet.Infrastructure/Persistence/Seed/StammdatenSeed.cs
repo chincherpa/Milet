@@ -55,6 +55,11 @@ public static class StammdatenSeed
                 new Nummernkreis { Code = "BE", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "BE-{1}-{0:0000}" });
         }
 
+        if (!await db.Lagerorte.AnyAsync(ct))
+        {
+            db.Lagerorte.Add(new Milet.Domain.Entities.Lager.Lagerort { Code = "HL", Bezeichnung = "Hauptlager", Aktiv = true });
+        }
+
         if (!await db.Firmenstamm.AnyAsync(ct))
         {
             db.Firmenstamm.Add(new Firmenstamm

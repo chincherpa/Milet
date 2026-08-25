@@ -14,7 +14,8 @@ public sealed class BelegConfiguration : IEntityTypeConfiguration<Beleg>
         b.HasDiscriminator<string>("BelegTyp")
             .HasValue<Angebot>(nameof(BelegTyp.Angebot))
             .HasValue<Auftrag>(nameof(BelegTyp.Auftrag))
-            .HasValue<Rechnung>(nameof(BelegTyp.Rechnung));
+            .HasValue<Rechnung>(nameof(BelegTyp.Rechnung))
+            .HasValue<Lieferschein>(nameof(BelegTyp.Lieferschein));
 
         b.Property(x => x.BelegNummer).HasMaxLength(20).IsRequired();
         // Unique je Typ — leere Rechnungsnummer (Entwurf, erst beim Buchen vergeben) ist erlaubt mehrfach leer,
