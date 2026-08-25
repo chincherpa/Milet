@@ -14,5 +14,6 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
     <PackageVersion Include="Testcontainers.MsSql" Version="4.14.0" />
+    <PackageVersion Include="QuestPDF" Version="2026.7.3" />
   </ItemGroup>
 </Project>
