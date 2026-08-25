@@ -30,6 +30,12 @@ public static class DependencyInjection
         services.AddScoped<IArtikelService, ArtikelService>();
         services.AddScoped<IStammdatenLookupService, StammdatenLookupService>();
 
+        services.AddScoped<IEinheitenService, EinheitenService>();
+        services.AddScoped<IMwStSaetzeService, MwStSaetzeService>();
+        services.AddScoped<IZahlungsbedingungenService, ZahlungsbedingungenService>();
+        services.AddScoped<IVersandartenService, VersandartenService>();
+        services.AddScoped<IPreislistenService, PreislistenService>();
+
         return services;
     }
 }

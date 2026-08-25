@@ -9,6 +9,9 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
             <conv:StringNotEmptyToBoolConverter x:Key="StringNotEmptyToBoolConverter" />
+            <conv:DecimalToDoubleConverter x:Key="DecimalToDoubleConverter" />
+            <conv:DateOnlyToDateTimeOffsetConverter x:Key="DateOnlyToDateTimeOffsetConverter" />
+            <conv:NullableInt32ToDoubleConverter x:Key="NullableInt32ToDoubleConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

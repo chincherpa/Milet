@@ -48,3 +48,50 @@ public sealed class ArtikelValidator : AbstractValidator<ArtikelDto>
         RuleFor(a => a.Mindestbestand).GreaterThanOrEqualTo(0).When(a => a.Mindestbestand.HasValue);
     }
 }
+
+public sealed class EinheitValidator : AbstractValidator<EinheitDto>
+{
+    public EinheitValidator()
+    {
+        RuleFor(e => e.Kuerzel).NotEmpty().WithMessage("Kürzel ist erforderlich.").MaximumLength(10);
+        RuleFor(e => e.Bezeichnung).NotEmpty().WithMessage("Bezeichnung ist erforderlich.").MaximumLength(100);
+        RuleFor(e => e.NachkommaStellen).InclusiveBetween(0, 4);
+    }
+}
+
+public sealed class MwStSatzValidator : AbstractValidator<MwStSatzDto>
+{
+    public MwStSatzValidator()
+    {
+        RuleFor(m => m.Bezeichnung).NotEmpty().WithMessage("Bezeichnung ist erforderlich.").MaximumLength(100);
+        RuleFor(m => m.Satz).InclusiveBetween(0, 100);
+    }
+}
+
+public sealed class ZahlungsbedingungValidator : AbstractValidator<ZahlungsbedingungDto>
+{
+    public ZahlungsbedingungValidator()
+    {
+        RuleFor(z => z.Bezeichnung).NotEmpty().WithMessage("Bezeichnung ist erforderlich.").MaximumLength(100);
+        RuleFor(z => z.ZielTage).GreaterThanOrEqualTo(0);
+        RuleFor(z => z.SkontoTage).GreaterThanOrEqualTo(0).When(z => z.SkontoTage.HasValue);
+        RuleFor(z => z.SkontoProzent).InclusiveBetween(0, 100).When(z => z.SkontoProzent.HasValue);
+    }
+}
+
+public sealed class VersandartValidator : AbstractValidator<VersandartDto>
+{
+    public VersandartValidator()
+    {
+        RuleFor(v => v.Bezeichnung).NotEmpty().WithMessage("Bezeichnung ist erforderlich.").MaximumLength(100);
+        RuleFor(v => v.Kosten).GreaterThanOrEqualTo(0).When(v => v.Kosten.HasValue);
+    }
+}
+
+public sealed class PreislisteValidator : AbstractValidator<PreislisteDto>
+{
+    public PreislisteValidator()
+    {
+        RuleFor(p => p.Name).NotEmpty().WithMessage("Name ist erforderlich.").MaximumLength(100);
+    }
+}

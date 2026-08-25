@@ -1,0 +1,30 @@
+<Page
+    x:Class="Milet.App.Views.Stammdaten.ArtikelEditPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer>
+        <StackPanel Padding="24" Spacing="12" MaxWidth="600" HorizontalAlignment="Left">
+            <TextBlock Text="Artikel" Style="{StaticResource TitleTextBlockStyle}" />
+            <TextBlock Text="{x:Bind ViewModel.Artikelnummer, Mode=OneWay}" Opacity="0.7" />
+            <InfoBar IsOpen="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay}" />
+            <TextBox Header="Bezeichnung *" Text="{x:Bind ViewModel.Bezeichnung, Mode=TwoWay}" />
+            <TextBox Header="Beschreibung" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" Text="{x:Bind ViewModel.Beschreibung, Mode=TwoWay}" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <ComboBox Header="Einheit *" Width="220" ItemsSource="{x:Bind ViewModel.Einheiten, Mode=OneWay}" SelectedValue="{x:Bind ViewModel.EinheitId, Mode=TwoWay}" SelectedValuePath="Id" DisplayMemberPath="Anzeige" />
+                <ComboBox Header="MwSt-Satz *" Width="220" ItemsSource="{x:Bind ViewModel.MwStSaetze, Mode=OneWay}" SelectedValue="{x:Bind ViewModel.MwStSatzId, Mode=TwoWay}" SelectedValuePath="Id" DisplayMemberPath="Anzeige" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <NumberBox Header="Einkaufspreis" Width="220" Value="{x:Bind ViewModel.Einkaufspreis, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" Minimum="0" />
+                <NumberBox Header="Listenpreis" Width="220" Value="{x:Bind ViewModel.Listenpreis, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" Minimum="0" />
+            </StackPanel>
+            <TextBox Header="EAN" Text="{x:Bind ViewModel.Ean, Mode=TwoWay}" />
+            <CheckBox Content="Lagerartikel" IsChecked="{x:Bind ViewModel.IstLagerartikel, Mode=TwoWay}" />
+            <NumberBox Header="Mindestbestand" Value="{x:Bind ViewModel.Mindestbestand, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" Minimum="0" />
+            <CheckBox Content="Gesperrt" IsChecked="{x:Bind ViewModel.Gesperrt, Mode=TwoWay}" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.SpeichernCommand}" />
+                <Button Content="Abbrechen" Command="{x:Bind ViewModel.AbbrechenCommand}" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

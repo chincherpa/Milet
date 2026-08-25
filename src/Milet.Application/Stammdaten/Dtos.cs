@@ -68,6 +68,47 @@ public sealed record ArtikelDto
     public byte[] RowVersion { get; init; } = [];
 }
 
+public sealed record EinheitDto
+{
+    public int Id { get; init; }
+    public string Kuerzel { get; init; } = string.Empty;
+    public string Bezeichnung { get; init; } = string.Empty;
+    public int NachkommaStellen { get; init; }
+}
+
+public sealed record MwStSatzDto
+{
+    public int Id { get; init; }
+    public string Bezeichnung { get; init; } = string.Empty;
+    public decimal Satz { get; init; }
+    public int? SteuerSchluessel { get; init; }
+    public DateOnly GueltigAb { get; init; }
+}
+
+public sealed record ZahlungsbedingungDto
+{
+    public int Id { get; init; }
+    public string Bezeichnung { get; init; } = string.Empty;
+    public int ZielTage { get; init; }
+    public int? SkontoTage { get; init; }
+    public decimal? SkontoProzent { get; init; }
+}
+
+public sealed record VersandartDto
+{
+    public int Id { get; init; }
+    public string Bezeichnung { get; init; } = string.Empty;
+    public decimal? Kosten { get; init; }
+}
+
+public sealed record PreislisteDto
+{
+    public int Id { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public DateOnly? GueltigVon { get; init; }
+    public DateOnly? GueltigBis { get; init; }
+}
+
 public sealed record StammdatenLookups(
     IReadOnlyList<LookupDto> Einheiten,
     IReadOnlyList<LookupDto> MwStSaetze,

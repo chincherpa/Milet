@@ -1,0 +1,61 @@
+<Page
+    x:Class="Milet.App.Views.Stammdaten.ArtikelListPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Padding="24" RowSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Artikel" Style="{StaticResource TitleTextBlockStyle}" />
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+            <TextBox Width="300" PlaceholderText="Suche (Artikelnummer oder Bezeichnung)…" Text="{x:Bind ViewModel.Suchtext, Mode=TwoWay}" />
+            <Button Content="Suchen" Command="{x:Bind ViewModel.LadenCommand}" />
+            <Button Content="Neu" Command="{x:Bind ViewModel.NeuCommand}" />
+            <Button Content="Bearbeiten" Command="{x:Bind ViewModel.BearbeitenCommand}" />
+            <Button Content="Löschen" Command="{x:Bind ViewModel.LoeschenCommand}" />
+            <ProgressRing IsActive="{x:Bind ViewModel.LaedtGerade, Mode=OneWay}" Width="24" Height="24" />
+        </StackPanel>
+
+        <ListView Grid.Row="2" ItemsSource="{x:Bind ViewModel.Artikel, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.Ausgewaehlt, Mode=TwoWay}" SelectionMode="Single">
+            <ListView.HeaderTemplate>
+                <DataTemplate>
+                    <Grid Padding="8,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="130" />
+                            <ColumnDefinition Width="300" />
+                            <ColumnDefinition Width="100" />
+                            <ColumnDefinition Width="130" />
+                            <ColumnDefinition Width="100" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Nummer" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="1" Text="Bezeichnung" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="2" Text="Einheit" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="3" Text="Listenpreis" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="4" Text="Gesperrt" FontWeight="SemiBold" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.HeaderTemplate>
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid Padding="8,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="130" />
+                            <ColumnDefinition Width="300" />
+                            <ColumnDefinition Width="100" />
+                            <ColumnDefinition Width="130" />
+                            <ColumnDefinition Width="100" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding Artikelnummer}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Bezeichnung}" />
+                        <TextBlock Grid.Column="2" Text="{Binding EinheitKuerzel}" />
+                        <TextBlock Grid.Column="3" Text="{Binding Listenpreis}" />
+                        <CheckBox Grid.Column="4" IsChecked="{Binding Gesperrt}" IsHitTestVisible="False" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</Page>

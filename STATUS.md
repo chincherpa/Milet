@@ -1,6 +1,6 @@
 # Milet — Projektstatus
 
-Stand: 2026-08-24. Plan: `C:\Users\lulef\.claude\plans\ich-m-chte-ein-warenwirtschaftssystem-immutable-sutton.md`
+Stand: 2026-08-25. Plan: `C:\Users\lulef\.claude\plans\ich-m-chte-ein-warenwirtschaftssystem-immutable-sutton.md`
 
 ## Erledigt
 
@@ -39,27 +39,38 @@ Stand: 2026-08-24. Plan: `C:\Users\lulef\.claude\plans\ich-m-chte-ein-warenwirts
 
 **App (WinUI):**
 - `IDialogService`/`DialogService` (Fehler-/Bestätigungsdialoge), `INavigationAware`-Pattern für Navigationsparameter
-- Kunden: `KundenListViewModel` + `KundenListPage.xaml` (Suche, Liste, Neu/Bearbeiten/Löschen) + `KundeEditViewModel` + `KundeEditPage.xaml` (Formular, Validierungsfehler-Anzeige, Concurrency-Dialog) — **Code steht, UI noch NICHT im laufenden Programm getestet**
-- Lieferanten: `LieferantenListViewModel` + `LieferantEditViewModel` geschrieben — **XAML-Views fehlen noch**
-- Artikel: `ArtikelListViewModel` + `ArtikelEditViewModel` geschrieben — **XAML-Views fehlen noch**
-- DI-Registrierungen in `App.xaml.cs` ergänzt
+- Kunden: `KundenListViewModel` + `KundenListPage.xaml` + `KundeEditViewModel` + `KundeEditPage.xaml` (Formular, Validierungsfehler-Anzeige, Concurrency-Dialog)
+- Lieferanten: `LieferantenListViewModel`/`LieferantEditViewModel` + `LieferantenListPage.xaml`/`LieferantEditPage.xaml`
+- Artikel: `ArtikelListViewModel`/`ArtikelEditViewModel` + `ArtikelListPage.xaml`/`ArtikelEditPage.xaml`
+- Alle 6 Seiten in `ShellPage.xaml.cs` beim `NavigationService` registriert; `ShellPage.xaml` NavigationView hat jetzt Untermenü "Stammdaten" (Kunden/Lieferanten/Artikel) verdrahtet über `NavView_SelectionChanged`
+- Bug gefunden+gefixt: `NumberBox.Value` ist `double`, ViewModel-Properties sind `decimal`/`decimal?` (Geldbeträge) → x:Bind TwoWay schlug beim Build fehl (WMC1121). Neuer `DecimalToDoubleConverter` (in `App.xaml` als Resource registriert) angewendet auf `KundeEditPage.RabattProzent`, `ArtikelEditPage.Einkaufspreis/Listenpreis/Mindestbestand`
+- DI-Registrierungen in `App.xaml.cs` bereits vorhanden
+- **Verifiziert:** `dotnet build` für App (win-x64) + alle 3 Testprojekte einzeln (MTP) grün (Domain 8/8, Application 9/9, Integration 1/1 + 2 Docker-Skips), App-Start manuell geprüft (Fenstertitel "Milet Warenwirtschaft" erscheint, Prozess reagiert)
+- **Hinweis Build-Tooling:** `dotnet` im PATH zeigt auf leere Install unter `C:\Program Files\dotnet`; funktionierender SDK liegt unter `%USERPROFILE%\.dotnet\dotnet.exe` — diesen Pfad explizit nutzen. `dotnet test` mit mehreren Projekten gleichzeitig (MTP-Modus) lief hier auf "keine Tests gefunden" — pro Testprojekt einzeln aufrufen.
+
+**Kleinstamm-Settings-UI (Phase 1, jetzt fertig):**
+- Application: `EinheitDto`/`MwStSatzDto`/`ZahlungsbedingungDto`/`VersandartDto`/`PreislisteDto` + `IEinheitenService`/`IMwStSaetzeService`/`IZahlungsbedingungenService`/`IVersandartenService`/`IPreislistenService` (Liste/Speichere/Lösche) + Validatoren
+- Infrastructure: `KleinstammServices.cs` (alle 5 Implementierungen), `ConcurrencyHelper.SaveChangesDeletingAsync` übersetzt FK-Konflikte beim Löschen in verständliche Meldung (diese Entities haben kein RowVersion → keine Concurrency-Behandlung nötig)
+- App: eine Seite `KleinstammPage.xaml` mit Pivot (5 Tabs, Master-Detail Liste+Formular statt eigener List/Edit-Seiten je Entity — bewusst kompakter gehalten für "einfache" Settings-Masken), `KleinstammViewModel` (ein VM, 5 Abschnitte), neuer Menüpunkt "Einstellungen" unter Stammdaten
+- Neue Converter: `NullableInt32ToDoubleConverter`, `DateOnlyToDateTimeOffsetConverter` (gleiche WMC1121-Klasse Bug wie `decimal`/`double` betraf auch `int?` bei NumberBox und `DateOnly` bei DatePicker/CalendarDatePicker)
+- Preisliste-UI hat nur Name/Gültig-von/-bis (Header); Staffelpreise (`ArtikelPreis`) haben noch keine UI — s. offen unten
+- Layout-Bug gefixt: erste Spalte der Pivot-Tabs hatte `Width="*"` → Liste füllte gesamte Breite, Formular klebte am rechten Fensterrand mit riesiger Lücke dazwischen. Grid auf 3 Spalten umgestellt (`380` Liste / `360` Formular / `*` Spacer) in allen 5 Tabs.
+- **Verifiziert:** Build + Application-/Domain-Tests grün, App startet clean, Layout per Screenshot geprüft
 
 ## Offen
 
-1. **Sofort als Nächstes:**
-   - `LieferantenListPage.xaml`, `LieferantEditPage.xaml`, `ArtikelListPage.xaml`, `ArtikelEditPage.xaml` erstellen (Muster von KundenListPage/KundeEditPage übernehmen)
-   - Neue Seiten in `ShellPage.xaml.cs` bei `NavigationService` registrieren
-   - `ShellPage.xaml`: NavigationView-Menüpunkte für Stammdaten (aktuell `IsEnabled="False"`) aktivieren und verdrahten
-   - Kompletten Build erneut prüfen (letzte ViewModel-Änderungen noch ungetestet)
-
-2. **Kleinstamm-Settings-UI** (laut Plan Teil von Phase 1, noch nicht begonnen): einfache CRUD-Masken für Einheiten, MwSt-Sätze, Zahlungsbedingungen, Versandarten, Preislisten
-
-3. **Phase-1-Abnahmekriterien noch zu verifizieren:**
-   - CRUD für Kunden/Lieferanten/Artikel im laufenden UI tatsächlich durchklicken
+1. **Sofort als Nächstes — Phase-1-Abnahmekriterien noch manuell zu verifizieren** (kein UI-Automation-Tool für WinUI-Desktop-Apps verfügbar, App läuft aber und wartet):
+   - CRUD für Kunden/Lieferanten/Artikel/Kleinstamm im laufenden UI tatsächlich durchklicken (inkl. Suche/Neu/Bearbeiten/Löschen)
    - Concurrency-Dialog live auslösen (Datensatz in zwei Editoren gleichzeitig öffnen)
-   - Kundennummer-Autovergabe im UI sichtbar prüfen
+   - Kundennummer-/Lieferantennummer-/Artikelnummer-Autovergabe im UI sichtbar prüfen
+   - Geldbeträge (NumberBox mit Convertern) auf korrekte Anzeige/Rundung prüfen
 
-4. **Phasen 2–7** (Verkauf+PDF, Lager, Einkauf, Finanzen+Mail, DATEV+Reporting, Admin) — noch nicht begonnen, siehe Plan-Datei für Details.
+2. **Staffelpreise (ArtikelPreis) je Preisliste**: keine UI zum Pflegen der Preisliste-Zeilen (AbMenge/Preis pro Artikel) — für vollständige Preisfindung im UI nötig, aktuell nur über Seed-Daten/Code vorhanden.
+
+3. **Phasen 2–7** (Verkauf+PDF, Lager, Einkauf, Finanzen+Mail, DATEV+Reporting, Admin) — noch nicht begonnen, siehe Plan-Datei für Details.
+
+## Gefixt während UI-Test (2026-08-25)
+- LocalDB-Datenbank hieß nach Projekt-Rename noch "Nexus" (Connection String erwartet "Milet") → "Fehler beim Laden" beim Öffnen der Kunden-Liste. Per `ALTER DATABASE ... MODIFY NAME` umbenannt (Seed-Daten erhalten), App neu gestartet — Kunden-Liste lädt jetzt.
 
 ## Bekannte Risiken (aus Plan, weiterhin relevant)
 - Kein Docker auf dieser Maschine → Integrationstests mit Testcontainers laufen hier nur übersprungen, nicht tatsächlich ausgeführt. Vor Phase mit kritischen Transaktionstests (Lager, Buchungspipeline) sollte Docker verfügbar gemacht werden oder LocalDB-Fallback für Tests ergänzt werden.

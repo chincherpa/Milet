@@ -1,0 +1,180 @@
+<Page
+    x:Class="Milet.App.Views.Stammdaten.KleinstammPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Padding="24" RowSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Einstellungen" Style="{StaticResource TitleTextBlockStyle}" />
+
+        <Pivot Grid.Row="1">
+
+            <PivotItem Header="Einheiten">
+                <Grid ColumnSpacing="24">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="380" />
+                        <ColumnDefinition Width="360" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <ListView Grid.Column="0" ItemsSource="{x:Bind ViewModel.EinheitenListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.EinheitAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="12" Padding="4">
+                                    <TextBlock Text="{Binding Kuerzel}" Width="60" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding Bezeichnung}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <StackPanel Grid.Column="1" Spacing="12">
+                        <InfoBar IsOpen="{x:Bind ViewModel.EinheitFehler, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.EinheitFehler, Mode=OneWay}" />
+                        <TextBox Header="Kürzel *" Text="{x:Bind ViewModel.EinheitKuerzel, Mode=TwoWay}" />
+                        <TextBox Header="Bezeichnung *" Text="{x:Bind ViewModel.EinheitBezeichnung, Mode=TwoWay}" />
+                        <NumberBox Header="Nachkommastellen" Value="{x:Bind ViewModel.EinheitNachkommaStellen, Mode=TwoWay}" Minimum="0" Maximum="4" SpinButtonPlacementMode="Inline" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Neu" Command="{x:Bind ViewModel.EinheitNeuCommand}" />
+                            <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.EinheitSpeichernCommand}" />
+                            <Button Content="Löschen" Command="{x:Bind ViewModel.EinheitLoeschenCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </PivotItem>
+
+            <PivotItem Header="MwSt-Sätze">
+                <Grid ColumnSpacing="24">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="380" />
+                        <ColumnDefinition Width="360" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <ListView Grid.Column="0" ItemsSource="{x:Bind ViewModel.MwStSaetzeListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.MwStSatzAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="12" Padding="4">
+                                    <TextBlock Text="{Binding Satz}" Width="60" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding Bezeichnung}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <StackPanel Grid.Column="1" Spacing="12">
+                        <InfoBar IsOpen="{x:Bind ViewModel.MwStFehler, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.MwStFehler, Mode=OneWay}" />
+                        <TextBox Header="Bezeichnung *" Text="{x:Bind ViewModel.MwStBezeichnung, Mode=TwoWay}" />
+                        <NumberBox Header="Satz % *" Value="{x:Bind ViewModel.MwStSatzWert, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" Minimum="0" Maximum="100" />
+                        <NumberBox Header="Steuerschlüssel (DATEV)" Value="{x:Bind ViewModel.MwStSteuerSchluessel, Mode=TwoWay, Converter={StaticResource NullableInt32ToDoubleConverter}}" Minimum="0" />
+                        <DatePicker Header="Gültig ab" Date="{x:Bind ViewModel.MwStGueltigAb, Mode=TwoWay, Converter={StaticResource DateOnlyToDateTimeOffsetConverter}}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Neu" Command="{x:Bind ViewModel.MwStSatzNeuCommand}" />
+                            <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.MwStSatzSpeichernCommand}" />
+                            <Button Content="Löschen" Command="{x:Bind ViewModel.MwStSatzLoeschenCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </PivotItem>
+
+            <PivotItem Header="Zahlungsbedingungen">
+                <Grid ColumnSpacing="24">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="380" />
+                        <ColumnDefinition Width="360" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <ListView Grid.Column="0" ItemsSource="{x:Bind ViewModel.ZahlungsbedingungenListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.ZahlungsbedingungAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="12" Padding="4">
+                                    <TextBlock Text="{Binding Bezeichnung}" />
+                                    <TextBlock Text="{Binding ZielTage}" Opacity="0.7" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <StackPanel Grid.Column="1" Spacing="12">
+                        <InfoBar IsOpen="{x:Bind ViewModel.ZahlungsbedingungFehler, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.ZahlungsbedingungFehler, Mode=OneWay}" />
+                        <TextBox Header="Bezeichnung *" Text="{x:Bind ViewModel.ZahlungsbedingungBezeichnung, Mode=TwoWay}" />
+                        <NumberBox Header="Ziel (Tage)" Value="{x:Bind ViewModel.ZahlungsbedingungZielTage, Mode=TwoWay}" Minimum="0" />
+                        <NumberBox Header="Skonto (Tage)" Value="{x:Bind ViewModel.ZahlungsbedingungSkontoTage, Mode=TwoWay, Converter={StaticResource NullableInt32ToDoubleConverter}}" Minimum="0" />
+                        <NumberBox Header="Skonto %" Value="{x:Bind ViewModel.ZahlungsbedingungSkontoProzent, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" Minimum="0" Maximum="100" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Neu" Command="{x:Bind ViewModel.ZahlungsbedingungNeuCommand}" />
+                            <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.ZahlungsbedingungSpeichernCommand}" />
+                            <Button Content="Löschen" Command="{x:Bind ViewModel.ZahlungsbedingungLoeschenCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </PivotItem>
+
+            <PivotItem Header="Versandarten">
+                <Grid ColumnSpacing="24">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="380" />
+                        <ColumnDefinition Width="360" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <ListView Grid.Column="0" ItemsSource="{x:Bind ViewModel.VersandartenListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.VersandartAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="12" Padding="4">
+                                    <TextBlock Text="{Binding Bezeichnung}" />
+                                    <TextBlock Text="{Binding Kosten}" Opacity="0.7" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <StackPanel Grid.Column="1" Spacing="12">
+                        <InfoBar IsOpen="{x:Bind ViewModel.VersandartFehler, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.VersandartFehler, Mode=OneWay}" />
+                        <TextBox Header="Bezeichnung *" Text="{x:Bind ViewModel.VersandartBezeichnung, Mode=TwoWay}" />
+                        <NumberBox Header="Kosten" Value="{x:Bind ViewModel.VersandartKosten, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" Minimum="0" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Neu" Command="{x:Bind ViewModel.VersandartNeuCommand}" />
+                            <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.VersandartSpeichernCommand}" />
+                            <Button Content="Löschen" Command="{x:Bind ViewModel.VersandartLoeschenCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </PivotItem>
+
+            <PivotItem Header="Preislisten">
+                <Grid ColumnSpacing="24">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="380" />
+                        <ColumnDefinition Width="360" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <ListView Grid.Column="0" ItemsSource="{x:Bind ViewModel.PreislistenListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.PreislisteAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}" Padding="4" />
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <StackPanel Grid.Column="1" Spacing="12">
+                        <InfoBar IsOpen="{x:Bind ViewModel.PreislisteFehler, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.PreislisteFehler, Mode=OneWay}" />
+                        <TextBox Header="Name *" Text="{x:Bind ViewModel.PreislisteName, Mode=TwoWay}" />
+                        <CalendarDatePicker Header="Gültig von" Date="{x:Bind ViewModel.PreislisteGueltigVon, Mode=TwoWay, Converter={StaticResource DateOnlyToDateTimeOffsetConverter}}" />
+                        <CalendarDatePicker Header="Gültig bis" Date="{x:Bind ViewModel.PreislisteGueltigBis, Mode=TwoWay, Converter={StaticResource DateOnlyToDateTimeOffsetConverter}}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Neu" Command="{x:Bind ViewModel.PreislisteNeuCommand}" />
+                            <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.PreislisteSpeichernCommand}" />
+                            <Button Content="Löschen" Command="{x:Bind ViewModel.PreislisteLoeschenCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </PivotItem>
+
+        </Pivot>
+    </Grid>
+</Page>

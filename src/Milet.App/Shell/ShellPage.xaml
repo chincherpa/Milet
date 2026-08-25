@@ -11,7 +11,14 @@
         <NavigationView.MenuItems>
             <NavigationViewItem Content="Dashboard" Tag="dashboard" Icon="Home" IsSelected="True" />
             <NavigationViewItemSeparator />
-            <NavigationViewItem Content="Stammdaten" Tag="stammdaten" Icon="ContactInfo" IsEnabled="False" />
+            <NavigationViewItem Content="Stammdaten" Tag="stammdaten" Icon="ContactInfo">
+                <NavigationViewItem.MenuItems>
+                    <NavigationViewItem Content="Kunden" Tag="kunden" Icon="Contact" />
+                    <NavigationViewItem Content="Lieferanten" Tag="lieferanten" Icon="People" />
+                    <NavigationViewItem Content="Artikel" Tag="artikel" Icon="Tag" />
+                    <NavigationViewItem Content="Einstellungen" Tag="einstellungen" Icon="Setting" />
+                </NavigationViewItem.MenuItems>
+            </NavigationViewItem>
             <NavigationViewItem Content="Verkauf" Tag="verkauf" Icon="Shop" IsEnabled="False" />
             <NavigationViewItem Content="Einkauf" Tag="einkauf" Icon="Import" IsEnabled="False" />
             <NavigationViewItem Content="Lager" Tag="lager" Icon="Library" IsEnabled="False" />

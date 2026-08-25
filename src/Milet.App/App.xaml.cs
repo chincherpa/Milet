@@ -61,6 +61,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         builder.Services.AddTransient<LieferantEditViewModel>();
         builder.Services.AddTransient<ArtikelListViewModel>();
         builder.Services.AddTransient<ArtikelEditViewModel>();
+        builder.Services.AddTransient<KleinstammViewModel>();
 
         return builder.Build();
     }

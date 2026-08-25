@@ -1,18 +1,12 @@
 <Page
-    x:Class="Milet.App.Views.Stammdaten.KundeEditPage"
+    x:Class="Milet.App.Views.Stammdaten.LieferantEditPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <ScrollViewer>
         <StackPanel Padding="24" Spacing="12" MaxWidth="600" HorizontalAlignment="Left">
-            <TextBlock Text="Kunde" Style="{StaticResource TitleTextBlockStyle}" />
-            <TextBlock Text="{x:Bind ViewModel.Kundennummer, Mode=OneWay}" Opacity="0.7" />
-
-            <InfoBar
-                IsOpen="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}"
-                Severity="Error"
-                Title="Fehler"
-                Message="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay}" />
-
+            <TextBlock Text="Lieferant" Style="{StaticResource TitleTextBlockStyle}" />
+            <TextBlock Text="{x:Bind ViewModel.Lieferantennummer, Mode=OneWay}" Opacity="0.7" />
+            <InfoBar IsOpen="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay}" />
             <TextBox Header="Name / Firma *" Text="{x:Bind ViewModel.Name1, Mode=TwoWay}" />
             <TextBox Header="Name (Zusatz)" Text="{x:Bind ViewModel.Name2, Mode=TwoWay}" />
             <TextBox Header="Straße" Text="{x:Bind ViewModel.Strasse, Mode=TwoWay}" />
@@ -24,18 +18,6 @@
             <TextBox Header="E-Mail" Text="{x:Bind ViewModel.Email, Mode=TwoWay}" />
             <TextBox Header="Telefon" Text="{x:Bind ViewModel.Telefon, Mode=TwoWay}" />
             <TextBox Header="USt-IdNr." Text="{x:Bind ViewModel.UStIdNr, Mode=TwoWay}" />
-
-            <ComboBox
-                Header="Zahlungsbedingung"
-                ItemsSource="{x:Bind ViewModel.Zahlungsbedingungen, Mode=OneWay}"
-                SelectedValue="{x:Bind ViewModel.ZahlungsbedingungId, Mode=TwoWay}"
-                SelectedValuePath="Id"
-                DisplayMemberPath="Anzeige" />
-
-            <NumberBox Header="Rabatt %" Value="{x:Bind ViewModel.RabattProzent, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" SpinButtonPlacementMode="Inline" Minimum="0" Maximum="100" />
-
-            <CheckBox Content="Liefersperre" IsChecked="{x:Bind ViewModel.Liefersperre, Mode=TwoWay}" />
-
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.SpeichernCommand}" />
                 <Button Content="Abbrechen" Command="{x:Bind ViewModel.AbbrechenCommand}" />

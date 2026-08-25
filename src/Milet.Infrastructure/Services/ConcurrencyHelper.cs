@@ -21,4 +21,22 @@ internal static class ConcurrencyHelper
             throw new ConcurrencyConflictException(entitaet, id, ex);
         }
     }
+
+    /// <summary>
+    /// Führt SaveChangesAsync für eine Löschung aus und übersetzt eine durch Fremdschlüssel
+    /// blockierte Löschung in eine verständliche Fehlermeldung.
+    /// </summary>
+    public static async Task SaveChangesDeletingAsync(
+        this DbContext db, string entitaet, object id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex)
+        {
+            throw new InvalidOperationException(
+                $"{entitaet} (Id {id}) kann nicht gelöscht werden, da noch Datensätze darauf verweisen.", ex);
+        }
+    }
 }
