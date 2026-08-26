@@ -11,4 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Milet.Application\Milet.Application.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Milet.IntegrationTests" />
+  </ItemGroup>
 </Project>

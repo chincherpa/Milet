@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Milet.Domain.Entities.Lager;
 using Milet.Domain.Entities.Stammdaten;
 using Milet.Domain.Entities.Verkauf;
 
@@ -23,6 +24,7 @@ public sealed class BelegPositionConfiguration : IEntityTypeConfiguration<BelegP
 
         b.HasOne(x => x.Artikel).WithMany().HasForeignKey(x => x.ArtikelId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<MwStSatz>().WithMany().HasForeignKey(x => x.MwStSatzId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne(x => x.Lagerort).WithMany().HasForeignKey(x => x.LagerortId).OnDelete(DeleteBehavior.Restrict);
 
         b.HasOne<BelegPosition>().WithMany()
             .HasForeignKey(x => x.UrsprungsPositionId)

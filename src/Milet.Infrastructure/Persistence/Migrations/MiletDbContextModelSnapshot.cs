@@ -145,6 +145,280 @@ namespace Milet.Infrastructure.Persistence.Migrations
                     b.ToTable("OffenePosten", (string)null);
                 });
 
+            modelBuilder.Entity("Milet.Domain.Entities.Lager.ArtikelBestand", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ArtikelId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("LagerortId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Menge")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LagerortId");
+
+                    b.HasIndex("ArtikelId", "LagerortId")
+                        .IsUnique();
+
+                    b.ToTable("ArtikelBestaende", (string)null);
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Lager.BelegPositionSeriennummer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BelegPositionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SeriennummerId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SeriennummerId");
+
+                    b.HasIndex("BelegPositionId", "SeriennummerId")
+                        .IsUnique();
+
+                    b.ToTable("BelegPositionSeriennummern", (string)null);
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Lager.Inventur", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateOnly>("Datum")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("ErstelltAm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ErstelltVonId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("GeaendertAm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("GeaendertVonId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("LagerortId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LagerortId");
+
+                    b.ToTable("Inventuren", (string)null);
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Lager.InventurPosition", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ArtikelId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("InventurId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("IstMenge")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<decimal>("SollMenge")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArtikelId");
+
+                    b.HasIndex("InventurId");
+
+                    b.ToTable("InventurPositionen", (string)null);
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Lager.Lagerbewegung", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ArtikelId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("BelegPositionId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("BenutzerId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("LagerortId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Menge")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("decimal(18,3)");
+
+                    b.Property<int?>("SeriennummerId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Typ")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Zeitpunkt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BelegPositionId");
+
+                    b.HasIndex("LagerortId");
+
+                    b.HasIndex("SeriennummerId");
+
+                    b.HasIndex("ArtikelId", "LagerortId");
+
+                    b.ToTable("Lagerbewegungen", (string)null);
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Lager.Lagerort", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Aktiv")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Bezeichnung")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<DateTime>("ErstelltAm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ErstelltVonId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("GeaendertAm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("GeaendertVonId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("Lagerorte", (string)null);
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Lager.Seriennummer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ArtikelId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ErstelltAm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ErstelltVonId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("GeaendertAm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("GeaendertVonId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("LagerortId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Nummer")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LagerortId");
+
+                    b.HasIndex("ArtikelId", "Nummer")
+                        .IsUnique();
+
+                    b.ToTable("Seriennummern", (string)null);
+                });
+
             modelBuilder.Entity("Milet.Domain.Entities.Stammdaten.Artikel", b =>
                 {
                     b.Property<int>("Id")
@@ -555,8 +829,8 @@ namespace Milet.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("BelegTyp")
                         .IsRequired()
-                        .HasMaxLength(8)
-                        .HasColumnType("nvarchar(8)");
+                        .HasMaxLength(13)
+                        .HasColumnType("nvarchar(13)");
 
                     b.Property<DateTime>("ErstelltAm")
                         .HasColumnType("datetime2");
@@ -664,6 +938,9 @@ namespace Milet.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int?>("LagerortId")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("Menge")
                         .HasPrecision(18, 3)
                         .HasColumnType("decimal(18,3)");
@@ -696,6 +973,8 @@ namespace Milet.Infrastructure.Persistence.Migrations
                     b.HasIndex("ArtikelId");
 
                     b.HasIndex("BelegId");
+
+                    b.HasIndex("LagerortId");
 
                     b.HasIndex("MwStSatzId");
 
@@ -749,6 +1028,13 @@ namespace Milet.Infrastructure.Persistence.Migrations
                     b.HasBaseType("Milet.Domain.Entities.Verkauf.Beleg");
 
                     b.HasDiscriminator().HasValue("Auftrag");
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Verkauf.Lieferschein", b =>
+                {
+                    b.HasBaseType("Milet.Domain.Entities.Verkauf.Beleg");
+
+                    b.HasDiscriminator().HasValue("Lieferschein");
                 });
 
             modelBuilder.Entity("Milet.Domain.Entities.Verkauf.Rechnung", b =>
@@ -821,6 +1107,125 @@ namespace Milet.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Beleg");
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Lager.ArtikelBestand", b =>
+                {
+                    b.HasOne("Milet.Domain.Entities.Stammdaten.Artikel", "Artikel")
+                        .WithMany()
+                        .HasForeignKey("ArtikelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Milet.Domain.Entities.Lager.Lagerort", "Lagerort")
+                        .WithMany()
+                        .HasForeignKey("LagerortId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Artikel");
+
+                    b.Navigation("Lagerort");
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Lager.BelegPositionSeriennummer", b =>
+                {
+                    b.HasOne("Milet.Domain.Entities.Verkauf.BelegPosition", "BelegPosition")
+                        .WithMany()
+                        .HasForeignKey("BelegPositionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Milet.Domain.Entities.Lager.Seriennummer", "Seriennummer")
+                        .WithMany()
+                        .HasForeignKey("SeriennummerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("BelegPosition");
+
+                    b.Navigation("Seriennummer");
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Lager.Inventur", b =>
+                {
+                    b.HasOne("Milet.Domain.Entities.Lager.Lagerort", "Lagerort")
+                        .WithMany()
+                        .HasForeignKey("LagerortId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Lagerort");
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Lager.InventurPosition", b =>
+                {
+                    b.HasOne("Milet.Domain.Entities.Stammdaten.Artikel", "Artikel")
+                        .WithMany()
+                        .HasForeignKey("ArtikelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Milet.Domain.Entities.Lager.Inventur", "Inventur")
+                        .WithMany("Positionen")
+                        .HasForeignKey("InventurId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Artikel");
+
+                    b.Navigation("Inventur");
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Lager.Lagerbewegung", b =>
+                {
+                    b.HasOne("Milet.Domain.Entities.Stammdaten.Artikel", "Artikel")
+                        .WithMany()
+                        .HasForeignKey("ArtikelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Milet.Domain.Entities.Verkauf.BelegPosition", "BelegPosition")
+                        .WithMany()
+                        .HasForeignKey("BelegPositionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Milet.Domain.Entities.Lager.Lagerort", "Lagerort")
+                        .WithMany()
+                        .HasForeignKey("LagerortId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Milet.Domain.Entities.Lager.Seriennummer", "Seriennummer")
+                        .WithMany()
+                        .HasForeignKey("SeriennummerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Artikel");
+
+                    b.Navigation("BelegPosition");
+
+                    b.Navigation("Lagerort");
+
+                    b.Navigation("Seriennummer");
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Lager.Seriennummer", b =>
+                {
+                    b.HasOne("Milet.Domain.Entities.Stammdaten.Artikel", "Artikel")
+                        .WithMany()
+                        .HasForeignKey("ArtikelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Milet.Domain.Entities.Lager.Lagerort", "Lagerort")
+                        .WithMany()
+                        .HasForeignKey("LagerortId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Artikel");
+
+                    b.Navigation("Lagerort");
                 });
 
             modelBuilder.Entity("Milet.Domain.Entities.Stammdaten.Artikel", b =>
@@ -1116,6 +1521,11 @@ namespace Milet.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Milet.Domain.Entities.Lager.Lagerort", "Lagerort")
+                        .WithMany()
+                        .HasForeignKey("LagerortId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Milet.Domain.Entities.Stammdaten.MwStSatz", null)
                         .WithMany()
                         .HasForeignKey("MwStSatzId")
@@ -1129,6 +1539,8 @@ namespace Milet.Infrastructure.Persistence.Migrations
                     b.Navigation("Artikel");
 
                     b.Navigation("Beleg");
+
+                    b.Navigation("Lagerort");
                 });
 
             modelBuilder.Entity("Milet.Domain.Entities.Verkauf.BelegSteuerSumme", b =>
@@ -1140,6 +1552,11 @@ namespace Milet.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Beleg");
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Lager.Inventur", b =>
+                {
+                    b.Navigation("Positionen");
                 });
 
             modelBuilder.Entity("Milet.Domain.Entities.Stammdaten.Preisliste", b =>

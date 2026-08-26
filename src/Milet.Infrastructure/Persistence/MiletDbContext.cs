@@ -34,6 +34,14 @@ public sealed class MiletDbContext(DbContextOptions<MiletDbContext> options) : D
     public DbSet<Milet.Domain.Entities.Verkauf.BelegSteuerSumme> BelegSteuerSummen => Set<Milet.Domain.Entities.Verkauf.BelegSteuerSumme>();
     public DbSet<Milet.Domain.Entities.Finanzen.OffenerPosten> OffenePosten => Set<Milet.Domain.Entities.Finanzen.OffenerPosten>();
     public DbSet<Firmenstamm> Firmenstamm => Set<Firmenstamm>();
+    public DbSet<Milet.Domain.Entities.Verkauf.Lieferschein> Lieferscheine => Set<Milet.Domain.Entities.Verkauf.Lieferschein>();
+    public DbSet<Milet.Domain.Entities.Lager.Lagerort> Lagerorte => Set<Milet.Domain.Entities.Lager.Lagerort>();
+    public DbSet<Milet.Domain.Entities.Lager.Lagerbewegung> Lagerbewegungen => Set<Milet.Domain.Entities.Lager.Lagerbewegung>();
+    public DbSet<Milet.Domain.Entities.Lager.ArtikelBestand> ArtikelBestaende => Set<Milet.Domain.Entities.Lager.ArtikelBestand>();
+    public DbSet<Milet.Domain.Entities.Lager.Seriennummer> Seriennummern => Set<Milet.Domain.Entities.Lager.Seriennummer>();
+    public DbSet<Milet.Domain.Entities.Lager.BelegPositionSeriennummer> BelegPositionSeriennummern => Set<Milet.Domain.Entities.Lager.BelegPositionSeriennummer>();
+    public DbSet<Milet.Domain.Entities.Lager.Inventur> Inventuren => Set<Milet.Domain.Entities.Lager.Inventur>();
+    public DbSet<Milet.Domain.Entities.Lager.InventurPosition> InventurPositionen => Set<Milet.Domain.Entities.Lager.InventurPosition>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

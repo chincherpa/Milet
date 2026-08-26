@@ -21,6 +21,7 @@ public sealed class BelegService(
         BelegTyp.Angebot => db.Angebote,
         BelegTyp.Auftrag => db.Auftraege,
         BelegTyp.Rechnung => db.Rechnungen,
+        BelegTyp.Lieferschein => db.Lieferscheine,
         _ => throw new ArgumentOutOfRangeException(nameof(typ)),
     };
 
@@ -29,6 +30,7 @@ public sealed class BelegService(
         BelegTyp.Angebot => new Angebot(),
         BelegTyp.Auftrag => new Auftrag(),
         BelegTyp.Rechnung => new Rechnung(),
+        BelegTyp.Lieferschein => new Lieferschein(),
         _ => throw new ArgumentOutOfRangeException(nameof(typ)),
     };
 
@@ -37,6 +39,7 @@ public sealed class BelegService(
         BelegTyp.Angebot => "AN",
         BelegTyp.Auftrag => "AU",
         BelegTyp.Rechnung => "RE",
+        BelegTyp.Lieferschein => "LS",
         _ => throw new ArgumentOutOfRangeException(nameof(typ)),
     };
 
@@ -144,6 +147,7 @@ public sealed class BelegService(
                 bestehend.MwStSatzId = dtoPos.MwStSatzId;
                 bestehend.MwStSatzWert = dtoPos.MwStSatzWert;
                 bestehend.SteuerSchluessel = dtoPos.SteuerSchluessel;
+                bestehend.LagerortId = dtoPos.LagerortId;
                 bestehend.GesamtNetto = gesamtNetto;
                 bestehend.UrsprungsPositionId = dtoPos.UrsprungsPositionId;
             }
@@ -162,6 +166,7 @@ public sealed class BelegService(
                     MwStSatzId = dtoPos.MwStSatzId,
                     MwStSatzWert = dtoPos.MwStSatzWert,
                     SteuerSchluessel = dtoPos.SteuerSchluessel,
+                    LagerortId = dtoPos.LagerortId,
                     GesamtNetto = gesamtNetto,
                     UrsprungsPositionId = dtoPos.UrsprungsPositionId,
                 });

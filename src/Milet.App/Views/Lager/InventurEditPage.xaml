@@ -1,0 +1,62 @@
+<Page
+    x:Class="Milet.App.Views.Lager.InventurEditPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Milet.App.ViewModels.Lager">
+    <ScrollViewer Padding="24">
+        <StackPanel MaxWidth="900" Spacing="16">
+            <TextBlock Text="Inventur" Style="{StaticResource TitleTextBlockStyle}" />
+            <InfoBar IsOpen="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}"
+                     Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay}" />
+
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" Header="Lagerort" IsReadOnly="True" Text="{x:Bind ViewModel.LagerortBezeichnung, Mode=OneWay}" />
+                <TextBox Grid.Column="1" Header="Datum" IsReadOnly="True" Text="{x:Bind ViewModel.Datum, Mode=OneWay}" />
+                <TextBox Grid.Column="2" Header="Status" IsReadOnly="True" Text="{x:Bind ViewModel.Status, Mode=OneWay}" />
+            </Grid>
+
+            <TextBlock Text="Positionen" Style="{StaticResource SubtitleTextBlockStyle}" />
+            <ListView MaxHeight="400" ItemsSource="{x:Bind ViewModel.Positionen, Mode=OneWay}" SelectionMode="None"
+                      IsEnabled="{x:Bind ViewModel.IstOffen, Mode=OneWay}">
+                <ListView.HeaderTemplate>
+                    <DataTemplate>
+                        <Grid Padding="4" ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120" /><ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="100" /><ColumnDefinition Width="120" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Artikelnr." FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="1" Text="Bezeichnung" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="2" Text="Soll" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="3" Text="Ist" FontWeight="SemiBold" />
+                        </Grid>
+                    </DataTemplate>
+                </ListView.HeaderTemplate>
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="local:InventurPositionZeile">
+                        <Grid Padding="4" ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120" /><ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="100" /><ColumnDefinition Width="120" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Artikelnummer}" />
+                            <TextBlock Grid.Column="1" Text="{x:Bind ArtikelBezeichnung}" />
+                            <TextBlock Grid.Column="2" Text="{x:Bind SollMenge}" />
+                            <NumberBox Grid.Column="3" SpinButtonPlacementMode="Compact"
+                                       Value="{x:Bind IstMenge, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" />
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Mengen speichern" IsEnabled="{x:Bind ViewModel.IstOffen, Mode=OneWay}" Command="{x:Bind ViewModel.MengenSpeichernCommand}" />
+                <Button Content="Abschließen" Style="{StaticResource AccentButtonStyle}" IsEnabled="{x:Bind ViewModel.IstOffen, Mode=OneWay}" Command="{x:Bind ViewModel.AbschliessenCommand}" />
+                <Button Content="Abbrechen" Command="{x:Bind ViewModel.AbbrechenCommand}" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

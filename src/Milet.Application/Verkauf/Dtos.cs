@@ -17,6 +17,7 @@ public sealed record BelegPositionDto
     public int? MwStSatzId { get; init; }
     public decimal MwStSatzWert { get; init; }
     public int? SteuerSchluessel { get; init; }
+    public int? LagerortId { get; init; }
     public decimal GesamtNetto { get; init; }
     public int? UrsprungsPositionId { get; init; }
 }
@@ -56,7 +57,8 @@ public sealed record ArtikelVerkaufLookupDto(
     int MwStSatzId,
     decimal MwStSatzWert,
     int? SteuerSchluessel,
-    string? EinheitKuerzel);
+    string? EinheitKuerzel,
+    bool HatSeriennummern);
 
 public sealed record KundeVerkaufLookupDto(
     int Id,
@@ -71,3 +73,6 @@ public sealed record VerkaufLookups(
     IReadOnlyList<LookupDto> Zahlungsbedingungen);
 
 public sealed record PreisErgebnisDto(decimal Einzelpreis, decimal RabattProzent);
+
+/// <summary>Offene (noch nicht überführte) Menge einer Quellposition — Grundlage für den Teillieferungs-Dialog.</summary>
+public sealed record OffenePositionDto(int PositionId, string Bezeichnung, string? EinheitKuerzel, decimal OffeneMenge);

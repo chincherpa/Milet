@@ -236,6 +236,39 @@
                 </Grid>
             </PivotItem>
 
+            <PivotItem Header="Lagerorte">
+                <Grid ColumnSpacing="24">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="380" />
+                        <ColumnDefinition Width="360" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <ListView Grid.Column="0" Style="{StaticResource MasterListStyle}" ItemsSource="{x:Bind ViewModel.LagerorteListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.LagerortAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="12" Padding="4">
+                                    <TextBlock Text="{Binding Code}" Width="60" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding Bezeichnung}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <StackPanel Grid.Column="1" Spacing="12">
+                        <InfoBar IsOpen="{x:Bind ViewModel.LagerortFehler, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.LagerortFehler, Mode=OneWay}" />
+                        <TextBox Header="Code *" Text="{x:Bind ViewModel.LagerortCode, Mode=TwoWay}" />
+                        <TextBox Header="Bezeichnung *" Text="{x:Bind ViewModel.LagerortBezeichnung, Mode=TwoWay}" />
+                        <CheckBox Content="Aktiv" IsChecked="{x:Bind ViewModel.LagerortAktiv, Mode=TwoWay}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Neu" Command="{x:Bind ViewModel.LagerortNeuCommand}" />
+                            <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.LagerortSpeichernCommand}" />
+                            <Button Content="Löschen" Command="{x:Bind ViewModel.LagerortLoeschenCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </PivotItem>
+
         </Pivot>
     </Grid>
 </Page>

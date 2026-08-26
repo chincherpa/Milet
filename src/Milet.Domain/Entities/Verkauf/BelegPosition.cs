@@ -26,6 +26,10 @@ public class BelegPosition
     public decimal MwStSatzWert { get; set; }
     public int? SteuerSchluessel { get; set; }
 
+    /// <summary>Nur bei Lieferschein-Positionen gesetzt — Ziel-Lagerort für die Bestandsabbuchung beim Buchen.</summary>
+    public int? LagerortId { get; set; }
+    public Domain.Entities.Lager.Lagerort? Lagerort { get; set; }
+
     public decimal GesamtNetto { get; set; }
 
     /// <summary>Trägt Teillieferung/Teilfakturierung/Sammelrechnung: offene Menge = Menge − Σ referenzierender Folgepositionen.</summary>

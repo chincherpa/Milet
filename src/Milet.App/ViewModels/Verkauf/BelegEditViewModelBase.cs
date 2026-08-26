@@ -16,13 +16,13 @@ public abstract partial class BelegEditViewModelBase : ObservableObject, INaviga
     private readonly BelegTyp _typ;
     private readonly IBelegService _belegService;
     private readonly IVerkaufLookupService _lookupService;
-    private readonly IBelegUeberleitungService _ueberleitungService;
+    protected readonly IBelegUeberleitungService UeberleitungService;
     private readonly IRechnungBuchenService? _buchenService;
     private readonly IPdfService _pdfService;
     protected readonly INavigationService Navigation;
-    private readonly IDialogService _dialogService;
+    protected readonly IDialogService DialogService;
 
-    private int _id;
+    protected int Id;
     private byte[] _rowVersion = [];
     private int _naechstePositionsNr = 1;
 
@@ -39,11 +39,11 @@ public abstract partial class BelegEditViewModelBase : ObservableObject, INaviga
         _typ = typ;
         _belegService = belegService;
         _lookupService = lookupService;
-        _ueberleitungService = ueberleitungService;
+        UeberleitungService = ueberleitungService;
         _buchenService = buchenService;
         _pdfService = pdfService;
         Navigation = navigation;
-        _dialogService = dialogService;
+        DialogService = dialogService;
     }
 
     [ObservableProperty] public partial string BelegNummer { get; set; } = "(automatisch)";
@@ -90,7 +90,7 @@ public abstract partial class BelegEditViewModelBase : ObservableObject, INaviga
 
     public void OnNavigatedTo(NavigationEventArgs args)
     {
-        _id = args.Parameter is int id ? id : 0;
+        Id = args.Parameter is int id ? id : 0;
         _ = InitAsync();
     }
 
@@ -100,13 +100,13 @@ public abstract partial class BelegEditViewModelBase : ObservableObject, INaviga
         Kunden = lookups.Kunden;
         ArtikelLookups = lookups.Artikel;
 
-        if (_id == 0)
+        if (Id == 0)
         {
             IstBearbeitbar = true;
             return;
         }
 
-        var beleg = await _belegService.LadeAsync(_id);
+        var beleg = await _belegService.LadeAsync(Id);
         _rowVersion = beleg.RowVersion;
         BelegNummer = string.IsNullOrEmpty(beleg.BelegNummer) ? "(wird beim Buchen vergeben)" : beleg.BelegNummer;
         BelegDatum = beleg.BelegDatum.ToDateTime(TimeOnly.MinValue);
@@ -202,7 +202,7 @@ public abstract partial class BelegEditViewModelBase : ObservableObject, INaviga
         Fehlermeldung = null;
         var dto = new BelegDto
         {
-            Id = _id,
+            Id = Id,
             BelegTyp = _typ,
             BelegDatum = DateOnly.FromDateTime((BelegDatum ?? DateTimeOffset.Now).DateTime),
             KundeId = KundeId,
@@ -215,7 +215,7 @@ public abstract partial class BelegEditViewModelBase : ObservableObject, INaviga
         try
         {
             var gespeichert = await _belegService.SpeichereAsync(dto);
-            _id = gespeichert.Id;
+            Id = gespeichert.Id;
             _rowVersion = gespeichert.RowVersion;
             BelegNummer = string.IsNullOrEmpty(gespeichert.BelegNummer) ? "(wird beim Buchen vergeben)" : gespeichert.BelegNummer;
             SummeNetto = gespeichert.SummeNetto;
@@ -228,7 +228,7 @@ public abstract partial class BelegEditViewModelBase : ObservableObject, INaviga
         }
         catch (ConcurrencyConflictException)
         {
-            var neuLaden = await _dialogService.BestaetigenAsync(
+            var neuLaden = await DialogService.BestaetigenAsync(
                 "Datensatz geändert", "Dieser Beleg wurde zwischenzeitlich von einem anderen Benutzer geändert. Neu laden?");
             if (neuLaden) await InitAsync();
         }
@@ -241,10 +241,10 @@ public abstract partial class BelegEditViewModelBase : ObservableObject, INaviga
     [RelayCommand]
     private async Task BuchenAsync()
     {
-        if (_buchenService is null || _id == 0) return;
+        if (_buchenService is null || Id == 0) return;
         try
         {
-            var gebucht = await _buchenService.BuchenAsync(_id);
+            var gebucht = await _buchenService.BuchenAsync(Id);
             BelegNummer = gebucht.BelegNummer;
             Status = gebucht.Status;
             Faelligkeit = gebucht.Faelligkeit?.ToDateTime(TimeOnly.MinValue);
@@ -259,10 +259,10 @@ public abstract partial class BelegEditViewModelBase : ObservableObject, INaviga
     [RelayCommand]
     private async Task PdfAsync()
     {
-        if (_id == 0) { Fehlermeldung = "Beleg muss erst gespeichert werden."; return; }
+        if (Id == 0) { Fehlermeldung = "Beleg muss erst gespeichert werden."; return; }
         try
         {
-            var pdfBytes = await _pdfService.GeneriereBelegPdfAsync(_id);
+            var pdfBytes = await _pdfService.GeneriereBelegPdfAsync(Id);
             var picker = new Windows.Storage.Pickers.FileSavePicker();
             var windowHandle = WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow);
             WinRT.Interop.InitializeWithWindow.Initialize(picker, windowHandle);
@@ -281,7 +281,7 @@ public abstract partial class BelegEditViewModelBase : ObservableObject, INaviga
     [RelayCommand]
     private async Task UeberleitenAsync()
     {
-        if (_id == 0) { Fehlermeldung = "Beleg muss erst gespeichert werden."; return; }
+        if (Id == 0) { Fehlermeldung = "Beleg muss erst gespeichert werden."; return; }
         var zielTyp = _typ switch
         {
             BelegTyp.Angebot => BelegTyp.Auftrag,
@@ -292,7 +292,7 @@ public abstract partial class BelegEditViewModelBase : ObservableObject, INaviga
 
         try
         {
-            await _ueberleitungService.UeberleitenAsync(_id, zielTyp.Value);
+            await UeberleitungService.UeberleitenAsync(Id, zielTyp.Value);
             NavigiereNachUeberleitung(zielTyp.Value);
         }
         catch (Exception ex)

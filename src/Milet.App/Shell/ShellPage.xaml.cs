@@ -2,9 +2,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml.Controls;
 using Milet.App.Services;
 using Milet.App.ViewModels;
+using Milet.App.ViewModels.Lager;
 using Milet.App.ViewModels.Stammdaten;
 using Milet.App.ViewModels.Verkauf;
 using Milet.App.Views;
+using Milet.App.Views.Lager;
 using Milet.App.Views.Stammdaten;
 using Milet.App.Views.Verkauf;
 
@@ -35,6 +37,12 @@ public sealed partial class ShellPage : Page
         _navigation.Register<AngebotEditViewModel, AngebotEditPage>();
         _navigation.Register<AuftragEditViewModel, AuftragEditPage>();
         _navigation.Register<RechnungEditViewModel, RechnungEditPage>();
+
+        _navigation.Register<LieferscheinListViewModel, LieferscheinListPage>();
+        _navigation.Register<LieferscheinEditViewModel, LieferscheinEditPage>();
+        _navigation.Register<BestandUebersichtViewModel, BestandUebersichtPage>();
+        _navigation.Register<InventurListViewModel, InventurListPage>();
+        _navigation.Register<InventurEditViewModel, InventurEditPage>();
 
         _navigation.Navigate<DashboardViewModel>();
     }
@@ -71,6 +79,15 @@ public sealed partial class ShellPage : Page
                 break;
             case "rechnungen":
                 _navigation.Navigate<RechnungListViewModel>();
+                break;
+            case "lieferscheine":
+                _navigation.Navigate<LieferscheinListViewModel>();
+                break;
+            case "bestand":
+                _navigation.Navigate<BestandUebersichtViewModel>();
+                break;
+            case "inventur":
+                _navigation.Navigate<InventurListViewModel>();
                 break;
         }
     }

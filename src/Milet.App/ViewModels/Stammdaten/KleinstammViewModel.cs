@@ -16,6 +16,7 @@ public sealed partial class KleinstammViewModel : ObservableObject
     private readonly IArtikelPreiseService _artikelPreiseService;
     private readonly IArtikelService _artikelService;
     private readonly IDialogService _dialogService;
+    private readonly Milet.Application.Lager.ILagerortService _lagerortService;
 
     public KleinstammViewModel(
         IEinheitenService einheitenService,
@@ -25,7 +26,8 @@ public sealed partial class KleinstammViewModel : ObservableObject
         IPreislistenService preislistenService,
         IArtikelPreiseService artikelPreiseService,
         IArtikelService artikelService,
-        IDialogService dialogService)
+        IDialogService dialogService,
+        Milet.Application.Lager.ILagerortService lagerortService)
     {
         _einheitenService = einheitenService;
         _mwStSaetzeService = mwStSaetzeService;
@@ -35,6 +37,7 @@ public sealed partial class KleinstammViewModel : ObservableObject
         _artikelPreiseService = artikelPreiseService;
         _artikelService = artikelService;
         _dialogService = dialogService;
+        _lagerortService = lagerortService;
 
         _ = EinheitenLadenAsync();
         _ = MwStSaetzeLadenAsync();
@@ -42,6 +45,7 @@ public sealed partial class KleinstammViewModel : ObservableObject
         _ = VersandartenLadenAsync();
         _ = PreislistenLadenAsync();
         _ = ArtikelLookupsLadenAsync();
+        _ = LagerortenLadenAsync();
     }
 
     // ---- Einheiten ----
@@ -594,6 +598,95 @@ public sealed partial class KleinstammViewModel : ObservableObject
             await _artikelPreiseService.LoescheAsync(staffelpreis.Id);
             StaffelpreisNeu();
             await StaffelpreiseLadenAsync(preisliste.Id);
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ZeigeFehlerAsync("Fehler beim Löschen", ex.Message);
+        }
+    }
+
+    // ---- Lagerorte ----
+
+    [ObservableProperty]
+    public partial IReadOnlyList<Milet.Application.Lager.LagerortDto> LagerorteListe { get; set; } = [];
+
+    [ObservableProperty]
+    public partial Milet.Application.Lager.LagerortDto? LagerortAusgewaehlt { get; set; }
+
+    [ObservableProperty]
+    public partial string LagerortCode { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string LagerortBezeichnung { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool LagerortAktiv { get; set; } = true;
+
+    [ObservableProperty]
+    public partial string? LagerortFehler { get; set; }
+
+    partial void OnLagerortAusgewaehltChanged(Milet.Application.Lager.LagerortDto? value)
+    {
+        LagerortFehler = null;
+        LagerortCode = value?.Code ?? string.Empty;
+        LagerortBezeichnung = value?.Bezeichnung ?? string.Empty;
+        LagerortAktiv = value?.Aktiv ?? true;
+    }
+
+    [RelayCommand]
+    private async Task LagerortenLadenAsync() => LagerorteListe = await _lagerortService.SucheAsync(null);
+
+    [RelayCommand]
+    private void LagerortNeu() => LagerortAusgewaehlt = null;
+
+    [RelayCommand]
+    private async Task LagerortSpeichernAsync()
+    {
+        LagerortFehler = null;
+        var dto = new Milet.Application.Lager.LagerortDto
+        {
+            Id = LagerortAusgewaehlt?.Id ?? 0,
+            Code = LagerortCode,
+            Bezeichnung = LagerortBezeichnung,
+            Aktiv = LagerortAktiv,
+            RowVersion = LagerortAusgewaehlt?.RowVersion ?? [],
+        };
+
+        try
+        {
+            await _lagerortService.SpeichereAsync(dto);
+            await LagerortenLadenAsync();
+            LagerortNeu();
+        }
+        catch (ValidationException ex)
+        {
+            LagerortFehler = string.Join(Environment.NewLine, ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (Exception ex)
+        {
+            LagerortFehler = ex.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task LagerortLoeschenAsync()
+    {
+        if (LagerortAusgewaehlt is not { } lagerort)
+        {
+            return;
+        }
+
+        var bestaetigt = await _dialogService.BestaetigenAsync("Lagerort löschen", $"Lagerort '{lagerort.Bezeichnung}' wirklich löschen?");
+        if (!bestaetigt)
+        {
+            return;
+        }
+
+        try
+        {
+            await _lagerortService.LoescheAsync(lagerort.Id);
+            LagerortNeu();
+            await LagerortenLadenAsync();
         }
         catch (Exception ex)
         {
