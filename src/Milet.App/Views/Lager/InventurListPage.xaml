@@ -1,0 +1,59 @@
+<Page
+    x:Class="Milet.App.Views.Lager.InventurListPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Padding="24" RowSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Inventuren" Style="{StaticResource TitleTextBlockStyle}" />
+
+        <InfoBar Grid.Row="1" IsOpen="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay}" />
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
+            <ComboBox Width="240" PlaceholderText="Lagerort für neue Inventur…"
+                      ItemsSource="{x:Bind ViewModel.Lagerorte, Mode=OneWay}"
+                      SelectedValue="{x:Bind ViewModel.NeueInventurLagerortId, Mode=TwoWay}"
+                      SelectedValuePath="Id" DisplayMemberPath="Bezeichnung" />
+            <Button Content="Neue Inventur" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.NeueInventurCommand}" />
+            <Button Content="Bearbeiten" Command="{x:Bind ViewModel.BearbeitenCommand}" />
+            <ProgressRing IsActive="{x:Bind ViewModel.LaedtGerade, Mode=OneWay}" Width="24" Height="24" />
+        </StackPanel>
+
+        <ListView Grid.Row="3"
+            ItemsSource="{x:Bind ViewModel.Inventuren, Mode=OneWay}"
+            SelectedItem="{x:Bind ViewModel.Ausgewaehlt, Mode=TwoWay}"
+            SelectionMode="Single">
+            <ListView.HeaderTemplate>
+                <DataTemplate>
+                    <Grid Padding="8,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="160" /><ColumnDefinition Width="160" />
+                            <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Lagerort" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="1" Text="Datum" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="2" Text="Status" FontWeight="SemiBold" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.HeaderTemplate>
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid Padding="8,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="160" /><ColumnDefinition Width="160" />
+                            <ColumnDefinition Width="120" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding LagerortBezeichnung}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Datum}" />
+                        <TextBlock Grid.Column="2" Text="{Binding Status}" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</Page>
