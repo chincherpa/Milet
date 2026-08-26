@@ -2,7 +2,7 @@
 
 ## Kontext
 
-Greenfield-Projekt in leerem Verzeichnis `d:\Projects\Milet`. Ziel: deutsches Warenwirtschaftssystem (Orientierung „Rita Bosse") mit den Modulen Stammdaten, Verkauf, Einkauf, Lager, Finanzen, Reporting, Administration.
+Greenfield-Projekt (Arbeitskopie `d:\Projects\Milet`). Ziel: deutsches Warenwirtschaftssystem (Orientierung „Rita Bosse") mit den Modulen Stammdaten, Verkauf, Einkauf, Lager, Finanzen, Reporting, Administration.
 
 **Bestätigte Entscheidungen (Nutzer):**
 - .NET 10 LTS (statt 8/9 — beide nahe/über EOL)
@@ -17,7 +17,7 @@ Greenfield-Projekt in leerem Verzeichnis `d:\Projects\Milet`. Ziel: deutsches Wa
 ## Solution-Struktur
 
 ```
-Milet.sln
+Milet.slnx
 Directory.Build.props / Directory.Packages.props (Central Package Management)
 src/
   Milet.Domain/           # keine Dependencies; Entities, Enums, ValueObjects,
@@ -136,10 +136,10 @@ Ein generischer `BelegUeberleitungService.Ueberleiten(sourceBelegId, targetTyp, 
 
 ## Kritische Dateien (Implementierung)
 
-- `src/Milet.Domain/Entities/Belege/Beleg.cs` — TPH-Basis, Herzstück des Modells
+- `src/Milet.Domain/Entities/Verkauf/Beleg.cs` — TPH-Basis, Herzstück des Modells
 - `src/Milet.Infrastructure/Persistence/MiletDbContext.cs` — Mappings, Interceptors, TPH/RowVersion
-- `src/Milet.Application/Verkauf/BelegUeberleitungService.cs` — generische Überleitung mit Zeilenreferenzen
-- `src/Milet.Application/Verkauf/RechnungBuchenService.cs` — Buchungstransaktion (Nummer, Freeze, OP)
+- `src/Milet.Infrastructure/Services/BelegUeberleitungService.cs` — generische Überleitung mit Zeilenreferenzen (Interface: `src/Milet.Application/Verkauf/IVerkaufServices.cs`)
+- `src/Milet.Infrastructure/Services/RechnungBuchenService.cs` — Buchungstransaktion (Nummer, Freeze, OP)
 - `src/Milet.App/App.xaml.cs` — Host-Builder, DI-Root, Navigations-Registry
 
-**Startpunkt: Phase 0.**
+**Stand:** Phasen 0–2 sind implementiert und abgenommen (Details in `STATUS.md`). **Nächster Schritt: Phase 3 (Lager+Lieferschein).**

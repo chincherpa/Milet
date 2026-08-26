@@ -10,7 +10,7 @@ Stand: 2026-08-25. Architekturplan: `PLAN.md`. Phase-2-Implementierungsplan: `do
 - SQL-Zugriff: LocalDB `(localdb)\MSSQLLocalDB`, DB "Milet" (kein Docker/SQL Server auf dieser Maschine — Details in Memory `milet-dev-umgebung`)
 
 ### Phase 0 — Scaffold ✅ vollständig verifiziert
-- Solution mit 6 Projekten (Domain/Application/Infrastructure/App/Tools.Migrator) + 3 Testprojekten
+- Solution (`Milet.slnx`) mit 5 Projekten (Domain/Application/Infrastructure/App/Tools.Migrator) + 3 Testprojekten
 - `Directory.Build.props` / `Directory.Packages.props` (Central Package Management)
 - WinUI-3-Shell mit NavigationView, DashboardPage, generischer `NavigationService`
 - `MiletDbContext` + `DesignTimeDbContextFactory` (dotnet-ef läuft ohne WinUI als Startprojekt)
