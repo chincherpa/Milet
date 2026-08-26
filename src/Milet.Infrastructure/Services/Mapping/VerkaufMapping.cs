@@ -19,6 +19,7 @@ internal static class VerkaufMapping
         MwStSatzId = p.MwStSatzId,
         MwStSatzWert = p.MwStSatzWert,
         SteuerSchluessel = p.SteuerSchluessel,
+        LagerortId = p.LagerortId,
         GesamtNetto = p.GesamtNetto,
         UrsprungsPositionId = p.UrsprungsPositionId,
     };
@@ -30,6 +31,7 @@ internal static class VerkaufMapping
             Angebot => BelegTyp.Angebot,
             Auftrag => BelegTyp.Auftrag,
             Rechnung => BelegTyp.Rechnung,
+            Lieferschein => BelegTyp.Lieferschein,
             _ => throw new InvalidOperationException($"Unbekannter Beleg-Subtyp {b.GetType().Name}."),
         };
 
