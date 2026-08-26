@@ -1,6 +1,6 @@
 # Milet — Projektstatus
 
-Stand: 2026-08-26. Architekturplan: `PLAN.md`. Phase-2-Implementierungsplan: `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md`. Phase-3-Implementierungsplan (umgesetzt): `docs/superpowers/plans/2026-08-25-phase3-lager-lieferschein.md`. Ein früherer, nicht umgesetzter Planungsentwurf liegt zusätzlich unter `docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md` — dessen technische Befunde (READ-COMMITTED-Race, Nummernkreis-Seed) sind unter „Bekannte Risiken" übernommen.
+Stand: 2026-08-26. Architekturplan: `PLAN.md`. Phase-2-Implementierungsplan: `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md`. Phase-3-Implementierungsplan (umgesetzt): `docs/superpowers/plans/2026-08-25-phase3-lager-lieferschein.md`. Ein früherer, nicht umgesetzter Planungsentwurf liegt zusätzlich unter `docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md` — dessen technische Befunde (READ-COMMITTED-Race, Nummernkreis-Seed) sind unter „Bekannte Risiken" übernommen. Phase-4-Implementierungsplan (noch nicht umgesetzt): `docs/superpowers/plans/2026-08-26-phase4-einkauf.md`.
 
 ## Erledigt
 
@@ -129,7 +129,7 @@ Implementiert nach Plan `docs/superpowers/plans/2026-08-25-phase3-lager-liefersc
    - Teillieferung (`UeberleitenMitAuswahlAsync`) und `InventurService` haben keinen automatisierten Test (Docker hier ohnehin nicht verfügbar, daher bisher nur compile-verifiziert).
    - Lagerort deaktivieren versteckt jetzt echten (nicht nur synthetischen Null-)Bestand dort in der Bestandsübersicht (Daten bleiben in der DB, nur diese eine Anzeige zeigt sie nicht mehr) — Regression aus dem C1-Fix in der finalen Review, noch nicht behoben.
    - Diverse Minor-Findings (PdfService-Exception-Parametername, `UeberleitenMitAuswahlAsync` verwirft Nicht-Artikel-Positionen, `LieferscheinListPage` Multiple-Selection+SelectedItem-Überschneidung, N+1-Lookups) — Details im finalen Review-Report, unkritisch.
-3. **Phasen 4–7** (Einkauf, Finanzen+Mail, DATEV+Reporting, Admin) — noch nicht begonnen, siehe `PLAN.md`. Phase 1+2 sind komplett abgenommen.
+3. **Phase 4 (Einkauf)** — noch nicht implementiert; detaillierter Implementierungsplan liegt vor (`docs/superpowers/plans/2026-08-26-phase4-einkauf.md`, 17 Tasks): Bestellung/Wareneingang/Eingangsrechnung als neue `Beleg`-TPH-Subtypen mit Lieferanten-Partei (dafür `Beleg.KundeId` → nullable + neues `Beleg.LieferantId`, DB-Check-Constraint), Bestellvorschlag anhand Mindestbestand, Wareneingang bucht Zugang über bestehenden `BestandService`, Eingangsrechnung legt Kreditor-OP an mit Betrags-Abweichungs-Soft-Warnung gegen den Wareneingang. Plan behebt dabei nebenbei die bekannte Nummernkreis-Seed-Lücke (s. „Bekannte Risiken" unten). **Phasen 5–7** (Finanzen+Mail, DATEV+Reporting, Admin) — noch nicht begonnen, siehe `PLAN.md`. Phase 1+2 sind komplett abgenommen.
 
 ## Gefixt während UI-Test (2026-08-25)
 - LocalDB-Datenbank hieß nach Projekt-Rename noch "Nexus" (Connection String erwartet "Milet") → "Fehler beim Laden" beim Öffnen der Kunden-Liste. Per `ALTER DATABASE ... MODIFY NAME` umbenannt (Seed-Daten erhalten), App neu gestartet — Kunden-Liste lädt jetzt.
