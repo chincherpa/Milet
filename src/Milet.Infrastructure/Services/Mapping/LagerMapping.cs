@@ -25,4 +25,18 @@ internal static class LagerMapping
         b.Artikel.Mindestbestand);
 
     public static SeriennummerDto ToDto(this Seriennummer s) => new(s.Id, s.ArtikelId, s.Nummer, s.Status, s.LagerortId);
+
+    public static InventurPositionDto ToDto(this InventurPosition p) =>
+        new(p.Id, p.ArtikelId, p.Artikel!.Artikelnummer, p.Artikel.Bezeichnung, p.SollMenge, p.IstMenge);
+
+    public static InventurDto ToDto(this Inventur i, bool mitPositionen) => new()
+    {
+        Id = i.Id,
+        LagerortId = i.LagerortId,
+        LagerortBezeichnung = i.Lagerort?.Bezeichnung ?? string.Empty,
+        Datum = i.Datum,
+        Status = i.Status,
+        Positionen = mitPositionen ? i.Positionen.OrderBy(p => p.ArtikelId).Select(p => p.ToDto()).ToList() : [],
+        RowVersion = i.RowVersion,
+    };
 }

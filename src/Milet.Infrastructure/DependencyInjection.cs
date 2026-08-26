@@ -53,6 +53,7 @@ public static class DependencyInjection
         services.AddScoped<ILagerortService, LagerortService>();
         services.AddScoped<ISeriennummernService, SeriennummernService>();
         services.AddScoped<ILieferscheinBuchenService, LieferscheinBuchenService>();
+        services.AddScoped<IInventurService, InventurService>();
 
         return services;
     }
