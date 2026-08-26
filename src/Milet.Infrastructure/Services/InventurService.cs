@@ -34,8 +34,12 @@ public sealed class InventurService(IDbContextFactory<MiletDbContext> dbContextF
             ?? throw new NotFoundException(nameof(Lagerort), lagerortId);
 
         var bestaende = await db.ArtikelBestaende.AsNoTracking().Where(b => b.LagerortId == lagerortId).ToListAsync(ct);
+        // Seriennummern-Artikel sind hier ausgeschlossen: ihr Bestand wird über die Seriennummernliste geführt
+        // (siehe SeriennummernService), nicht über bulk Ist-Mengen — sonst desynchronisiert eine Inventur-Korrektur
+        // ArtikelBestand.Menge von COUNT(Seriennummern WHERE Status = AufLager). Spiegelt die gleiche Regel wie
+        // BestandUebersichtViewModel.ZeigtKorrekturPanel (dort ebenfalls nur für !HatSeriennummern sichtbar).
         var lagerfaehigeArtikel = await db.Artikel
-            .Where(a => a.IstLagerartikel && !a.Gesperrt).ToListAsync(ct);
+            .Where(a => a.IstLagerartikel && !a.Gesperrt && !a.HatSeriennummern).ToListAsync(ct);
 
         if (lagerfaehigeArtikel.Count == 0)
             throw new InvalidOperationException("Keine lagerfähigen Artikel für eine Inventur vorhanden.");

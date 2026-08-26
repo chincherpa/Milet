@@ -59,6 +59,8 @@ public sealed class BelegUeberleitungService(
         var quellTyp = TypVon(quellBeleg);
         if (!ErlaubteUebergaenge.TryGetValue(quellTyp, out var erlaubteZiele) || !erlaubteZiele.Contains(zielTyp))
             throw new InvalidOperationException($"Überleitung von {quellTyp} nach {zielTyp} wird nicht unterstützt.");
+        if (zielTyp == BelegTyp.Lieferschein)
+            throw new InvalidOperationException("Lieferschein-Erstellung erfordert Mengenauswahl und Lagerort — verwenden Sie UeberleitenMitAuswahlAsync.");
         if (quellTyp == BelegTyp.Lieferschein && quellBeleg.Status != BelegStatus.Gebucht)
             throw new InvalidOperationException($"Lieferschein '{quellBeleg.BelegNummer}' muss erst gebucht werden, bevor er berechnet werden kann.");
 
@@ -167,6 +169,8 @@ public sealed class BelegUeberleitungService(
         var quellTyp = TypVon(quellBeleg);
         if (!ErlaubteUebergaenge.TryGetValue(quellTyp, out var erlaubteZiele) || !erlaubteZiele.Contains(zielTyp))
             throw new InvalidOperationException($"Überleitung von {quellTyp} nach {zielTyp} wird nicht unterstützt.");
+        if (quellTyp == BelegTyp.Lieferschein && quellBeleg.Status != BelegStatus.Gebucht)
+            throw new InvalidOperationException($"Lieferschein '{quellBeleg.BelegNummer}' muss erst gebucht werden, bevor er berechnet werden kann.");
 
         if (zielTyp == BelegTyp.Lieferschein)
         {
@@ -243,7 +247,7 @@ public sealed class BelegUeberleitungService(
 
         db.Add(zielBeleg);
 
-        if (quellVollstaendigUebernommen && quellBeleg.Status == BelegStatus.Entwurf)
+        if (quellVollstaendigUebernommen && quellBeleg.Status is BelegStatus.Entwurf or BelegStatus.Gebucht)
             quellBeleg.Status = BelegStatus.Erledigt;
 
         await db.SaveChangesAsync(ct);

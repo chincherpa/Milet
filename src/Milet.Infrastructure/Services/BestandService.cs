@@ -14,14 +14,33 @@ public sealed class BestandService(IDbContextFactory<MiletDbContext> dbContextFa
     public async Task<IReadOnlyList<ArtikelBestandDto>> SucheAsync(string? suchtext, CancellationToken ct = default)
     {
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
-        var query = db.ArtikelBestaende.AsNoTracking().Include(b => b.Artikel).Include(b => b.Lagerort).AsQueryable();
+
+        var artikelQuery = db.Artikel.AsNoTracking().Where(a => a.IstLagerartikel && !a.Gesperrt).AsQueryable();
         if (!string.IsNullOrWhiteSpace(suchtext))
         {
             var s = suchtext.Trim();
-            query = query.Where(b => EF.Functions.Like(b.Artikel!.Bezeichnung, $"%{s}%") || EF.Functions.Like(b.Artikel!.Artikelnummer, $"%{s}%"));
+            artikelQuery = artikelQuery.Where(a => EF.Functions.Like(a.Bezeichnung, $"%{s}%") || EF.Functions.Like(a.Artikelnummer, $"%{s}%"));
         }
-        var liste = await query.OrderBy(b => b.Artikel!.Artikelnummer).ToListAsync(ct);
-        return liste.Select(b => b.ToDto()).ToList();
+
+        var artikel = await artikelQuery.ToListAsync(ct);
+        var lagerorte = await db.Lagerorte.AsNoTracking().Where(l => l.Aktiv).ToListAsync(ct);
+        var bestaende = await db.ArtikelBestaende.AsNoTracking().ToListAsync(ct);
+        var bestaendeLookup = bestaende.ToDictionary(b => (b.ArtikelId, b.LagerortId), b => b.Menge);
+
+        // Left-Join Artikel x Lagerorte gegen ArtikelBestaende (in-memory kombiniert, da nur kleine/mittlere Zeilenzahlen
+        // erwartet werden): jede Kombination lagerfähiger Artikel x aktiver Lagerort erzeugt eine Zeile, auch ohne
+        // existierenden ArtikelBestand-Datensatz (Menge = 0) — sonst ist der allererste Erstbestand über die UI nicht anlegbar.
+        var ergebnis = new List<ArtikelBestandDto>();
+        foreach (var a in artikel)
+        {
+            foreach (var l in lagerorte)
+            {
+                var menge = bestaendeLookup.GetValueOrDefault((a.Id, l.Id), 0m);
+                ergebnis.Add(new ArtikelBestandDto(a.Id, a.Artikelnummer, a.Bezeichnung, a.HatSeriennummern, l.Id, l.Bezeichnung, menge, a.Mindestbestand));
+            }
+        }
+
+        return ergebnis.OrderBy(b => b.Artikelnummer).ThenBy(b => b.LagerortBezeichnung).ToList();
     }
 
     public async Task KorrigiereAsync(BestandskorrekturDto dto, CancellationToken ct = default)

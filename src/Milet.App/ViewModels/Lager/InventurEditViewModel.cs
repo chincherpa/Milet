@@ -67,17 +67,23 @@ public sealed partial class InventurEditViewModel : ObservableObject, INavigatio
     }
 
     [RelayCommand]
-    private async Task MengenSpeichernAsync()
+    private async Task MengenSpeichernAsync() => await MengenSpeichernInternalAsync();
+
+    /// <summary>Persistiert alle lokal erfassten Ist-Mengen. Gibt false zurück (und setzt <see cref="Fehlermeldung"/>),
+    /// wenn das Speichern fehlschlägt — Aufrufer muss dann abbrechen statt fortzufahren.</summary>
+    private async Task<bool> MengenSpeichernInternalAsync()
     {
         Fehlermeldung = null;
         try
         {
             foreach (var zeile in Positionen.Where(z => z.IstMenge.HasValue))
                 await _inventurService.ErfasseIstMengeAsync(zeile.Id, zeile.IstMenge!.Value);
+            return true;
         }
         catch (Exception ex)
         {
             Fehlermeldung = ex.Message;
+            return false;
         }
     }
 
@@ -86,6 +92,11 @@ public sealed partial class InventurEditViewModel : ObservableObject, INavigatio
     {
         var bestaetigt = await _dialogService.BestaetigenAsync("Inventur abschließen", "Inventur abschließen und Korrekturbuchungen für alle erfassten Abweichungen anlegen?");
         if (!bestaetigt) return;
+
+        // Im Grid erfasste, aber noch nicht gespeicherte Ist-Mengen (NumberBox-Eingaben leben nur lokal in
+        // InventurPositionZeile.IstMenge) müssen vor dem Abschluss persistiert werden — sonst schließt AbschliessenAsync
+        // die Inventur mit IstMenge = NULL überall ab und es werden keine Korrekturen gebucht, ohne Weg zurück.
+        if (!await MengenSpeichernInternalAsync()) return;
 
         try
         {
