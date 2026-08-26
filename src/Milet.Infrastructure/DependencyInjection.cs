@@ -50,6 +50,7 @@ public static class DependencyInjection
         services.AddScoped<IRechnungBuchenService, RechnungBuchenService>();
         services.AddScoped<IPdfService, Pdf.PdfService>();
         services.AddScoped<IBestandService, BestandService>();
+        services.AddScoped<ILagerortService, LagerortService>();
 
         return services;
     }
