@@ -27,7 +27,13 @@
                 </NavigationViewItem.MenuItems>
             </NavigationViewItem>
             <NavigationViewItem Content="Einkauf" Tag="einkauf" Icon="Import" IsEnabled="False" />
-            <NavigationViewItem Content="Lager" Tag="lager" Icon="Library" IsEnabled="False" />
+            <NavigationViewItem Content="Lager" Tag="lager" Icon="Library">
+                <NavigationViewItem.MenuItems>
+                    <NavigationViewItem Content="Lieferscheine" Tag="lieferscheine" Icon="Package" />
+                    <NavigationViewItem Content="Bestandsübersicht" Tag="bestand" Icon="AllApps" />
+                    <NavigationViewItem Content="Inventur" Tag="inventur" Icon="List" />
+                </NavigationViewItem.MenuItems>
+            </NavigationViewItem>
             <NavigationViewItem Content="Finanzen" Tag="finanzen" Icon="Calculator" IsEnabled="False" />
             <NavigationViewItem Content="Reporting" Tag="reporting" Icon="ReportHacked" IsEnabled="False" />
             <NavigationViewItem Content="Administration" Tag="admin" Icon="Setting" IsEnabled="False" />

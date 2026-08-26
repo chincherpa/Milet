@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.UI.Xaml;
 using Milet.App.Services;
 using Milet.App.ViewModels;
+using Milet.App.ViewModels.Lager;
 using Milet.App.ViewModels.Stammdaten;
 using Milet.App.ViewModels.Verkauf;
 using Milet.App.Views;
@@ -70,6 +71,12 @@ public partial class App : Microsoft.UI.Xaml.Application
         builder.Services.AddTransient<AngebotEditViewModel>();
         builder.Services.AddTransient<AuftragEditViewModel>();
         builder.Services.AddTransient<RechnungEditViewModel>();
+
+        builder.Services.AddTransient<BestandUebersichtViewModel>();
+        builder.Services.AddTransient<LieferscheinListViewModel>();
+        builder.Services.AddTransient<LieferscheinEditViewModel>();
+        builder.Services.AddTransient<InventurListViewModel>();
+        builder.Services.AddTransient<InventurEditViewModel>();
 
         return builder.Build();
     }
