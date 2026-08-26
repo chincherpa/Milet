@@ -1,6 +1,6 @@
 # Milet — Projektstatus
 
-Stand: 2026-08-25. Architekturplan: `PLAN.md`. Phase-2-Implementierungsplan: `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md`.
+Stand: 2026-08-26. Architekturplan: `PLAN.md`. Phase-2-Implementierungsplan: `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md`. Phase-3-Implementierungsplan: `docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md`.
 
 ## Erledigt
 
@@ -104,7 +104,11 @@ Implementiert nach Plan `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md
 
 ## Offen
 
-1. **Phasen 3–7** (Lager+Lieferschein, Einkauf, Finanzen+Mail, DATEV+Reporting, Admin) — noch nicht begonnen, siehe Plan-Datei für Details. Phase 1+2 sind damit komplett abgenommen.
+1. **Phase 3 (Lager+Lieferschein)** — noch nicht begonnen, Implementierungsplan liegt vor: `docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md` (19 Tasks). Zwei Vorbedingungen daraus, die den Bestandscode betreffen:
+   - Die Offene-Mengen-Prüfung in `BelegUeberleitungService` schützt trotz gegenteiligem Kommentar **nicht** gegen parallele Überleitungen (READ COMMITTED sieht beide Male „nichts geliefert"). Folgenlos bei Angebot→Auftrag, ein echter Bestandsfehler ab Teillieferung → Fix per `UPDLOCK` auf dem Quellbeleg (Plan-Task 9).
+   - `StammdatenSeed` legt Nummernkreise nur an, wenn die Tabelle komplett leer ist → bestehende Datenbanken bekommen neue Kreise (`INV`) nie. Muss auf „je Code nachlegen" umgebaut werden (Plan-Task 6).
+   - Integrationstests laufen mangels Docker bisher nur als Skip; Plan-Task 0 ergänzt einen LocalDB-Fallback, damit die Transaktionstests dieser Phase tatsächlich ausgeführt werden.
+2. **Phasen 4–7** (Einkauf, Finanzen+Mail, DATEV+Reporting, Admin) — noch nicht begonnen, siehe `PLAN.md`. Phase 1+2 sind komplett abgenommen.
 
 ## Gefixt während UI-Test (2026-08-25)
 - LocalDB-Datenbank hieß nach Projekt-Rename noch "Nexus" (Connection String erwartet "Milet") → "Fehler beim Laden" beim Öffnen der Kunden-Liste. Per `ALTER DATABASE ... MODIFY NAME` umbenannt (Seed-Daten erhalten), App neu gestartet — Kunden-Liste lädt jetzt.
