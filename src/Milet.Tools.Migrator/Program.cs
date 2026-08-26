@@ -1,25 +1,41 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Milet.Infrastructure;
 using Milet.Infrastructure.Persistence;
 using Milet.Infrastructure.Persistence.Seed;
 
-var configuration = new ConfigurationBuilder()
-    .SetBasePath(AppContext.BaseDirectory)
-    .AddJsonFile("appsettings.json", optional: true)
-    .Build();
+var connectionStringOverride = Environment.GetEnvironmentVariable("MILET_CONNECTIONSTRING")
+    ?? args.FirstOrDefault(a => a.StartsWith("--connection=", StringComparison.Ordinal))?["--connection=".Length..];
 
-var connectionString = Environment.GetEnvironmentVariable("MILET_CONNECTIONSTRING")
-    ?? args.FirstOrDefault(a => a.StartsWith("--connection=", StringComparison.Ordinal))?["--connection=".Length..]
-    ?? configuration.GetConnectionString("Milet")
-    ?? throw new InvalidOperationException(
+var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+{
+    ContentRootPath = AppContext.BaseDirectory,
+});
+
+builder.Configuration
+    .SetBasePath(AppContext.BaseDirectory)
+    .AddJsonFile("appsettings.json", optional: true);
+
+if (connectionStringOverride is not null)
+{
+    builder.Configuration.AddInMemoryCollection([new("ConnectionStrings:Milet", connectionStringOverride)]);
+}
+
+if (builder.Configuration.GetConnectionString("Milet") is null)
+{
+    throw new InvalidOperationException(
         "Keine Verbindungszeichenfolge. ConnectionStrings:Milet in appsettings.json setzen " +
         "oder MILET_CONNECTIONSTRING als Umgebungsvariable.");
+}
 
-var options = new DbContextOptionsBuilder<MiletDbContext>()
-    .UseSqlServer(connectionString)
-    .Options;
+builder.Services.AddInfrastructure(builder.Configuration);
 
-await using var db = new MiletDbContext(options);
+using var host = builder.Build();
+
+var dbFactory = host.Services.GetRequiredService<IDbContextFactory<MiletDbContext>>();
+await using var db = await dbFactory.CreateDbContextAsync();
 
 Console.WriteLine("Milet Migrator");
 Console.WriteLine($"Ziel: {db.Database.GetDbConnection().DataSource} / {db.Database.GetDbConnection().Database}");
@@ -43,5 +59,10 @@ else
 
 await StammdatenSeed.ApplyAsync(db);
 Console.WriteLine("Grunddaten (Einheiten, MwSt-Sätze, Zahlungsbedingungen, Nummernkreise) geprüft/angelegt.");
+
+var dummyAngelegt = await DummyDatenSeed.ApplyAsync(host.Services);
+Console.WriteLine(dummyAngelegt
+    ? "Testdaten (Kunden, Lieferanten, Artikel, Angebote/Aufträge/Rechnungen) angelegt."
+    : "Testdaten bereits vorhanden — übersprungen.");
 
 return 0;
