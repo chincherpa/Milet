@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Milet.Application.Abstractions;
 using Milet.Application.Admin;
+using Milet.Application.Lager;
 using Milet.Application.Stammdaten;
 using Milet.Application.Verkauf;
 using Milet.Infrastructure.Persistence;
@@ -48,6 +49,7 @@ public static class DependencyInjection
         services.AddScoped<IBelegUeberleitungService, BelegUeberleitungService>();
         services.AddScoped<IRechnungBuchenService, RechnungBuchenService>();
         services.AddScoped<IPdfService, Pdf.PdfService>();
+        services.AddScoped<IBestandService, BestandService>();
 
         return services;
     }
