@@ -250,4 +250,101 @@ public sealed class BelegUeberleitungService(
         await transaction.CommitAsync(ct);
         return zielBeleg.ToDto(mitPositionen: true);
     }
+
+    /// <summary>Führt mehrere Quellbelege gleichen Kunden/gleicher Zahlungsbedingung in einen Zielbeleg zusammen (Sammelrechnung).</summary>
+    public async Task<BelegDto> UeberleitenMehrereAsync(IReadOnlyList<int> quellBelegIds, BelegTyp zielTyp, CancellationToken ct = default)
+    {
+        if (quellBelegIds.Count == 0)
+            throw new InvalidOperationException("Mindestens ein Quellbeleg erforderlich.");
+
+        await using var db = await dbContextFactory.CreateDbContextAsync(ct);
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+
+        var quellBelege = await db.Belege.Include(b => b.Positionen)
+            .Where(b => quellBelegIds.Contains(b.Id))
+            .ToListAsync(ct);
+        if (quellBelege.Count != quellBelegIds.Count)
+            throw new NotFoundException(nameof(Beleg), string.Join(",", quellBelegIds));
+
+        var ersterBeleg = quellBelege[0];
+        var ersteZahlungsbedingung = (ersterBeleg.ZahlungsbedingungZielTage, ersterBeleg.ZahlungsbedingungSkontoTage, ersterBeleg.ZahlungsbedingungSkontoProzent);
+        foreach (var beleg in quellBelege)
+        {
+            var typ = TypVon(beleg);
+            if (!ErlaubteUebergaenge.TryGetValue(typ, out var erlaubteZiele) || !erlaubteZiele.Contains(zielTyp))
+                throw new InvalidOperationException($"Überleitung von {typ} nach {zielTyp} wird nicht unterstützt.");
+            if (typ == BelegTyp.Lieferschein && beleg.Status != BelegStatus.Gebucht)
+                throw new InvalidOperationException($"Lieferschein '{beleg.BelegNummer}' muss erst gebucht werden, bevor er berechnet werden kann.");
+            if (beleg.KundeId != ersterBeleg.KundeId)
+                throw new InvalidOperationException("Sammelüberleitung nur für Belege desselben Kunden möglich.");
+            if ((beleg.ZahlungsbedingungZielTage, beleg.ZahlungsbedingungSkontoTage, beleg.ZahlungsbedingungSkontoProzent) != ersteZahlungsbedingung)
+                throw new InvalidOperationException("Sammelüberleitung nur für Belege derselben Zahlungsbedingung möglich.");
+        }
+
+        var alleQuellPositionIds = quellBelege.SelectMany(b => b.Positionen).Select(p => p.Id).ToList();
+        var folgepositionen = await db.BelegPositionen.AsNoTracking()
+            .Where(p => p.UrsprungsPositionId != null && alleQuellPositionIds.Contains(p.UrsprungsPositionId.Value))
+            .ToListAsync(ct);
+
+        var zielBeleg = NeueInstanz(zielTyp);
+        zielBeleg.BelegNummer = zielTyp == BelegTyp.Rechnung
+            ? string.Empty
+            : await numberRangeService.NaechsteNummerAsync(NummernkreisCode(zielTyp), ct);
+        zielBeleg.BelegDatum = DateOnly.FromDateTime(DateTime.Today);
+        zielBeleg.KundeId = ersterBeleg.KundeId;
+        zielBeleg.RechnungsadresseSnapshot = ersterBeleg.RechnungsadresseSnapshot.Kopie();
+        zielBeleg.LieferadresseSnapshot = ersterBeleg.LieferadresseSnapshot.Kopie();
+        zielBeleg.ZahlungsbedingungZielTage = ersterBeleg.ZahlungsbedingungZielTage;
+        zielBeleg.ZahlungsbedingungSkontoTage = ersterBeleg.ZahlungsbedingungSkontoTage;
+        zielBeleg.ZahlungsbedingungSkontoProzent = ersterBeleg.ZahlungsbedingungSkontoProzent;
+
+        var positionsNr = 1;
+        foreach (var quellBeleg in quellBelege.OrderBy(b => b.BelegDatum).ThenBy(b => b.Id))
+        {
+            var quellVollstaendigUebernommen = true;
+            foreach (var quellPosition in quellBeleg.Positionen.OrderBy(p => p.PositionsNr))
+            {
+                var menge = quellPosition.PositionsTyp == PositionsTyp.Artikel
+                    ? BelegPosition.OffeneMenge(quellPosition, folgepositionen)
+                    : quellPosition.Menge;
+
+                if (quellPosition.PositionsTyp == PositionsTyp.Artikel && menge <= 0)
+                    continue;
+                if (quellPosition.PositionsTyp == PositionsTyp.Artikel && menge < quellPosition.Menge)
+                    quellVollstaendigUebernommen = false;
+
+                zielBeleg.Positionen.Add(new BelegPosition
+                {
+                    PositionsNr = positionsNr++,
+                    PositionsTyp = quellPosition.PositionsTyp,
+                    ArtikelId = quellPosition.ArtikelId,
+                    Bezeichnung = quellPosition.Bezeichnung,
+                    EinheitKuerzel = quellPosition.EinheitKuerzel,
+                    Menge = menge,
+                    Einzelpreis = quellPosition.Einzelpreis,
+                    RabattProzent = quellPosition.RabattProzent,
+                    MwStSatzId = quellPosition.MwStSatzId,
+                    MwStSatzWert = quellPosition.MwStSatzWert,
+                    SteuerSchluessel = quellPosition.SteuerSchluessel,
+                    GesamtNetto = SteuerRechner.BerechnePosition(menge, quellPosition.Einzelpreis, quellPosition.RabattProzent),
+                    UrsprungsPositionId = quellPosition.Id,
+                });
+            }
+
+            if (quellVollstaendigUebernommen && quellBeleg.Status is BelegStatus.Entwurf or BelegStatus.Gebucht)
+                quellBeleg.Status = BelegStatus.Erledigt;
+        }
+
+        if (zielBeleg.Positionen.Count == 0)
+            throw new InvalidOperationException("Keine offenen Positionen zum Überleiten vorhanden.");
+
+        var steuersummen = SteuerRechner.BerechneSteuersummen(zielBeleg.Positionen);
+        zielBeleg.Steuersummen = steuersummen.ToList();
+        (zielBeleg.SummeNetto, zielBeleg.SummeMwSt, zielBeleg.SummeBrutto) = SteuerRechner.BerechneKopfsummen(steuersummen);
+
+        db.Add(zielBeleg);
+        await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
+        return zielBeleg.ToDto(mitPositionen: true);
+    }
 }
