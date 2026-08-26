@@ -34,7 +34,7 @@ public sealed class InventurService(IDbContextFactory<MiletDbContext> dbContextF
             ?? throw new NotFoundException(nameof(Lagerort), lagerortId);
 
         var bestaende = await db.ArtikelBestaende.AsNoTracking().Where(b => b.LagerortId == lagerortId).ToListAsync(ct);
-        var lagerfaehigeArtikel = await db.Artikel.AsNoTracking()
+        var lagerfaehigeArtikel = await db.Artikel
             .Where(a => a.IstLagerartikel && !a.Gesperrt).ToListAsync(ct);
 
         if (lagerfaehigeArtikel.Count == 0)
