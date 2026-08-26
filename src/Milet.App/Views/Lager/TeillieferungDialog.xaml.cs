@@ -32,10 +32,10 @@ public sealed partial class TeillieferungDialog : ContentDialog
 
     public TeillieferungDialog(IReadOnlyList<OffenePositionDto> offenePositionen, IReadOnlyList<LagerortDto> lagerorte)
     {
-        InitializeComponent();
         Zeilen = new ObservableCollection<TeillieferungZeile>(offenePositionen.Select(p => new TeillieferungZeile(p)));
         Lagerorte = lagerorte;
         AusgewaehlterLagerortId = lagerorte[0].Id;
+        InitializeComponent();
     }
 
     public IReadOnlyDictionary<int, decimal> GewaehlteMengen() =>
