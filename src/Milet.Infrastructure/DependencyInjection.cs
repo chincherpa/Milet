@@ -51,6 +51,7 @@ public static class DependencyInjection
         services.AddScoped<IPdfService, Pdf.PdfService>();
         services.AddScoped<IBestandService, BestandService>();
         services.AddScoped<ILagerortService, LagerortService>();
+        services.AddScoped<ISeriennummernService, SeriennummernService>();
 
         return services;
     }

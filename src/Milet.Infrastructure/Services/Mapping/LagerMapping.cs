@@ -23,4 +23,6 @@ internal static class LagerMapping
         b.Lagerort!.Bezeichnung,
         b.Menge,
         b.Artikel.Mindestbestand);
+
+    public static SeriennummerDto ToDto(this Seriennummer s) => new(s.Id, s.ArtikelId, s.Nummer, s.Status, s.LagerortId);
 }
