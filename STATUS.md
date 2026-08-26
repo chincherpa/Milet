@@ -1,6 +1,6 @@
 # Milet — Projektstatus
 
-Stand: 2026-08-25. Architekturplan: `PLAN.md`. Phase-2-Implementierungsplan: `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md`.
+Stand: 2026-08-26. Architekturplan: `PLAN.md`. Phase-2-Implementierungsplan: `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md`. Phase-3-Implementierungsplan: `docs/superpowers/plans/2026-08-25-phase3-lager-lieferschein.md`.
 
 ## Erledigt
 
@@ -102,9 +102,28 @@ Implementiert nach Plan `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md
 
 **Hinweis Build-Tooling:** `sqlcmd` braucht `SET QUOTED_IDENTIFIER ON;` vor `DELETE`/`UPDATE` auf Tabellen mit gefilterten Indizes (z. B. `Belege`), sonst Meldung 1934.
 
+### Phase 3 — Lager+Lieferschein ⚠️ (Build/Tests grün, manueller Smoke-Test ausstehend) (2026-08-26, Branch `phase3-lager-lieferschein`)
+Implementiert nach Plan `docs/superpowers/plans/2026-08-25-phase3-lager-lieferschein.md` (19 Tasks + dieser Verifikations-Task, jeder Task einzeln gebaut/getestet/committet):
+
+**Domain:** `Lagerort` (Aggregate Root, `IHasRowVersion`+`AuditableEntity`), `Lagerbewegung` (append-only-Ledger: ArtikelId/LagerortId/Menge signiert/Typ/BelegPositionId?/SeriennummerId?/Zeitpunkt/BenutzerId, bewusst ohne RowVersion/AuditableEntity), `ArtikelBestand` (Snapshot ArtikelId+LagerortId), `LagerbewegungTyp`-Enum; `Seriennummer` (Status AufLager/Ausgeliefert/Retourniert), `BelegPositionSeriennummer` (Junction), `Inventur`+`InventurPosition` (SollMenge eingefroren, IstMenge); `Lieferschein` als dünner `Beleg`-TPH-Subtyp + `BelegPosition.LagerortId`-Erweiterung.
+
+**Application:** DTOs+Validatoren für alle neuen Entities; `ILagerortService`/`ISeriennummernService`/`IInventurService`/`IBestandService`-Interfaces; `IBelegUeberleitungService` erweitert um `UeberleitenMitAuswahlAsync` (explizite Mengenauswahl statt Immer-alles-Übernahme) und `UeberleitenMehrereAsync` (Sammelrechnung, Mehrfachquellen); `ILieferscheinBuchenService`. 5 neue Application-Tests (Validatoren).
+
+**Infrastructure:** EF-Configurations für alle neuen Entities, Migration `LagerLieferschein`, Hauptlagerort-Seed (`Code=HL`); `BestandService.BucheBewegungAsync` — der einzige Schreibpfad auf Bestand, atomares `UPDATE ... SET Menge = Menge + @delta WHERE ... >= 0` (ein SQL-Round-Trip, `betroffeneZeilen == 0` ⇒ Negativsperre, `InvalidOperationException`), gemeinsam genutzt von Bestandskorrektur/Lieferschein-Buchen/Inventur-Abschluss; `LagerortService` (CRUD, Kleinstamm-Muster); `SeriennummernService`; `LieferscheinBuchenService` (negative Lagerbewegungen + Seriennummern-Pick + Bestandsupdate in einer Transaktion, Offene-Mengen-Prüfung wiederholt); `InventurService` (Anlegen/Ist-Erfassung/Abschluss mit Korrekturbuchungen); `BelegUeberleitungService`/`BelegService` um Lieferschein-Pfad erweitert. 3 neue Integrationstest-Klassen: `BelegUeberleitungServiceTests`, `BestandServiceTests`, `LieferscheinBuchenServiceTests` (10 Testmethoden, Testcontainers).
+
+**App (WinUI):** Lagerorte-Tab in `KleinstammPage`; Bestandsübersicht-Seite (Bestandskorrektur + Seriennummern-Erfassung, zwei Detail-Modi einer Seite); `AuftragEditViewModel`-Erweiterung „→ Lieferschein" + `TeillieferungDialog` (offene Mengen, Lagerort-Auswahl, Mengenreduktion); Lieferschein-Liste (inkl. Mehrfachauswahl „→ Sammelrechnung") + -Editor + Seriennummern-Auswahl-Dialog beim Buchen; Inventur-Liste + -Editor (Mengen erfassen, Abschließen); Lager-Menü in `ShellPage` aktiviert, alle neuen ViewModels in DI registriert.
+
+**Automatisiert verifiziert (dieser Task, 2026-08-26):**
+- Build `Milet.App.csproj -p:Platform=x64`: **0 Fehler**, 1 Warnung (`WMC1506` XAML-Binding-Hinweis in `TeillieferungDialog.xaml`, kein Unused-Using-Problem).
+- Tests einzeln (MTP-Modus): Domain **14/14**, Application **19/19** (14 Bestand + 5 neu), IntegrationTests **18 gesamt: 4 bestanden, 0 fehlgeschlagen, 14 übersprungen** (alle Skips sauber „Docker nicht verfügbar" — 4 bestehende Skips aus Phase 1/2 + 10 neue Skips aus den 3 neuen Testklassen; kein einziger Fail).
+- Migration: `Milet.Tools.Migrator` meldet „Datenbank ist aktuell — keine ausstehenden Migrationen." (bereits in einer früheren Task-Session angewendet), Seed-Grunddaten geprüft. Per `sqlcmd` gegengeprüft: `Lagerorte` enthält `HL`/„Hauptlager"; `SELECT COUNT(*) FROM Belege WHERE BelegTyp = 'Lieferschein'` läuft ohne Schemafehler (0 Zeilen — keine Lieferscheine angelegt, da kein manueller UI-Testlauf in diesem Durchgang).
+
+**Nicht durchgeführt — Offen für Phase-3-Abnahme:** Der manuelle End-to-End-Smoke-Test im laufenden UI (Plan-Task-20-Step-4, 9 Teilschritte: Lagerort anlegen, Bestandskorrektur, Auftrag→Teillieferung→Lieferschein, Buchen, zweite Teillieferung, Sammelrechnung, Negativsperre-Check, Inventur-Abschluss, Seriennummern-Auswahl beim Buchen) wurde in diesem Durchgang **nicht** ausgeführt — dieser Verifikationslauf erfolgte durch einen headless Hintergrund-Agenten ohne Display-/Maus-Zugriff, der keine WinUI-Desktop-App starten oder bedienen kann. Build/Tests/Migration sind damit real verifiziert; der eigentliche fachliche End-to-End-Nachweis (inkl. eventueller dabei gefundener UI-Bugs, wie in den Phase-1/2-Abnahmen dokumentiert) fehlt noch und muss von einem Menschen (oder einer UI-Automation-fähigen Session, wie bei der Phase-1-Abnahme praktiziert) nachgeholt werden, bevor Phase 3 als vollständig abgenommen gilt.
+
 ## Offen
 
-1. **Phasen 3–7** (Lager+Lieferschein, Einkauf, Finanzen+Mail, DATEV+Reporting, Admin) — noch nicht begonnen, siehe Plan-Datei für Details. Phase 1+2 sind damit komplett abgenommen.
+1. **Phase 3 — manueller UI-Smoke-Test ausstehend:** Die 9 Teilschritte aus dem Phase-3-Plan (Task 20, Step 4) — Lagerort/Bestandskorrektur, Auftrag→Teillieferung→Lieferschein→Buchen, zweite Teillieferung, Sammelrechnung, Negativsperre-Fehlermeldung statt Absturz, Inventur-Abschluss, Seriennummern-Auswahl-Dialog beim Buchen — sind noch nicht durchgeklickt worden (Build/Tests/Migration bereits grün, s. oben). Muss vor Abnahme von Phase 3 nachgeholt werden.
+2. **Phasen 4–7** (Einkauf, Finanzen+Mail, DATEV+Reporting, Admin) — noch nicht begonnen, siehe Plan-Datei für Details.
 
 ## Gefixt während UI-Test (2026-08-25)
 - LocalDB-Datenbank hieß nach Projekt-Rename noch "Nexus" (Connection String erwartet "Milet") → "Fehler beim Laden" beim Öffnen der Kunden-Liste. Per `ALTER DATABASE ... MODIFY NAME` umbenannt (Seed-Daten erhalten), App neu gestartet — Kunden-Liste lädt jetzt.
@@ -113,6 +132,6 @@ Implementiert nach Plan `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md
 - Phase 2: Positions-Bezeichnung + IsEnabled-Scoping (s. oben, Phase-2-Abnahme).
 
 ## Bekannte Risiken (aus Plan, weiterhin relevant)
-- Kein Docker auf dieser Maschine → Integrationstests mit Testcontainers laufen hier nur übersprungen, nicht tatsächlich ausgeführt. Vor Phase mit kritischen Transaktionstests (Lager) sollte Docker verfügbar gemacht werden oder LocalDB-Fallback für Tests ergänzt werden.
+- Kein Docker auf dieser Maschine → Integrationstests mit Testcontainers laufen hier nur übersprungen, nicht tatsächlich ausgeführt. Das betrifft inzwischen konkret Phase 3: `BestandServiceTests` (Race-/Negativsperre-Test des atomaren `BucheBewegungAsync`-UPDATE) und `LieferscheinBuchenServiceTests` (paralleles Buchen) sind **nie gegen eine echte DB gelaufen**, nur compile-verifiziert + sauber übersprungen. Der manuelle UI-Smoke-Test (s. „Offen") würde die fachliche Kernlogik zumindest einmal seriell gegen LocalDB nachweisen, ersetzt aber nicht den Parallelitäts-Nachweis. Docker sollte vor Produktivsetzung verfügbar gemacht werden oder ein LocalDB-Fallback für diese Tests ergänzt werden.
 - Graph-Auth, DATEV-Format — noch nicht relevant, erst ab Phase 5/6. QuestPDF-Lizenz (Community, <1M USD Umsatz) bereits gesetzt (`PdfService`-statischer Konstruktor).
 - Lieferadresse ist in Phase 2 nicht im Belegeditor editierbar (immer 1:1 aus Kundenstamm übernommen) — bewusste Vereinfachung, relevant erst mit Lieferschein (Phase 3).
