@@ -1,0 +1,55 @@
+<Page
+    x:Class="Milet.App.Views.Finanzen.DatevExportPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Padding="24" RowSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="DATEV-Export" Style="{StaticResource TitleTextBlockStyle}" />
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+            <CalendarDatePicker Header="Von" Date="{x:Bind ViewModel.Von, Mode=TwoWay, Converter={StaticResource DateOnlyToDateTimeOffsetConverter}}" />
+            <CalendarDatePicker Header="Bis" Date="{x:Bind ViewModel.Bis, Mode=TwoWay, Converter={StaticResource DateOnlyToDateTimeOffsetConverter}}" />
+            <Button Content="Vorschau" Command="{x:Bind ViewModel.VorschauLadenCommand}" VerticalAlignment="Bottom" />
+            <Button Content="Exportieren" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.ExportierenCommand}" VerticalAlignment="Bottom" />
+            <ProgressRing IsActive="{x:Bind ViewModel.LaedtGerade, Mode=OneWay}" Width="24" Height="24" VerticalAlignment="Bottom" />
+        </StackPanel>
+
+        <InfoBar Grid.Row="2"
+            IsOpen="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}"
+            Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay}" />
+
+        <InfoBar Grid.Row="3"
+            IsOpen="{x:Bind ViewModel.Erfolgsmeldung, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}"
+            Severity="Success" Title="Ergebnis" Message="{x:Bind ViewModel.Erfolgsmeldung, Mode=OneWay}" />
+
+        <StackPanel Grid.Row="4" Spacing="8" MaxWidth="480" HorizontalAlignment="Left">
+            <TextBlock Text="Vorschau (zählt nur, markiert noch nichts als exportiert)" Style="{StaticResource SubtitleTextBlockStyle}" />
+            <Grid ColumnSpacing="12" RowSpacing="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Rechnungen" />
+                <TextBlock Grid.Row="0" Grid.Column="1" Text="{x:Bind ViewModel.Vorschau.AnzahlRechnungen, Mode=OneWay}" />
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Eingangsrechnungen" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind ViewModel.Vorschau.AnzahlEingangsrechnungen, Mode=OneWay}" />
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Zahlungen" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Bind ViewModel.Vorschau.AnzahlZahlungen, Mode=OneWay}" />
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="Buchungszeilen gesamt" FontWeight="SemiBold" />
+                <TextBlock Grid.Row="3" Grid.Column="1" Text="{x:Bind ViewModel.Vorschau.AnzahlBuchungszeilen, Mode=OneWay}" FontWeight="SemiBold" />
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="Summe Umsatz" />
+                <TextBlock Grid.Row="4" Grid.Column="1" Text="{x:Bind ViewModel.Vorschau.SummeUmsatz, Mode=OneWay}" />
+            </Grid>
+        </StackPanel>
+    </Grid>
+</Page>

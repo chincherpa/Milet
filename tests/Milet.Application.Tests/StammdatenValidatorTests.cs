@@ -78,4 +78,40 @@ public class StammdatenValidatorTests
 
         Assert.True(ergebnis.IsValid);
     }
+
+    [Fact]
+    public void MwStSatz_OhneKonten_KeineFehler()
+    {
+        var dto = new MwStSatzDto { Bezeichnung = "Voller Satz", Satz = 19m, GueltigAb = new DateOnly(2007, 1, 1) };
+
+        var ergebnis = new MwStSatzValidator().Validate(dto);
+
+        Assert.True(ergebnis.IsValid);
+    }
+
+    [Fact]
+    public void MwStSatz_GueltigeKonten_KeineFehler()
+    {
+        var dto = new MwStSatzDto
+        {
+            Bezeichnung = "Voller Satz", Satz = 19m, GueltigAb = new DateOnly(2007, 1, 1),
+            ErloeskontoNr = 8400, AufwandskontoNr = 3400,
+        };
+
+        var ergebnis = new MwStSatzValidator().Validate(dto);
+
+        Assert.True(ergebnis.IsValid);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void MwStSatz_UngueltigesErloeskonto_Fehler(int konto)
+    {
+        var dto = new MwStSatzDto { Bezeichnung = "Voller Satz", Satz = 19m, GueltigAb = new DateOnly(2007, 1, 1), ErloeskontoNr = konto };
+
+        var ergebnis = new MwStSatzValidator().Validate(dto);
+
+        Assert.False(ergebnis.IsValid);
+    }
 }

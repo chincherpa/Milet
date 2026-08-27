@@ -24,5 +24,8 @@ public class Zahlung : AuditableEntity, IHasRowVersion
 
     public List<ZahlungZuordnung> Zuordnungen { get; set; } = [];
 
+    /// <summary>Gesetzt beim DATEV-Export (Doppelexport-Marker, s. DatevExportService).</summary>
+    public DateTime? ExportiertAm { get; set; }
+
     public byte[] RowVersion { get; set; } = [];
 }

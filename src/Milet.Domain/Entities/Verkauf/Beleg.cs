@@ -57,5 +57,9 @@ public abstract class Beleg : AuditableEntity, IHasRowVersion
     public List<BelegPosition> Positionen { get; set; } = [];
     public List<BelegSteuerSumme> Steuersummen { get; set; } = [];
 
+    /// <summary>Gesetzt beim DATEV-Export (Doppelexport-Marker, s. DatevExportService) — nur relevant
+    /// für gebuchte Rechnungen/Eingangsrechnungen.</summary>
+    public DateTime? ExportiertAm { get; set; }
+
     public byte[] RowVersion { get; set; } = [];
 }

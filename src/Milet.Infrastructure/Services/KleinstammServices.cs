@@ -59,7 +59,11 @@ public sealed class MwStSaetzeService(IDbContextFactory<MiletDbContext> dbContex
     {
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         return await db.MwStSaetze.AsNoTracking().OrderBy(m => m.Satz)
-            .Select(m => new MwStSatzDto { Id = m.Id, Bezeichnung = m.Bezeichnung, Satz = m.Satz, SteuerSchluessel = m.SteuerSchluessel, GueltigAb = m.GueltigAb })
+            .Select(m => new MwStSatzDto
+            {
+                Id = m.Id, Bezeichnung = m.Bezeichnung, Satz = m.Satz, SteuerSchluessel = m.SteuerSchluessel, GueltigAb = m.GueltigAb,
+                ErloeskontoNr = m.ErloeskontoNr, AufwandskontoNr = m.AufwandskontoNr,
+            })
             .ToListAsync(ct);
     }
 
@@ -75,6 +79,8 @@ public sealed class MwStSaetzeService(IDbContextFactory<MiletDbContext> dbContex
         entity.Satz = dto.Satz;
         entity.SteuerSchluessel = dto.SteuerSchluessel;
         entity.GueltigAb = dto.GueltigAb;
+        entity.ErloeskontoNr = dto.ErloeskontoNr;
+        entity.AufwandskontoNr = dto.AufwandskontoNr;
 
         if (dto.Id == 0)
         {

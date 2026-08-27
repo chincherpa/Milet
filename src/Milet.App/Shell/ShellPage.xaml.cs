@@ -5,12 +5,14 @@ using Milet.App.ViewModels;
 using Milet.App.ViewModels.Einkauf;
 using Milet.App.ViewModels.Finanzen;
 using Milet.App.ViewModels.Lager;
+using Milet.App.ViewModels.Reporting;
 using Milet.App.ViewModels.Stammdaten;
 using Milet.App.ViewModels.Verkauf;
 using Milet.App.Views;
 using Milet.App.Views.Einkauf;
 using Milet.App.Views.Finanzen;
 using Milet.App.Views.Lager;
+using Milet.App.Views.Reporting;
 using Milet.App.Views.Stammdaten;
 using Milet.App.Views.Verkauf;
 
@@ -58,6 +60,9 @@ public sealed partial class ShellPage : Page
 
         _navigation.Register<OffenePostenListViewModel, OffenePostenListPage>();
         _navigation.Register<MahnlaufViewModel, MahnlaufPage>();
+        _navigation.Register<DatevExportViewModel, DatevExportPage>();
+
+        _navigation.Register<ReportingViewModel, ReportingPage>();
 
         _navigation.Navigate<DashboardViewModel>();
     }
@@ -121,6 +126,12 @@ public sealed partial class ShellPage : Page
                 break;
             case "mahnlauf":
                 _navigation.Navigate<MahnlaufViewModel>();
+                break;
+            case "datevexport":
+                _navigation.Navigate<DatevExportViewModel>();
+                break;
+            case "reporting":
+                _navigation.Navigate<ReportingViewModel>();
                 break;
         }
     }
