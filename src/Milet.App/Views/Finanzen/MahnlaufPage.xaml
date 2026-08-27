@@ -1,0 +1,110 @@
+<Page
+    x:Class="Milet.App.Views.Finanzen.MahnlaufPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Padding="24" RowSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="200" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Mahnlauf" Style="{StaticResource TitleTextBlockStyle}" />
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+            <Button Content="Fällige ermitteln" Command="{x:Bind ViewModel.FaelligeErmittelnCommand}" />
+            <Button Content="Mahnlauf durchführen" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.MahnlaufDurchfuehrenCommand}" />
+            <ProgressRing IsActive="{x:Bind ViewModel.LaedtGerade, Mode=OneWay}" Width="24" Height="24" />
+        </StackPanel>
+
+        <InfoBar Grid.Row="2"
+            IsOpen="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}"
+            Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay}" />
+
+        <ListView Grid.Row="3" ItemsSource="{x:Bind ViewModel.Kandidaten, Mode=OneWay}">
+            <ListView.HeaderTemplate>
+                <DataTemplate>
+                    <Grid Padding="8,4" ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" /><ColumnDefinition Width="220" />
+                            <ColumnDefinition Width="140" /><ColumnDefinition Width="100" />
+                            <ColumnDefinition Width="100" /><ColumnDefinition Width="90" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="" />
+                        <TextBlock Grid.Column="1" Text="Kunde" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="2" Text="Beleg" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="3" Text="Offen" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="4" Text="Fällig" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="5" Text="Neue Stufe" FontWeight="SemiBold" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.HeaderTemplate>
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid Padding="8,4" ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" /><ColumnDefinition Width="220" />
+                            <ColumnDefinition Width="140" /><ColumnDefinition Width="100" />
+                            <ColumnDefinition Width="100" /><ColumnDefinition Width="90" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox Grid.Column="0" IsChecked="{Binding Ausgewaehlt, Mode=TwoWay}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="{Binding KundenName}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" Text="{Binding BelegNummer}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="3" Text="{Binding OffenerBetrag}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="4" Text="{Binding Faelligkeit}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="5" Text="{Binding NaechsteMahnstufe}" VerticalAlignment="Center" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <TextBlock Grid.Row="4" Text="Erzeugte Mahnungen" Style="{StaticResource SubtitleTextBlockStyle}" />
+
+        <Grid Grid.Row="5" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <ListView Grid.Column="0"
+                ItemsSource="{x:Bind ViewModel.ErzeugteMahnungen, Mode=OneWay}"
+                SelectedItem="{x:Bind ViewModel.MahnungAusgewaehlt, Mode=TwoWay}">
+                <ListView.HeaderTemplate>
+                    <DataTemplate>
+                        <Grid Padding="8,4" ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="220" /><ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="120" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Kunde" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="1" Text="Stufe" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="2" Text="Gesamtbetrag" FontWeight="SemiBold" />
+                        </Grid>
+                    </DataTemplate>
+                </ListView.HeaderTemplate>
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Padding="8,4" ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="220" /><ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="120" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding KundenName}" />
+                            <TextBlock Grid.Column="1" Text="{Binding Mahnstufe}" />
+                            <TextBlock Grid.Column="2" Text="{Binding Gesamtbetrag}" />
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <StackPanel Grid.Column="1" Spacing="8">
+                <Button Content="PDF erstellen" Command="{x:Bind ViewModel.MahnungPdfCommand}" HorizontalAlignment="Stretch" />
+                <Button Content="E-Mail senden" Command="{x:Bind ViewModel.EmailSendenCommand}" HorizontalAlignment="Stretch" />
+                <TextBlock Text="{x:Bind ViewModel.EmailStatus, Mode=OneWay}" Opacity="0.8" TextWrapping="Wrap" MaxWidth="180" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>

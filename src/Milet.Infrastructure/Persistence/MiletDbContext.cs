@@ -45,6 +45,12 @@ public sealed class MiletDbContext(DbContextOptions<MiletDbContext> options) : D
     public DbSet<Milet.Domain.Entities.Lager.BelegPositionSeriennummer> BelegPositionSeriennummern => Set<Milet.Domain.Entities.Lager.BelegPositionSeriennummer>();
     public DbSet<Milet.Domain.Entities.Lager.Inventur> Inventuren => Set<Milet.Domain.Entities.Lager.Inventur>();
     public DbSet<Milet.Domain.Entities.Lager.InventurPosition> InventurPositionen => Set<Milet.Domain.Entities.Lager.InventurPosition>();
+    public DbSet<Milet.Domain.Entities.Finanzen.Zahlung> Zahlungen => Set<Milet.Domain.Entities.Finanzen.Zahlung>();
+    public DbSet<Milet.Domain.Entities.Finanzen.ZahlungZuordnung> ZahlungZuordnungen => Set<Milet.Domain.Entities.Finanzen.ZahlungZuordnung>();
+    public DbSet<Milet.Domain.Entities.Finanzen.Mahnstufe> Mahnstufen => Set<Milet.Domain.Entities.Finanzen.Mahnstufe>();
+    public DbSet<Milet.Domain.Entities.Finanzen.Mahnung> Mahnungen => Set<Milet.Domain.Entities.Finanzen.Mahnung>();
+    public DbSet<Milet.Domain.Entities.Finanzen.MahnungPosition> MahnungPositionen => Set<Milet.Domain.Entities.Finanzen.MahnungPosition>();
+    public DbSet<Milet.Domain.Entities.Finanzen.EmailVersand> EmailVersand => Set<Milet.Domain.Entities.Finanzen.EmailVersand>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

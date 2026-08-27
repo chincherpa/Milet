@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml;
 using Milet.App.Services;
 using Milet.App.ViewModels;
 using Milet.App.ViewModels.Einkauf;
+using Milet.App.ViewModels.Finanzen;
 using Milet.App.ViewModels.Lager;
 using Milet.App.ViewModels.Stammdaten;
 using Milet.App.ViewModels.Verkauf;
@@ -54,6 +55,10 @@ public partial class App : Microsoft.UI.Xaml.Application
 
         builder.Services.AddInfrastructure(builder.Configuration);
 
+        // Überschreibt den NullWindowHandleProvider-Fallback aus AddInfrastructure — DI löst bei mehreren
+        // Registrierungen desselben Diensts die zuletzt registrierte auf.
+        builder.Services.AddSingleton<Milet.Application.Abstractions.IWindowHandleProvider, WinUiWindowHandleProvider>();
+
         builder.Services.AddSingleton<INavigationService, NavigationService>();
         builder.Services.AddSingleton<IDialogService, DialogService>();
 
@@ -86,6 +91,9 @@ public partial class App : Microsoft.UI.Xaml.Application
         builder.Services.AddTransient<WareneingangEditViewModel>();
         builder.Services.AddTransient<EingangsrechnungListViewModel>();
         builder.Services.AddTransient<EingangsrechnungEditViewModel>();
+
+        builder.Services.AddTransient<OffenePostenListViewModel>();
+        builder.Services.AddTransient<MahnlaufViewModel>();
 
         return builder.Build();
     }

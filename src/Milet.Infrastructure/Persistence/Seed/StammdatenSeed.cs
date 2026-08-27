@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Milet.Domain.Entities.Admin;
+using Milet.Domain.Entities.Finanzen;
 using Milet.Domain.Entities.Stammdaten;
 using Milet.Domain.ValueObjects;
 
@@ -71,6 +72,22 @@ public static class StammdatenSeed
         if (!await db.Lagerorte.AnyAsync(ct))
         {
             db.Lagerorte.Add(new Milet.Domain.Entities.Lager.Lagerort { Code = "HL", Bezeichnung = "Hauptlager", Aktiv = true });
+        }
+
+        // Gleiches "je fehlender Stufe ergänzen"-Muster wie bei den Nummernkreisen (s. o.).
+        var benoetigteMahnstufen = new[]
+        {
+            new Mahnstufe { Stufe = 1, Karenztage = 7, Gebuehr = 0.00m },
+            new Mahnstufe { Stufe = 2, Karenztage = 14, Gebuehr = 5.00m },
+            new Mahnstufe { Stufe = 3, Karenztage = 21, Gebuehr = 10.00m },
+        };
+        var vorhandeneStufen = await db.Mahnstufen.Select(m => m.Stufe).ToListAsync(ct);
+        foreach (var stufe in benoetigteMahnstufen)
+        {
+            if (!vorhandeneStufen.Contains(stufe.Stufe))
+            {
+                db.Mahnstufen.Add(stufe);
+            }
         }
 
         if (!await db.Firmenstamm.AnyAsync(ct))
