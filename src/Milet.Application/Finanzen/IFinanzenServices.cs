@@ -22,3 +22,11 @@ public interface IMahnwesenService
     Task<IReadOnlyList<MahnungDto>> MahnlaufDurchfuehrenAsync(IReadOnlyList<int> offenerPostenIds, CancellationToken ct = default);
     Task<MahnungDto> LadeMahnungAsync(int id, CancellationToken ct = default);
 }
+
+/// <summary>Wrapt IEmailService, protokolliert jeden Versandversuch (Erfolg wie Fehlschlag) in EmailVersand.
+/// Wirft nie — Ergebnis immer im DTO, siehe EmailVersandDto.</summary>
+public interface IEmailVersandService
+{
+    Task<EmailVersandDto> SendeBelegPdfAsync(int belegId, string empfaenger, string betreff, string text, CancellationToken ct = default);
+    Task<EmailVersandDto> SendeMahnungPdfAsync(int mahnungId, string empfaenger, string betreff, string text, CancellationToken ct = default);
+}

@@ -91,6 +91,8 @@ public static class DependencyInjection
             services.AddScoped<IEmailService, NichtKonfigurierterEmailService>();
         }
 
+        services.AddScoped<IEmailVersandService, EmailVersandService>();
+
         return services;
     }
 }

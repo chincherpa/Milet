@@ -52,3 +52,7 @@ public sealed record MahnungPositionDto(int OffenerPostenId, string BelegNummerS
 public sealed record MahnungDto(
     int Id, int KundeId, string KundenName, DateOnly MahnDatum, int Mahnstufe, decimal Gebuehr,
     decimal Gesamtbetrag, IReadOnlyList<MahnungPositionDto> Positionen);
+
+/// <summary>Ergebnis eines Versandversuchs — nie eine Exception, immer dieses DTO (auch bei Fehlschlag,
+/// z. B. EmailNichtKonfiguriertException). UI muss nur das Ergebnis anzeigen, kein try/catch nötig.</summary>
+public sealed record EmailVersandDto(bool Erfolgreich, string? Fehlermeldung);
