@@ -72,4 +72,25 @@ public class FinanzenValidatorTests
         var dto = new ZahlungZuordnungDto(1, -10m, 0m, []);
         Assert.False(new ZahlungZuordnungValidator().Validate(dto).IsValid);
     }
+
+    [Fact]
+    public void Mahnstufe_GueltigeDaten_KeinFehler()
+    {
+        var dto = new MahnstufeDto(0, 1, 7, 0m, null);
+        Assert.True(new MahnstufeValidator().Validate(dto).IsValid);
+    }
+
+    [Fact]
+    public void Mahnstufe_StufeNull_Fehler()
+    {
+        var dto = new MahnstufeDto(0, 0, 7, 0m, null);
+        Assert.False(new MahnstufeValidator().Validate(dto).IsValid);
+    }
+
+    [Fact]
+    public void Mahnstufe_NegativeKarenztage_Fehler()
+    {
+        var dto = new MahnstufeDto(0, 1, -1, 0m, null);
+        Assert.False(new MahnstufeValidator().Validate(dto).IsValid);
+    }
 }

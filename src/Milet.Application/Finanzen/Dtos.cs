@@ -37,3 +37,18 @@ public sealed record ZahlungDto(
     string? Zahlungsart,
     string? Referenz,
     IReadOnlyList<ZahlungZuordnungDto> Zuordnungen);
+
+public sealed record MahnstufeDto(int Id, int Stufe, int Karenztage, decimal Gebuehr, string? Mahntext);
+
+/// <summary>Ein OP, für den laut MahnSelektionService eine Mahnung fällig ist.</summary>
+public sealed record MahnKandidatDto(
+    int OffenerPostenId, int BelegId, string BelegNummer, decimal OffenerBetrag, DateOnly Faelligkeit,
+    int AktuelleMahnstufe, int NaechsteMahnstufe);
+
+public sealed record MahnlaufGruppeDto(int KundeId, string KundenName, IReadOnlyList<MahnKandidatDto> Kandidaten);
+
+public sealed record MahnungPositionDto(int OffenerPostenId, string BelegNummerSnapshot, decimal OffenerBetragSnapshot);
+
+public sealed record MahnungDto(
+    int Id, int KundeId, string KundenName, DateOnly MahnDatum, int Mahnstufe, decimal Gebuehr,
+    decimal Gesamtbetrag, IReadOnlyList<MahnungPositionDto> Positionen);

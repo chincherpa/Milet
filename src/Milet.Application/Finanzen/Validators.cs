@@ -14,6 +14,16 @@ public sealed class ZahlungZuordnungValidator : AbstractValidator<ZahlungZuordnu
     }
 }
 
+public sealed class MahnstufeValidator : AbstractValidator<MahnstufeDto>
+{
+    public MahnstufeValidator()
+    {
+        RuleFor(m => m.Stufe).GreaterThan(0);
+        RuleFor(m => m.Karenztage).GreaterThanOrEqualTo(0);
+        RuleFor(m => m.Gebuehr).GreaterThanOrEqualTo(0);
+    }
+}
+
 public sealed class ZahlungValidator : AbstractValidator<ZahlungDto>
 {
     public ZahlungValidator()
