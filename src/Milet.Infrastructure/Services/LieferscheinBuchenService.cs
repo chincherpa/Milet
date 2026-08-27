@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Milet.Application.Abstractions;
+using Milet.Application.Admin;
 using Milet.Application.Common;
 using Milet.Application.Verkauf;
 using Milet.Domain.Entities.Lager;
@@ -8,11 +10,14 @@ using Milet.Infrastructure.Services.Mapping;
 
 namespace Milet.Infrastructure.Services;
 
-public sealed class LieferscheinBuchenService(IDbContextFactory<MiletDbContext> dbContextFactory) : ILieferscheinBuchenService
+public sealed class LieferscheinBuchenService(
+    IDbContextFactory<MiletDbContext> dbContextFactory,
+    IBerechtigungsService berechtigung) : ILieferscheinBuchenService
 {
     public async Task<BelegDto> BuchenAsync(
         int lieferscheinId, IReadOnlyDictionary<int, IReadOnlyList<int>> seriennummernJePosition, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Lager);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
 

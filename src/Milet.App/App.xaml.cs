@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.UI.Xaml;
 using Milet.App.Services;
 using Milet.App.ViewModels;
+using Milet.App.ViewModels.Admin;
 using Milet.App.ViewModels.Einkauf;
 using Milet.App.ViewModels.Finanzen;
 using Milet.App.ViewModels.Lager;
@@ -19,7 +20,10 @@ namespace Milet.App;
 public partial class App : Microsoft.UI.Xaml.Application
 {
     public static IHost Host { get; private set; } = null!;
-    public static Window MainWindow { get; private set; } = null!;
+
+    /// <summary>Erst nach erfolgreichem Login gesetzt (s. LoginWindow) — DialogService und
+    /// andere Seiten dürfen erst danach darauf zugreifen.</summary>
+    public static Window MainWindow { get; internal set; } = null!;
 
     public App()
     {
@@ -31,8 +35,8 @@ public partial class App : Microsoft.UI.Xaml.Application
         Host = BuildHost();
         Host.Start();
 
-        MainWindow = new MainWindow();
-        MainWindow.Activate();
+        var loginWindow = new LoginWindow();
+        loginWindow.Activate();
     }
 
     private static IHost BuildHost()
@@ -63,6 +67,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         builder.Services.AddSingleton<INavigationService, NavigationService>();
         builder.Services.AddSingleton<IDialogService, DialogService>();
 
+        builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddTransient<DashboardViewModel>();
         builder.Services.AddTransient<KundenListViewModel>();
         builder.Services.AddTransient<KundeEditViewModel>();
@@ -98,6 +103,8 @@ public partial class App : Microsoft.UI.Xaml.Application
         builder.Services.AddTransient<DatevExportViewModel>();
 
         builder.Services.AddTransient<ReportingViewModel>();
+
+        builder.Services.AddTransient<AdministrationViewModel>();
 
         return builder.Build();
     }

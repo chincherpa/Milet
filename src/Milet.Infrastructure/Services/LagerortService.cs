@@ -1,5 +1,7 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Milet.Application.Abstractions;
+using Milet.Application.Admin;
 using Milet.Application.Lager;
 using Milet.Domain.Entities.Lager;
 using Milet.Infrastructure.Persistence;
@@ -7,7 +9,9 @@ using Milet.Infrastructure.Services.Mapping;
 
 namespace Milet.Infrastructure.Services;
 
-public sealed class LagerortService(IDbContextFactory<MiletDbContext> dbContextFactory) : ILagerortService
+public sealed class LagerortService(
+    IDbContextFactory<MiletDbContext> dbContextFactory,
+    IBerechtigungsService berechtigung) : ILagerortService
 {
     private static readonly LagerortValidator Validator = new();
 
@@ -26,6 +30,7 @@ public sealed class LagerortService(IDbContextFactory<MiletDbContext> dbContextF
 
     public async Task<LagerortDto> SpeichereAsync(LagerortDto dto, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Lager);
         await Validator.ValidateAndThrowAsync(dto, ct);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
 
@@ -52,6 +57,7 @@ public sealed class LagerortService(IDbContextFactory<MiletDbContext> dbContextF
 
     public async Task LoescheAsync(int id, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Lager);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         var lagerort = await db.Lagerorte.FirstOrDefaultAsync(l => l.Id == id, ct)
             ?? throw new Application.Common.NotFoundException(nameof(Lagerort), id);

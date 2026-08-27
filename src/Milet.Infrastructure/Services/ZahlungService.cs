@@ -1,5 +1,7 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Milet.Application.Abstractions;
+using Milet.Application.Admin;
 using Milet.Application.Common;
 using Milet.Application.Finanzen;
 using Milet.Domain.Entities.Finanzen;
@@ -8,7 +10,9 @@ using Milet.Infrastructure.Persistence;
 
 namespace Milet.Infrastructure.Services;
 
-public sealed class ZahlungService(IDbContextFactory<MiletDbContext> dbContextFactory) : IZahlungService
+public sealed class ZahlungService(
+    IDbContextFactory<MiletDbContext> dbContextFactory,
+    IBerechtigungsService berechtigung) : IZahlungService
 {
     private static readonly ZahlungValidator Validator = new();
 
@@ -30,6 +34,7 @@ public sealed class ZahlungService(IDbContextFactory<MiletDbContext> dbContextFa
 
     public async Task<ZahlungDto> ErfasseZahlungAsync(ZahlungDto dto, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Finanzen);
         await Validator.ValidateAndThrowAsync(dto, ct);
 
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);

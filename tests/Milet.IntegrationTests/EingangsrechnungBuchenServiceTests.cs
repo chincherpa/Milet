@@ -93,7 +93,7 @@ public sealed class EingangsrechnungBuchenServiceTests : IAsyncLifetime
         db.Add(wareneingang);
         await db.SaveChangesAsync(ct);
 
-        var wareneingangBuchenService = new WareneingangBuchenService(_factory);
+        var wareneingangBuchenService = new WareneingangBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
         await wareneingangBuchenService.BuchenAsync(wareneingang.Id, new Dictionary<int, IReadOnlyList<string>>(), ct);
 
         var ueberleitungService = new BelegUeberleitungService(_factory, new NumberRangeService(_factory));
@@ -128,7 +128,7 @@ public sealed class EingangsrechnungBuchenServiceTests : IAsyncLifetime
         // unverändert gebucht.
         var eingangsrechnungId = await NeueUnveraenderteEingangsrechnungAsync(ct);
         var lieferantId = _lieferantId;
-        var service = new EingangsrechnungBuchenService(_factory);
+        var service = new EingangsrechnungBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
 
         var ergebnis = await service.BuchenAsync(eingangsrechnungId, ct);
 
@@ -149,7 +149,7 @@ public sealed class EingangsrechnungBuchenServiceTests : IAsyncLifetime
         // höheren Wert geändert (simuliert eine reale Rechnung mit abweichendem Preis).
         var eingangsrechnungId = await NeueUnveraenderteEingangsrechnungAsync(ct);
         await VerteuerePositionAsync(eingangsrechnungId, 150m, ct);
-        var service = new EingangsrechnungBuchenService(_factory);
+        var service = new EingangsrechnungBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
 
         var ergebnis = await service.BuchenAsync(eingangsrechnungId, ct);
 

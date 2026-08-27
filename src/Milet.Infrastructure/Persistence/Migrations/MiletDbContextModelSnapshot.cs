@@ -22,6 +22,113 @@ namespace Milet.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Milet.Domain.Entities.Admin.AuditLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Aenderungen")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Aktion")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("BenutzerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("BenutzerName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("EntityId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("EntityName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("Zeitpunkt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Zeitpunkt");
+
+                    b.HasIndex("EntityName", "EntityId");
+
+                    b.ToTable("AuditLog", (string)null);
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Admin.Benutzer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Aktiv")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Anzeigename")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Benutzername")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("ErstelltAm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ErstelltVonId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("GeaendertAm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("GeaendertVonId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PasswortHash")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("RolleId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Benutzername")
+                        .IsUnique();
+
+                    b.HasIndex("RolleId");
+
+                    b.ToTable("Benutzer", (string)null);
+                });
+
             modelBuilder.Entity("Milet.Domain.Entities.Admin.FibuKonfiguration", b =>
                 {
                     b.Property<int>("Id")
@@ -113,6 +220,75 @@ namespace Milet.Infrastructure.Persistence.Migrations
                         .HasFilter("[Jahr] IS NOT NULL");
 
                     b.ToTable("Nummernkreise", (string)null);
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Admin.Recht", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Bezeichnung")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("Rechte", (string)null);
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Admin.Rolle", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Beschreibung")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("ErstelltAm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ErstelltVonId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("GeaendertAm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("GeaendertVonId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Rollen", (string)null);
                 });
 
             modelBuilder.Entity("Milet.Domain.Entities.Finanzen.EmailVersand", b =>
@@ -1324,6 +1500,21 @@ namespace Milet.Infrastructure.Persistence.Migrations
                     b.ToTable("BelegSteuerSummen", (string)null);
                 });
 
+            modelBuilder.Entity("RechtRolle", b =>
+                {
+                    b.Property<int>("RechteId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RollenId")
+                        .HasColumnType("int");
+
+                    b.HasKey("RechteId", "RollenId");
+
+                    b.HasIndex("RollenId");
+
+                    b.ToTable("RolleRecht", (string)null);
+                });
+
             modelBuilder.Entity("Milet.Domain.Entities.Verkauf.Angebot", b =>
                 {
                     b.HasBaseType("Milet.Domain.Entities.Verkauf.Beleg");
@@ -1406,6 +1597,17 @@ namespace Milet.Infrastructure.Persistence.Migrations
                         });
 
                     b.HasDiscriminator().HasValue("Wareneingang");
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Admin.Benutzer", b =>
+                {
+                    b.HasOne("Milet.Domain.Entities.Admin.Rolle", "Rolle")
+                        .WithMany("Benutzer")
+                        .HasForeignKey("RolleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Rolle");
                 });
 
             modelBuilder.Entity("Milet.Domain.Entities.Admin.Firmenstamm", b =>
@@ -2005,6 +2207,26 @@ namespace Milet.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Beleg");
+                });
+
+            modelBuilder.Entity("RechtRolle", b =>
+                {
+                    b.HasOne("Milet.Domain.Entities.Admin.Recht", null)
+                        .WithMany()
+                        .HasForeignKey("RechteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Milet.Domain.Entities.Admin.Rolle", null)
+                        .WithMany()
+                        .HasForeignKey("RollenId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Admin.Rolle", b =>
+                {
+                    b.Navigation("Benutzer");
                 });
 
             modelBuilder.Entity("Milet.Domain.Entities.Finanzen.Mahnung", b =>

@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Milet.Application.Abstractions;
+using Milet.Application.Admin;
 using Milet.Application.Common;
 using Milet.Application.Verkauf;
 using Milet.Domain.Entities.Verkauf;
@@ -12,9 +13,17 @@ namespace Milet.Infrastructure.Services;
 
 public sealed class BelegService(
     IDbContextFactory<MiletDbContext> dbContextFactory,
-    INumberRangeService numberRangeService) : IBelegService
+    INumberRangeService numberRangeService,
+    IBerechtigungsService berechtigung) : IBelegService
 {
     private static readonly BelegValidator Validator = new();
+
+    private static string RechtFuerTyp(BelegTyp typ) => typ switch
+    {
+        BelegTyp.Lieferschein => RechtCodes.Lager,
+        _ when typ.IstEinkaufsBeleg() => RechtCodes.Einkauf,
+        _ => RechtCodes.Verkauf,
+    };
 
     private static IQueryable<Beleg> SetFuerTyp(MiletDbContext db, BelegTyp typ) => typ switch
     {
@@ -82,6 +91,7 @@ public sealed class BelegService(
 
     public async Task<BelegDto> SpeichereAsync(BelegDto dto, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtFuerTyp(dto.BelegTyp));
         await Validator.ValidateAndThrowAsync(dto, ct);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
 
@@ -213,6 +223,7 @@ public sealed class BelegService(
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         var beleg = await db.Belege.FirstOrDefaultAsync(b => b.Id == id, ct)
             ?? throw new NotFoundException(nameof(Beleg), id);
+        berechtigung.PruefeRecht(RechtFuerTyp(beleg.ToDto(mitPositionen: false).BelegTyp));
         if (beleg.Status != BelegStatus.Entwurf)
             throw new InvalidOperationException($"Beleg '{beleg.BelegNummer}' ist bereits gebucht und kann nicht gelöscht werden.");
         db.Remove(beleg);

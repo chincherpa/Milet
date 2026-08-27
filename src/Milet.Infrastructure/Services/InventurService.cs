@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Milet.Application.Abstractions;
+using Milet.Application.Admin;
 using Milet.Application.Common;
 using Milet.Application.Lager;
 using Milet.Domain.Entities.Lager;
@@ -7,7 +9,9 @@ using Milet.Infrastructure.Services.Mapping;
 
 namespace Milet.Infrastructure.Services;
 
-public sealed class InventurService(IDbContextFactory<MiletDbContext> dbContextFactory) : IInventurService
+public sealed class InventurService(
+    IDbContextFactory<MiletDbContext> dbContextFactory,
+    IBerechtigungsService berechtigung) : IInventurService
 {
     public async Task<IReadOnlyList<InventurDto>> SucheAsync(CancellationToken ct = default)
     {
@@ -29,6 +33,7 @@ public sealed class InventurService(IDbContextFactory<MiletDbContext> dbContextF
 
     public async Task<InventurDto> NeueInventurAsync(int lagerortId, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Lager);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         var lagerort = await db.Lagerorte.FirstOrDefaultAsync(l => l.Id == lagerortId, ct)
             ?? throw new NotFoundException(nameof(Lagerort), lagerortId);
@@ -58,6 +63,7 @@ public sealed class InventurService(IDbContextFactory<MiletDbContext> dbContextF
 
     public async Task ErfasseIstMengeAsync(int inventurPositionId, decimal istMenge, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Lager);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         var position = await db.InventurPositionen.Include(p => p.Inventur)
             .FirstOrDefaultAsync(p => p.Id == inventurPositionId, ct)
@@ -71,6 +77,7 @@ public sealed class InventurService(IDbContextFactory<MiletDbContext> dbContextF
 
     public async Task<InventurDto> AbschliessenAsync(int inventurId, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Lager);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
 

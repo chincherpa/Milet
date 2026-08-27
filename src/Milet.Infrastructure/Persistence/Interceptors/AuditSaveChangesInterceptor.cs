@@ -1,13 +1,31 @@
+using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Milet.Application.Abstractions;
 using Milet.Domain.Common;
+using Milet.Domain.Entities.Admin;
 
 namespace Milet.Infrastructure.Persistence.Interceptors;
 
+/// <summary>
+/// Setzt die Audit-Felder auf <see cref="AuditableEntity"/> UND protokolliert jede
+/// Änderung (Angelegt/Geändert/Gelöscht) als <see cref="AuditLog"/>-Zeile (GoBD-Nachweis,
+/// s. PLAN.md "Audit &amp; Concurrency"). Die Erfassung passiert vor dem physischen Speichern
+/// (SavingChanges*, PKs von Added-Entitäten noch unbekannt), das Schreiben der AuditLog-Zeilen
+/// danach (SavedChanges*, per zusätzlichem SaveChanges-Aufruf — terminiert garantiert nach einer
+/// Rekursionsebene, da AuditLog selbst keine AuditableEntity ist und dabei nichts mehr einsammelt).
+/// Der Interceptor ist Singleton (mehrere DbContext-Instanzen aus der Factory) — der Zwischenstand
+/// je Speichervorgang hängt daher an einer <see cref="ConditionalWeakTable{TKey,TValue}"/> je Context,
+/// nicht an Instanzfeldern.
+/// </summary>
 public sealed class AuditSaveChangesInterceptor(ICurrentUserService currentUser) : SaveChangesInterceptor
 {
+    private sealed record PendingAudit(EntityEntry Entry, string EntityName, string Aktion, string? EntityId, Dictionary<string, object?> Werte);
+
+    private static readonly ConditionalWeakTable<DbContext, List<PendingAudit>> Pending = new();
+
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
     {
         Anwenden(eventData.Context);
@@ -21,6 +39,19 @@ public sealed class AuditSaveChangesInterceptor(ICurrentUserService currentUser)
         return base.SavingChangesAsync(eventData, result, cancellationToken);
     }
 
+    public override int SavedChanges(SaveChangesCompletedEventData eventData, int result)
+    {
+        AuditSchreibenAsync(eventData.Context, default).GetAwaiter().GetResult();
+        return base.SavedChanges(eventData, result);
+    }
+
+    public override async ValueTask<int> SavedChangesAsync(
+        SaveChangesCompletedEventData eventData, int result, CancellationToken cancellationToken = default)
+    {
+        await AuditSchreibenAsync(eventData.Context, cancellationToken);
+        return await base.SavedChangesAsync(eventData, result, cancellationToken);
+    }
+
     private void Anwenden(DbContext? context)
     {
         if (context is null)
@@ -29,6 +60,7 @@ public sealed class AuditSaveChangesInterceptor(ICurrentUserService currentUser)
         }
 
         var jetzt = DateTime.UtcNow;
+        var audits = new List<PendingAudit>();
 
         foreach (EntityEntry<AuditableEntity> entry in context.ChangeTracker.Entries<AuditableEntity>())
         {
@@ -42,6 +74,97 @@ public sealed class AuditSaveChangesInterceptor(ICurrentUserService currentUser)
                 entry.Entity.GeaendertAm = jetzt;
                 entry.Entity.GeaendertVonId = currentUser.BenutzerId;
             }
+
+            if (entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+            {
+                audits.Add(Erfassen(entry));
+            }
         }
+
+        Pending.Remove(context);
+        if (audits.Count > 0)
+        {
+            Pending.Add(context, audits);
+        }
+    }
+
+    private static PendingAudit Erfassen(EntityEntry entry)
+    {
+        var aktion = entry.State switch
+        {
+            EntityState.Added => "Angelegt",
+            EntityState.Modified => "Geändert",
+            EntityState.Deleted => "Gelöscht",
+            _ => entry.State.ToString(),
+        };
+
+        var pkNamen = entry.Metadata.FindPrimaryKey()?.Properties.Select(p => p.Name).ToHashSet() ?? [];
+
+        var werte = new Dictionary<string, object?>();
+        foreach (var prop in entry.Properties)
+        {
+            if (pkNamen.Contains(prop.Metadata.Name))
+            {
+                continue;
+            }
+
+            if (entry.State == EntityState.Modified && !prop.IsModified)
+            {
+                continue;
+            }
+
+            werte[prop.Metadata.Name] = entry.State == EntityState.Deleted ? prop.OriginalValue : prop.CurrentValue;
+        }
+
+        // Bei Added ist der Identity-PK jetzt noch unbekannt — erst nach dem physischen Save lesbar.
+        string? entityId = null;
+        if (entry.State != EntityState.Added)
+        {
+            var pk = entry.Properties.FirstOrDefault(p => pkNamen.Contains(p.Metadata.Name));
+            entityId = pk?.OriginalValue?.ToString();
+        }
+
+        return new PendingAudit(entry, entry.Entity.GetType().Name, aktion, entityId, werte);
+    }
+
+    private async Task AuditSchreibenAsync(DbContext? context, CancellationToken ct)
+    {
+        if (context is null || !Pending.TryGetValue(context, out var audits))
+        {
+            return;
+        }
+
+        Pending.Remove(context);
+
+        if (audits.Count == 0)
+        {
+            return;
+        }
+
+        var jetzt = DateTime.UtcNow;
+        var logs = audits.Select(audit =>
+        {
+            var entityId = audit.EntityId;
+            if (entityId is null)
+            {
+                var pkNamen = audit.Entry.Metadata.FindPrimaryKey()?.Properties.Select(p => p.Name).ToHashSet() ?? [];
+                var pk = audit.Entry.Properties.FirstOrDefault(p => pkNamen.Contains(p.Metadata.Name));
+                entityId = pk?.CurrentValue?.ToString() ?? "?";
+            }
+
+            return new AuditLog
+            {
+                Zeitpunkt = jetzt,
+                BenutzerId = currentUser.BenutzerId,
+                BenutzerName = currentUser.BenutzerName,
+                EntityName = audit.EntityName,
+                EntityId = entityId,
+                Aktion = audit.Aktion,
+                Aenderungen = audit.Werte.Count > 0 ? JsonSerializer.Serialize(audit.Werte) : null,
+            };
+        }).ToList();
+
+        context.Set<AuditLog>().AddRange(logs);
+        await context.SaveChangesAsync(ct);
     }
 }

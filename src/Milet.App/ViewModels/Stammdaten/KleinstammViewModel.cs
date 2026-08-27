@@ -22,6 +22,7 @@ public sealed partial class KleinstammViewModel : ObservableObject
     private readonly Milet.Application.Lager.ILagerortService _lagerortService;
     private readonly IMahnwesenService _mahnwesenService;
     private readonly IFibuKonfigurationService _fibuKonfigurationService;
+    private readonly IFirmenstammService _firmenstammService;
 
     public KleinstammViewModel(
         IEinheitenService einheitenService,
@@ -34,7 +35,8 @@ public sealed partial class KleinstammViewModel : ObservableObject
         IDialogService dialogService,
         Milet.Application.Lager.ILagerortService lagerortService,
         IMahnwesenService mahnwesenService,
-        IFibuKonfigurationService fibuKonfigurationService)
+        IFibuKonfigurationService fibuKonfigurationService,
+        IFirmenstammService firmenstammService)
     {
         _einheitenService = einheitenService;
         _mwStSaetzeService = mwStSaetzeService;
@@ -47,6 +49,7 @@ public sealed partial class KleinstammViewModel : ObservableObject
         _lagerortService = lagerortService;
         _mahnwesenService = mahnwesenService;
         _fibuKonfigurationService = fibuKonfigurationService;
+        _firmenstammService = firmenstammService;
 
         _ = EinheitenLadenAsync();
         _ = MwStSaetzeLadenAsync();
@@ -57,6 +60,7 @@ public sealed partial class KleinstammViewModel : ObservableObject
         _ = LagerortenLadenAsync();
         _ = MahnstufenLadenAsync();
         _ = FibuKonfigurationLadenAsync();
+        _ = FirmenstammLadenAsync();
     }
 
     // ---- Einheiten ----
@@ -863,6 +867,94 @@ public sealed partial class KleinstammViewModel : ObservableObject
         catch (Exception ex)
         {
             FibuKonfigurationFehler = ex.Message;
+        }
+    }
+
+    // ---- Firmenstamm (Briefkopf, Singleton) ----
+
+    [ObservableProperty]
+    public partial string FirmaFirmenname { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string FirmaStrasse { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string FirmaPlz { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string FirmaOrt { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string FirmaLand { get; set; } = "DE";
+
+    [ObservableProperty]
+    public partial string? FirmaUStIdNr { get; set; }
+
+    [ObservableProperty]
+    public partial string? FirmaTelefon { get; set; }
+
+    [ObservableProperty]
+    public partial string? FirmaEmail { get; set; }
+
+    [ObservableProperty]
+    public partial string? FirmaIban { get; set; }
+
+    [ObservableProperty]
+    public partial string? FirmaBic { get; set; }
+
+    [ObservableProperty]
+    public partial string? FirmenstammFehler { get; set; }
+
+    [RelayCommand]
+    private async Task FirmenstammLadenAsync()
+    {
+        var dto = await _firmenstammService.LadeAsync();
+        FirmaFirmenname = dto.Firmenname;
+        FirmaStrasse = dto.Adresse.Strasse;
+        FirmaPlz = dto.Adresse.Plz;
+        FirmaOrt = dto.Adresse.Ort;
+        FirmaLand = dto.Adresse.Land;
+        FirmaUStIdNr = dto.UStIdNr;
+        FirmaTelefon = dto.Telefon;
+        FirmaEmail = dto.Email;
+        FirmaIban = dto.Iban;
+        FirmaBic = dto.Bic;
+    }
+
+    [RelayCommand]
+    private async Task FirmenstammSpeichernAsync()
+    {
+        FirmenstammFehler = null;
+        var dto = new FirmenstammDto
+        {
+            Firmenname = FirmaFirmenname,
+            Adresse = new AdresseDto
+            {
+                Name1 = FirmaFirmenname,
+                Strasse = FirmaStrasse,
+                Plz = FirmaPlz,
+                Ort = FirmaOrt,
+                Land = FirmaLand,
+            },
+            UStIdNr = FirmaUStIdNr,
+            Telefon = FirmaTelefon,
+            Email = FirmaEmail,
+            Iban = FirmaIban,
+            Bic = FirmaBic,
+        };
+
+        try
+        {
+            await _firmenstammService.SpeichereAsync(dto);
+            await FirmenstammLadenAsync();
+        }
+        catch (ValidationException ex)
+        {
+            FirmenstammFehler = string.Join(Environment.NewLine, ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (Exception ex)
+        {
+            FirmenstammFehler = ex.Message;
         }
     }
 }

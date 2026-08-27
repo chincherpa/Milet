@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Milet.Application.Abstractions;
+using Milet.Application.Admin;
 using Milet.Application.Common;
 using Milet.Application.Einkauf;
 using Milet.Domain.Entities.Finanzen;
@@ -9,10 +11,13 @@ using Verkauf = Milet.Application.Verkauf;
 
 namespace Milet.Infrastructure.Services;
 
-public sealed class EingangsrechnungBuchenService(IDbContextFactory<MiletDbContext> dbContextFactory) : IEingangsrechnungBuchenService
+public sealed class EingangsrechnungBuchenService(
+    IDbContextFactory<MiletDbContext> dbContextFactory,
+    IBerechtigungsService berechtigung) : IEingangsrechnungBuchenService
 {
     public async Task<EingangsrechnungBuchenErgebnisDto> BuchenAsync(int eingangsrechnungId, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Einkauf);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
 

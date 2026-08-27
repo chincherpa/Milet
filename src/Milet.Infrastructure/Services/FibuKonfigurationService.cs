@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Milet.Application.Abstractions;
 using Milet.Application.Admin;
 using Milet.Domain.Entities.Admin;
 using Milet.Infrastructure.Persistence;
@@ -6,7 +7,9 @@ using Milet.Infrastructure.Services.Mapping;
 
 namespace Milet.Infrastructure.Services;
 
-public sealed class FibuKonfigurationService(IDbContextFactory<MiletDbContext> dbContextFactory) : IFibuKonfigurationService
+public sealed class FibuKonfigurationService(
+    IDbContextFactory<MiletDbContext> dbContextFactory,
+    IBerechtigungsService berechtigung) : IFibuKonfigurationService
 {
     public async Task<FibuKonfigurationDto> LadeAsync(CancellationToken ct = default)
     {
@@ -17,6 +20,7 @@ public sealed class FibuKonfigurationService(IDbContextFactory<MiletDbContext> d
 
     public async Task SpeichereAsync(FibuKonfigurationDto dto, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Administration);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         var konfiguration = await db.FibuKonfiguration.FirstOrDefaultAsync(f => f.Id == 1, ct);
         if (konfiguration is null)

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Milet.Application.Abstractions;
 using Milet.Application.Admin;
 using Milet.Domain.Entities.Admin;
 using Milet.Infrastructure.Persistence;
@@ -6,7 +7,9 @@ using Milet.Infrastructure.Services.Mapping;
 
 namespace Milet.Infrastructure.Services;
 
-public sealed class FirmenstammService(IDbContextFactory<MiletDbContext> dbContextFactory) : IFirmenstammService
+public sealed class FirmenstammService(
+    IDbContextFactory<MiletDbContext> dbContextFactory,
+    IBerechtigungsService berechtigung) : IFirmenstammService
 {
     public async Task<FirmenstammDto> LadeAsync(CancellationToken ct = default)
     {
@@ -17,6 +20,7 @@ public sealed class FirmenstammService(IDbContextFactory<MiletDbContext> dbConte
 
     public async Task SpeichereAsync(FirmenstammDto dto, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Administration);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         var firma = await db.Firmenstamm.FirstOrDefaultAsync(f => f.Id == 1, ct);
         if (firma is null)
