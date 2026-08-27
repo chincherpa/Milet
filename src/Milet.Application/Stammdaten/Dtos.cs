@@ -83,6 +83,8 @@ public sealed record MwStSatzDto
     public decimal Satz { get; init; }
     public int? SteuerSchluessel { get; init; }
     public DateOnly GueltigAb { get; init; }
+    public int? ErloeskontoNr { get; init; }
+    public int? AufwandskontoNr { get; init; }
 }
 
 public sealed record ZahlungsbedingungDto

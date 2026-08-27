@@ -56,3 +56,16 @@ public sealed record MahnungDto(
 /// <summary>Ergebnis eines Versandversuchs — nie eine Exception, immer dieses DTO (auch bei Fehlschlag,
 /// z. B. EmailNichtKonfiguriertException). UI muss nur das Ergebnis anzeigen, kein try/catch nötig.</summary>
 public sealed record EmailVersandDto(bool Erfolgreich, string? Fehlermeldung);
+
+/// <summary>Zählt/summiert, was ein DATEV-Export für den Zeitraum umfassen würde — ohne
+/// <c>ExportiertAm</c> zu setzen (reine Vorschau, wiederholbar).</summary>
+public sealed record DatevExportVorschauDto(
+    int AnzahlRechnungen,
+    int AnzahlEingangsrechnungen,
+    int AnzahlZahlungen,
+    int AnzahlBuchungszeilen,
+    decimal SummeUmsatz);
+
+/// <summary>Ergebnis eines tatsächlichen Exports — die fertige CSV (CP1252-kodiert) plus Vorschlags-
+/// dateiname. Markiert die exportierten Belege/Zahlungen mit <c>ExportiertAm</c>.</summary>
+public sealed record DatevExportErgebnisDto(byte[] CsvBytes, string Dateiname, int AnzahlBuchungszeilen);

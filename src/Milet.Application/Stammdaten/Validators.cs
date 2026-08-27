@@ -65,6 +65,10 @@ public sealed class MwStSatzValidator : AbstractValidator<MwStSatzDto>
     {
         RuleFor(m => m.Bezeichnung).NotEmpty().WithMessage("Bezeichnung ist erforderlich.").MaximumLength(100);
         RuleFor(m => m.Satz).InclusiveBetween(0, 100);
+        RuleFor(m => m.ErloeskontoNr).GreaterThan(0).When(m => m.ErloeskontoNr.HasValue)
+            .WithMessage("Erlöskonto muss eine positive Kontonummer sein.");
+        RuleFor(m => m.AufwandskontoNr).GreaterThan(0).When(m => m.AufwandskontoNr.HasValue)
+            .WithMessage("Aufwandskonto muss eine positive Kontonummer sein.");
     }
 }
 
