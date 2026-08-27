@@ -63,6 +63,7 @@ public static class DependencyInjection
         services.AddScoped<IEingangsrechnungBuchenService, EingangsrechnungBuchenService>();
 
         services.AddScoped<IOffenePostenService, OffenePostenService>();
+        services.AddScoped<IZahlungService, ZahlungService>();
 
         return services;
     }
