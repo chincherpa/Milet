@@ -8,7 +8,9 @@ public sealed class OffenerPostenConfiguration : IEntityTypeConfiguration<Offene
 {
     public void Configure(EntityTypeBuilder<OffenerPosten> b)
     {
-        b.ToTable("OffenePosten");
+        b.ToTable("OffenePosten", t => t.HasCheckConstraint(
+            "CK_OffenePosten_KundeOderLieferant",
+            "([KundeId] IS NOT NULL AND [LieferantId] IS NULL) OR ([KundeId] IS NULL AND [LieferantId] IS NOT NULL)"));
         b.HasKey(x => x.Id);
         b.HasIndex(x => x.BelegId).IsUnique();
         b.HasOne(x => x.Beleg).WithMany().HasForeignKey(x => x.BelegId).OnDelete(DeleteBehavior.Restrict);

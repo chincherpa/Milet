@@ -41,18 +41,31 @@ public static class StammdatenSeed
                 new Zahlungsbedingung { Bezeichnung = "30 Tage netto, 14 Tage 2% Skonto", ZielTage = 30, SkontoTage = 14, SkontoProzent = 2.00m });
         }
 
-        if (!await db.Nummernkreise.AnyAsync(ct))
+        // Fix für ein bekanntes Risiko (STATUS.md „Bekannte Risiken"): vorher wurden Nummernkreise nur angelegt,
+        // wenn die ganze Tabelle leer war — ein später hinzugefügter Code (hier: WE, ER) wurde auf einer bereits
+        // migrierten DB dadurch nie automatisch nachgetragen. Jetzt: je fehlendem Code einzeln ergänzen,
+        // vorhandene Zeilen werden nie angefasst (kein Reset von NaechsteNummer bei bereits existierenden Codes).
+        var benoetigteNummernkreise = new[]
         {
-            db.Nummernkreise.AddRange(
-                new Nummernkreis { Code = "KD", NaechsteNummer = 10001, Format = "KD-{0}" },
-                new Nummernkreis { Code = "LF", NaechsteNummer = 70001, Format = "LF-{0}" },
-                new Nummernkreis { Code = "ART", NaechsteNummer = 1001, Format = "ART-{0:00000}" },
-                new Nummernkreis { Code = "AN", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "AN-{1}-{0:0000}" },
-                new Nummernkreis { Code = "AU", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "AU-{1}-{0:0000}" },
-                new Nummernkreis { Code = "LS", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "LS-{1}-{0:0000}" },
-                new Nummernkreis { Code = "RE", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "RE-{1}-{0:0000}" },
-                new Nummernkreis { Code = "GS", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "GS-{1}-{0:0000}" },
-                new Nummernkreis { Code = "BE", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "BE-{1}-{0:0000}" });
+            new Nummernkreis { Code = "KD", NaechsteNummer = 10001, Format = "KD-{0}" },
+            new Nummernkreis { Code = "LF", NaechsteNummer = 70001, Format = "LF-{0}" },
+            new Nummernkreis { Code = "ART", NaechsteNummer = 1001, Format = "ART-{0:00000}" },
+            new Nummernkreis { Code = "AN", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "AN-{1}-{0:0000}" },
+            new Nummernkreis { Code = "AU", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "AU-{1}-{0:0000}" },
+            new Nummernkreis { Code = "LS", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "LS-{1}-{0:0000}" },
+            new Nummernkreis { Code = "RE", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "RE-{1}-{0:0000}" },
+            new Nummernkreis { Code = "GS", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "GS-{1}-{0:0000}" },
+            new Nummernkreis { Code = "BE", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "BE-{1}-{0:0000}" },
+            new Nummernkreis { Code = "WE", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "WE-{1}-{0:0000}" },
+            new Nummernkreis { Code = "ER", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "ER-{1}-{0:0000}" },
+        };
+        var vorhandeneCodes = await db.Nummernkreise.Select(n => n.Code).ToListAsync(ct);
+        foreach (var kreis in benoetigteNummernkreise)
+        {
+            if (!vorhandeneCodes.Contains(kreis.Code))
+            {
+                db.Nummernkreise.Add(kreis);
+            }
         }
 
         if (!await db.Lagerorte.AnyAsync(ct))

@@ -8,24 +8,29 @@ public sealed class BelegConfiguration : IEntityTypeConfiguration<Beleg>
 {
     public void Configure(EntityTypeBuilder<Beleg> b)
     {
-        b.ToTable("Belege");
+        b.ToTable("Belege", t => t.HasCheckConstraint(
+            "CK_Belege_KundeOderLieferant",
+            "([KundeId] IS NOT NULL AND [LieferantId] IS NULL) OR ([KundeId] IS NULL AND [LieferantId] IS NOT NULL)"));
         b.HasKey(x => x.Id);
 
         b.HasDiscriminator<string>("BelegTyp")
             .HasValue<Angebot>(nameof(BelegTyp.Angebot))
             .HasValue<Auftrag>(nameof(BelegTyp.Auftrag))
             .HasValue<Rechnung>(nameof(BelegTyp.Rechnung))
-            .HasValue<Lieferschein>(nameof(BelegTyp.Lieferschein));
+            .HasValue<Lieferschein>(nameof(BelegTyp.Lieferschein))
+            .HasValue<Bestellung>(nameof(BelegTyp.Bestellung))
+            .HasValue<Wareneingang>(nameof(BelegTyp.Wareneingang))
+            .HasValue<Eingangsrechnung>(nameof(BelegTyp.Eingangsrechnung));
 
         b.Property(x => x.BelegNummer).HasMaxLength(20).IsRequired();
-        // Unique je Typ — leere Rechnungsnummer (Entwurf, erst beim Buchen vergeben) ist erlaubt mehrfach leer,
-        // SQL Server behandelt mehrere '' in einem Unique-Index als Duplikate -> daher Filter auf nicht-leer.
         b.HasIndex("BelegTyp", nameof(Beleg.BelegNummer))
             .IsUnique()
             .HasFilter("[BelegNummer] <> ''");
 
-        b.Property(x => x.KundeId).IsRequired();
+        // KundeId/LieferantId bewusst NICHT .IsRequired() — je nach Belegtyp ist genau eines von beiden gesetzt,
+        // durchgesetzt vom CHECK-Constraint oben, nicht von EF-Required (das würde beide zwingend machen).
         b.HasOne(x => x.Kunde).WithMany().HasForeignKey(x => x.KundeId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne(x => x.Lieferant).WithMany().HasForeignKey(x => x.LieferantId).OnDelete(DeleteBehavior.Restrict);
 
         b.OwnsOne(x => x.RechnungsadresseSnapshot, a =>
         {
@@ -56,6 +61,7 @@ public sealed class BelegConfiguration : IEntityTypeConfiguration<Beleg>
 
         b.Property(x => x.Kopftext).HasMaxLength(2000);
         b.Property(x => x.Fusstext).HasMaxLength(2000);
+        b.Property(x => x.ExterneReferenz).HasMaxLength(50);
 
         b.HasMany(x => x.Positionen).WithOne(p => p.Beleg).HasForeignKey(p => p.BelegId).OnDelete(DeleteBehavior.Cascade);
         b.HasMany(x => x.Steuersummen).WithOne(s => s.Beleg).HasForeignKey(s => s.BelegId).OnDelete(DeleteBehavior.Cascade);
