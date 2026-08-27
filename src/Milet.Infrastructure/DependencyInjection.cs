@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Milet.Application.Abstractions;
 using Milet.Application.Admin;
+using Milet.Application.Einkauf;
 using Milet.Application.Lager;
 using Milet.Application.Stammdaten;
 using Milet.Application.Verkauf;
@@ -54,6 +55,11 @@ public static class DependencyInjection
         services.AddScoped<ISeriennummernService, SeriennummernService>();
         services.AddScoped<ILieferscheinBuchenService, LieferscheinBuchenService>();
         services.AddScoped<IInventurService, InventurService>();
+
+        services.AddScoped<IEinkaufLookupService, EinkaufLookupService>();
+        services.AddScoped<IBestellVorschlagService, BestellVorschlagService>();
+        services.AddScoped<IWareneingangBuchenService, WareneingangBuchenService>();
+        services.AddScoped<IEingangsrechnungBuchenService, EingangsrechnungBuchenService>();
 
         return services;
     }

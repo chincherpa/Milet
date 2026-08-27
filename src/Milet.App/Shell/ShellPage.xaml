@@ -26,7 +26,14 @@
                     <NavigationViewItem Content="Rechnungen" Tag="rechnungen" Icon="PostUpdate" />
                 </NavigationViewItem.MenuItems>
             </NavigationViewItem>
-            <NavigationViewItem Content="Einkauf" Tag="einkauf" Icon="Import" IsEnabled="False" />
+            <NavigationViewItem Content="Einkauf" Tag="einkauf" Icon="Import">
+                <NavigationViewItem.MenuItems>
+                    <NavigationViewItem Content="Bestellvorschlag" Tag="bestellvorschlag" Icon="Add" />
+                    <NavigationViewItem Content="Bestellungen" Tag="bestellungen" Icon="Bookmarks" />
+                    <NavigationViewItem Content="Wareneingänge" Tag="wareneingaenge" Icon="Package" />
+                    <NavigationViewItem Content="Eingangsrechnungen" Tag="eingangsrechnungen" Icon="PostUpdate" />
+                </NavigationViewItem.MenuItems>
+            </NavigationViewItem>
             <NavigationViewItem Content="Lager" Tag="lager" Icon="Library">
                 <NavigationViewItem.MenuItems>
                     <NavigationViewItem Content="Lieferscheine" Tag="lieferscheine" Icon="Package" />
