@@ -23,6 +23,9 @@ public sealed class BelegConfiguration : IEntityTypeConfiguration<Beleg>
             .HasValue<Eingangsrechnung>(nameof(BelegTyp.Eingangsrechnung));
 
         b.Property(x => x.BelegNummer).HasMaxLength(20).IsRequired();
+        // HasFilter: Rechnungen aus einer Sammelüberleitung haben vorübergehend BelegNummer = '' (Nummer wird erst
+        // beim Buchen vergeben) — ohne den Filter würde SQL Server mehrere leere Strings als Duplikate im
+        // Unique-Index behandeln (anders als NULL, das er ignoriert) und die zweite Sammelrechnung ablehnen.
         b.HasIndex("BelegTyp", nameof(Beleg.BelegNummer))
             .IsUnique()
             .HasFilter("[BelegNummer] <> ''");

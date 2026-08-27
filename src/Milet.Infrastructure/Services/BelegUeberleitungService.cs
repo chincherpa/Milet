@@ -274,6 +274,15 @@ public sealed class BelegUeberleitungService(
         if (quellBelegIds.Count == 0)
             throw new InvalidOperationException("Mindestens ein Quellbeleg erforderlich.");
 
+        // Sammel-Eingangsrechnung aus mehreren Wareneingängen ist explizit out of scope (Phase-4-Plan) — die
+        // Methode wurde nur für den Verkaufs-Fall (mehrere Lieferscheine -> eine Sammelrechnung) gebaut und
+        // kennt kein LieferantId auf dem Zielbeleg, keinen Schutz vor unterschiedlichen Lieferanten (null != null
+        // wäre immer false) und keinen generalisierten Gebucht-Guard für Wareneingang. ErlaubteUebergaenge lässt
+        // Wareneingang->Eingangsrechnung inzwischen technisch zu (für den 1:1-Pfad in UeberleitenAsync/-MitAuswahlAsync),
+        // also muss hier ein expliziter Schutz stehen statt sich auf "keine UI ruft das so auf" zu verlassen.
+        if (zielTyp.IstEinkaufsBeleg())
+            throw new InvalidOperationException("Sammel-Eingangsrechnung aus mehreren Wareneingängen wird nicht unterstützt.");
+
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
@@ -282,6 +291,9 @@ public sealed class BelegUeberleitungService(
             .ToListAsync(ct);
         if (quellBelege.Count != quellBelegIds.Count)
             throw new NotFoundException(nameof(Beleg), string.Join(",", quellBelegIds));
+
+        if (quellBelege.Any(b => TypVon(b).IstEinkaufsBeleg()))
+            throw new InvalidOperationException("Sammel-Eingangsrechnung aus mehreren Wareneingängen wird nicht unterstützt.");
 
         var ersterBeleg = quellBelege[0];
         var ersteZahlungsbedingung = (ersterBeleg.ZahlungsbedingungZielTage, ersterBeleg.ZahlungsbedingungSkontoTage, ersterBeleg.ZahlungsbedingungSkontoProzent);

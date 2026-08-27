@@ -44,8 +44,11 @@ public sealed class WareneingangBuchenService(IDbContextFactory<MiletDbContext> 
                 if (!neueSeriennummernJePosition.TryGetValue(position.Id, out var nummern) || nummern.Count != position.Menge)
                     throw new InvalidOperationException($"Position {position.PositionsNr}: es müssen genau {position.Menge} Seriennummer(n) erfasst werden.");
 
-                // In-Memory-Check: doppelte innerhalb der gleichen Eingabe (vor SaveChangesAsync würden sie nicht gemerkt)
-                if (nummern.Distinct(StringComparer.Ordinal).Count() != nummern.Count)
+                // In-Memory-Check: doppelte innerhalb der gleichen Eingabe (vor SaveChangesAsync würden sie nicht gemerkt).
+                // OrdinalIgnoreCase, weil der DB-Unique-Index (SeriennummerConfiguration) unter der Standard-Collation
+                // von SQL Server case-insensitiv vergleicht — sonst würde z. B. "SN-A"/"sn-a" hier durchrutschen und
+                // erst als roher DbUpdateException an der DB scheitern.
+                if (nummern.Distinct(StringComparer.OrdinalIgnoreCase).Count() != nummern.Count)
                     throw new InvalidOperationException($"Position {position.PositionsNr}: doppelte Seriennummer(n) in der Eingabe.");
 
                 var doppelte = await db.Seriennummern.AsNoTracking()
