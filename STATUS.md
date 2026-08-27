@@ -143,3 +143,22 @@ Implementiert nach Plan `docs/superpowers/plans/2026-08-25-phase3-lager-liefersc
 - Lieferadresse ist in Phase 2 nicht im Belegeditor editierbar (immer 1:1 aus Kundenstamm übernommen) — bewusste Vereinfachung, relevant erst mit Lieferschein (Phase 3).
 - **Offene-Mengen-Prüfung in `BelegUeberleitungService` (inkl. `UeberleitenMitAuswahlAsync`/`UeberleitenMehrereAsync`) schützt trotz gegenteiligem Kommentar im Code vermutlich nicht gegen parallele Überleitungen**: der In-Transaktion-Re-Check liest unter SQL Servers Default-Isolationslevel READ COMMITTED ohne Sperre — zwei gleichzeitige Transaktionen können beide „nichts geliefert" sehen und beide committen. Folgenlos bei Angebot→Auftrag (1:1, keine Teilmengen), aber ein echter potenzieller Bestandsfehler bei paralleler Teillieferung/Sammelrechnung. Noch nicht verifiziert (Docker hier nicht verfügbar) oder behoben — möglicher Fix: `UPDLOCK` auf dem/den Quellbeleg(en) beim Lesen. Fund stammt aus einem parallel entstandenen, nicht umgesetzten Planungsentwurf (`docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md`).
 - `StammdatenSeed` legt Nummernkreise nur an, wenn die `Nummernkreise`-Tabelle komplett leer ist, nicht „je fehlendem Code" — eine bereits migrierte Datenbank bekommt einen später neu hinzugefügten Nummernkreis-Code nie automatisch nachgetragen. Bisher folgenlos (alle bislang genutzten Codes existierten schon vor der ersten Migration), wird aber relevant, sobald eine spätere Phase einen neuen Code auf einer bestehenden DB einführt.
+
+
+
+
+
+
+
+
+
+
+
+
+**1 Stammdaten**           Done
+**2 Verkauf+PDF**          Done
+**3 Lager+Lieferschein**   Done
+**4 Einkauf**              in progress
+**5 Finanzen+E-Mail**      open
+**6 DATEV+Reporting**      open
+**7 Admin+Härtung**        open
