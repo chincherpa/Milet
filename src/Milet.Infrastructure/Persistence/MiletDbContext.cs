@@ -35,6 +35,9 @@ public sealed class MiletDbContext(DbContextOptions<MiletDbContext> options) : D
     public DbSet<Milet.Domain.Entities.Finanzen.OffenerPosten> OffenePosten => Set<Milet.Domain.Entities.Finanzen.OffenerPosten>();
     public DbSet<Firmenstamm> Firmenstamm => Set<Firmenstamm>();
     public DbSet<Milet.Domain.Entities.Verkauf.Lieferschein> Lieferscheine => Set<Milet.Domain.Entities.Verkauf.Lieferschein>();
+    public DbSet<Milet.Domain.Entities.Verkauf.Bestellung> Bestellungen => Set<Milet.Domain.Entities.Verkauf.Bestellung>();
+    public DbSet<Milet.Domain.Entities.Verkauf.Wareneingang> Wareneingaenge => Set<Milet.Domain.Entities.Verkauf.Wareneingang>();
+    public DbSet<Milet.Domain.Entities.Verkauf.Eingangsrechnung> Eingangsrechnungen => Set<Milet.Domain.Entities.Verkauf.Eingangsrechnung>();
     public DbSet<Milet.Domain.Entities.Lager.Lagerort> Lagerorte => Set<Milet.Domain.Entities.Lager.Lagerort>();
     public DbSet<Milet.Domain.Entities.Lager.Lagerbewegung> Lagerbewegungen => Set<Milet.Domain.Entities.Lager.Lagerbewegung>();
     public DbSet<Milet.Domain.Entities.Lager.ArtikelBestand> ArtikelBestaende => Set<Milet.Domain.Entities.Lager.ArtikelBestand>();

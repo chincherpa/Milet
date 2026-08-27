@@ -56,4 +56,20 @@ public class VerkaufValidatorTests
         var ergebnis = new BelegPositionValidator().Validate(dto);
         Assert.False(ergebnis.IsValid);
     }
+
+    [Fact]
+    public void Beleg_EinkaufsTyp_OhneLieferant_Fehler()
+    {
+        var dto = new BelegDto { BelegTyp = BelegTyp.Bestellung, Positionen = [GueltigePosition()] };
+        var ergebnis = new BelegValidator().Validate(dto);
+        Assert.False(ergebnis.IsValid);
+    }
+
+    [Fact]
+    public void Beleg_EinkaufsTyp_MitLieferant_KundeNichtErforderlich()
+    {
+        var dto = new BelegDto { BelegTyp = BelegTyp.Bestellung, KundeId = 0, LieferantId = 3, Positionen = [GueltigePosition()] };
+        var ergebnis = new BelegValidator().Validate(dto);
+        Assert.True(ergebnis.IsValid);
+    }
 }

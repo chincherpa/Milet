@@ -2,10 +2,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml.Controls;
 using Milet.App.Services;
 using Milet.App.ViewModels;
+using Milet.App.ViewModels.Einkauf;
 using Milet.App.ViewModels.Lager;
 using Milet.App.ViewModels.Stammdaten;
 using Milet.App.ViewModels.Verkauf;
 using Milet.App.Views;
+using Milet.App.Views.Einkauf;
 using Milet.App.Views.Lager;
 using Milet.App.Views.Stammdaten;
 using Milet.App.Views.Verkauf;
@@ -43,6 +45,14 @@ public sealed partial class ShellPage : Page
         _navigation.Register<BestandUebersichtViewModel, BestandUebersichtPage>();
         _navigation.Register<InventurListViewModel, InventurListPage>();
         _navigation.Register<InventurEditViewModel, InventurEditPage>();
+
+        _navigation.Register<BestellVorschlagViewModel, BestellVorschlagPage>();
+        _navigation.Register<BestellungListViewModel, BestellungListPage>();
+        _navigation.Register<BestellungEditViewModel, BestellungEditPage>();
+        _navigation.Register<WareneingangListViewModel, WareneingangListPage>();
+        _navigation.Register<WareneingangEditViewModel, WareneingangEditPage>();
+        _navigation.Register<EingangsrechnungListViewModel, EingangsrechnungListPage>();
+        _navigation.Register<EingangsrechnungEditViewModel, EingangsrechnungEditPage>();
 
         _navigation.Navigate<DashboardViewModel>();
     }
@@ -88,6 +98,18 @@ public sealed partial class ShellPage : Page
                 break;
             case "inventur":
                 _navigation.Navigate<InventurListViewModel>();
+                break;
+            case "bestellvorschlag":
+                _navigation.Navigate<BestellVorschlagViewModel>();
+                break;
+            case "bestellungen":
+                _navigation.Navigate<BestellungListViewModel>();
+                break;
+            case "wareneingaenge":
+                _navigation.Navigate<WareneingangListViewModel>();
+                break;
+            case "eingangsrechnungen":
+                _navigation.Navigate<EingangsrechnungListViewModel>();
                 break;
         }
     }

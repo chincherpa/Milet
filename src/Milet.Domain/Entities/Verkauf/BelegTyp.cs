@@ -6,4 +6,7 @@ public enum BelegTyp
     Auftrag = 1,
     Rechnung = 2,
     Lieferschein = 3,
+    Bestellung = 4,
+    Wareneingang = 5,
+    Eingangsrechnung = 6,
 }

@@ -142,4 +142,4 @@ Ein generischer `BelegUeberleitungService.Ueberleiten(sourceBelegId, targetTyp, 
 - `src/Milet.Infrastructure/Services/RechnungBuchenService.cs` — Buchungstransaktion (Nummer, Freeze, OP)
 - `src/Milet.App/App.xaml.cs` — Host-Builder, DI-Root, Navigations-Registry
 
-**Stand:** Phasen 0–2 sind implementiert und abgenommen (Details in `STATUS.md`). **Nächster Schritt: Phase 3 (Lager+Lieferschein).**
+**Stand:** Phasen 0–2 sind implementiert und abgenommen, Phase 3 (Lager+Lieferschein) ist implementiert (Build/Tests grün, manueller UI-Smoke-Test noch ausstehend) (Details in `STATUS.md`). **Nächster Schritt: Phase 4 (Einkauf) — Implementierungsplan liegt vor in `docs/superpowers/plans/2026-08-26-phase4-einkauf.md`.**

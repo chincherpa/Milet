@@ -1,0 +1,53 @@
+<Page
+    x:Class="Milet.App.Views.Einkauf.WareneingangEditPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer Padding="24">
+        <StackPanel MaxWidth="900" Spacing="16">
+            <TextBlock Text="Wareneingang" Style="{StaticResource TitleTextBlockStyle}" />
+            <InfoBar IsOpen="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}"
+                     Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay}" />
+
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" Header="Nummer" IsReadOnly="True" Text="{x:Bind ViewModel.BelegNummer, Mode=OneWay}" />
+                <TextBox Grid.Column="1" Header="Lieferant" IsReadOnly="True" Text="{x:Bind ViewModel.LieferantAnzeige, Mode=OneWay}" />
+                <TextBox Grid.Column="2" Header="Status" IsReadOnly="True" Text="{x:Bind ViewModel.Status, Mode=OneWay}" />
+            </Grid>
+
+            <TextBlock Text="Positionen" Style="{StaticResource SubtitleTextBlockStyle}" />
+            <ListView MaxHeight="300" ItemsSource="{x:Bind ViewModel.Positionen, Mode=OneWay}" SelectionMode="None">
+                <ListView.HeaderTemplate>
+                    <DataTemplate>
+                        <Grid Padding="4" ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" /><ColumnDefinition Width="100" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Bezeichnung" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="1" Text="Menge" FontWeight="SemiBold" />
+                        </Grid>
+                    </DataTemplate>
+                </ListView.HeaderTemplate>
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Padding="4" ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" /><ColumnDefinition Width="100" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding Bezeichnung}" />
+                            <TextBlock Grid.Column="1" Text="{Binding Menge}" />
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Buchen" Style="{StaticResource AccentButtonStyle}" IsEnabled="{x:Bind ViewModel.IstBearbeitbar, Mode=OneWay}" Command="{x:Bind ViewModel.BuchenCommand}" />
+                <Button Content="→ Eingangsrechnung" Visibility="{x:Bind ViewModel.KannUeberleiten, Mode=OneWay}" IsEnabled="{x:Bind ViewModel.KannUeberleiten, Mode=OneWay}" Command="{x:Bind ViewModel.UeberleitenZuEingangsrechnungCommand}" />
+                <Button Content="Abbrechen" Command="{x:Bind ViewModel.AbbrechenCommand}" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

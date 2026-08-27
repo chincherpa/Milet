@@ -22,6 +22,9 @@ public sealed class BelegService(
         BelegTyp.Auftrag => db.Auftraege,
         BelegTyp.Rechnung => db.Rechnungen,
         BelegTyp.Lieferschein => db.Lieferscheine,
+        BelegTyp.Bestellung => db.Bestellungen,
+        BelegTyp.Wareneingang => db.Wareneingaenge,
+        BelegTyp.Eingangsrechnung => db.Eingangsrechnungen,
         _ => throw new ArgumentOutOfRangeException(nameof(typ)),
     };
 
@@ -31,6 +34,9 @@ public sealed class BelegService(
         BelegTyp.Auftrag => new Auftrag(),
         BelegTyp.Rechnung => new Rechnung(),
         BelegTyp.Lieferschein => new Lieferschein(),
+        BelegTyp.Bestellung => new Bestellung(),
+        BelegTyp.Wareneingang => new Wareneingang(),
+        BelegTyp.Eingangsrechnung => new Eingangsrechnung(),
         _ => throw new ArgumentOutOfRangeException(nameof(typ)),
     };
 
@@ -40,19 +46,23 @@ public sealed class BelegService(
         BelegTyp.Auftrag => "AU",
         BelegTyp.Rechnung => "RE",
         BelegTyp.Lieferschein => "LS",
+        BelegTyp.Bestellung => "BE",
+        BelegTyp.Wareneingang => "WE",
+        BelegTyp.Eingangsrechnung => "ER",
         _ => throw new ArgumentOutOfRangeException(nameof(typ)),
     };
 
     public async Task<IReadOnlyList<BelegDto>> SucheAsync(BelegTyp typ, string? suchtext, CancellationToken ct = default)
     {
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
-        var query = SetFuerTyp(db, typ).AsNoTracking().Include(b => b.Kunde).AsQueryable();
+        var query = SetFuerTyp(db, typ).AsNoTracking().Include(b => b.Kunde).Include(b => b.Lieferant).AsQueryable();
         if (!string.IsNullOrWhiteSpace(suchtext))
         {
             var s = suchtext.Trim();
             query = query.Where(b =>
                 EF.Functions.Like(b.BelegNummer, $"%{s}%") ||
-                (b.Kunde != null && EF.Functions.Like(b.Kunde.Adresse.Name1, $"%{s}%")));
+                (b.Kunde != null && EF.Functions.Like(b.Kunde.Adresse.Name1, $"%{s}%")) ||
+                (b.Lieferant != null && EF.Functions.Like(b.Lieferant.Adresse.Name1, $"%{s}%")));
         }
         var belege = await query.OrderByDescending(b => b.BelegDatum).ThenByDescending(b => b.Id).Take(500).ToListAsync(ct);
         return belege.Select(b => b.ToDto(mitPositionen: false)).ToList();
@@ -63,6 +73,7 @@ public sealed class BelegService(
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         var beleg = await db.Belege.AsNoTracking()
             .Include(b => b.Kunde)
+            .Include(b => b.Lieferant)
             .Include(b => b.Positionen)
             .FirstOrDefaultAsync(b => b.Id == id, ct)
             ?? throw new NotFoundException(nameof(Beleg), id);
@@ -77,19 +88,41 @@ public sealed class BelegService(
         Beleg beleg;
         if (dto.Id == 0)
         {
-            var kunde = await db.Kunden.Include(k => k.Zahlungsbedingung).FirstOrDefaultAsync(k => k.Id == dto.KundeId, ct)
-                ?? throw new NotFoundException(nameof(Domain.Entities.Stammdaten.Kunde), dto.KundeId);
-
             beleg = NeueInstanz(dto.BelegTyp);
             beleg.BelegNummer = dto.BelegTyp == BelegTyp.Rechnung
                 ? string.Empty
                 : await numberRangeService.NaechsteNummerAsync(NummernkreisCode(dto.BelegTyp), ct);
-            beleg.KundeId = kunde.Id;
-            beleg.RechnungsadresseSnapshot = kunde.Adresse.Kopie();
-            beleg.LieferadresseSnapshot = kunde.Adresse.Kopie();
-            beleg.ZahlungsbedingungZielTage = kunde.Zahlungsbedingung?.ZielTage ?? 0;
-            beleg.ZahlungsbedingungSkontoTage = kunde.Zahlungsbedingung?.SkontoTage;
-            beleg.ZahlungsbedingungSkontoProzent = kunde.Zahlungsbedingung?.SkontoProzent;
+
+            if (dto.BelegTyp.IstEinkaufsBeleg())
+            {
+                var lieferant = await db.Lieferanten.Include(l => l.Zahlungsbedingung)
+                    .FirstOrDefaultAsync(l => l.Id == dto.LieferantId, ct)
+                    ?? throw new NotFoundException(nameof(Domain.Entities.Stammdaten.Lieferant), dto.LieferantId ?? 0);
+                var firma = await db.Firmenstamm.AsNoTracking().FirstOrDefaultAsync(f => f.Id == 1, ct);
+
+                beleg.LieferantId = lieferant.Id;
+                // Invertierte Semantik ggü. Verkauf (siehe Architektur-Entscheidung 5 im Phase-4-Plan):
+                // "Rechnungsadresse" = Anschrift des Geschäftspartners (hier: Lieferant), "Lieferadresse" =
+                // wohin die Ware geht (hier: die eigene Firma, nicht der Lieferant).
+                beleg.RechnungsadresseSnapshot = lieferant.Adresse.Kopie();
+                beleg.LieferadresseSnapshot = firma?.Adresse.Kopie() ?? lieferant.Adresse.Kopie();
+                beleg.ZahlungsbedingungZielTage = lieferant.Zahlungsbedingung?.ZielTage ?? 0;
+                beleg.ZahlungsbedingungSkontoTage = lieferant.Zahlungsbedingung?.SkontoTage;
+                beleg.ZahlungsbedingungSkontoProzent = lieferant.Zahlungsbedingung?.SkontoProzent;
+            }
+            else
+            {
+                var kunde = await db.Kunden.Include(k => k.Zahlungsbedingung).FirstOrDefaultAsync(k => k.Id == dto.KundeId, ct)
+                    ?? throw new NotFoundException(nameof(Domain.Entities.Stammdaten.Kunde), dto.KundeId);
+
+                beleg.KundeId = kunde.Id;
+                beleg.RechnungsadresseSnapshot = kunde.Adresse.Kopie();
+                beleg.LieferadresseSnapshot = kunde.Adresse.Kopie();
+                beleg.ZahlungsbedingungZielTage = kunde.Zahlungsbedingung?.ZielTage ?? 0;
+                beleg.ZahlungsbedingungSkontoTage = kunde.Zahlungsbedingung?.SkontoTage;
+                beleg.ZahlungsbedingungSkontoProzent = kunde.Zahlungsbedingung?.SkontoProzent;
+            }
+
             db.Add(beleg);
         }
         else
@@ -108,6 +141,7 @@ public sealed class BelegService(
         beleg.Leistungsdatum = dto.Leistungsdatum;
         beleg.Kopftext = dto.Kopftext;
         beleg.Fusstext = dto.Fusstext;
+        beleg.ExterneReferenz = dto.ExterneReferenz;
 
         AktualisierePositionen(db, beleg, dto.Positionen);
 

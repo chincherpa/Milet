@@ -7,15 +7,25 @@ public abstract class Beleg : AuditableEntity, IHasRowVersion
 {
     public int Id { get; set; }
 
-    /// <summary>Leer bei Entwurf einer Rechnung — erst beim Buchen atomar vergeben.</summary>
+    /// <summary>Leer bei Entwurf einer Rechnung — erst beim Buchen atomar vergeben. Bei allen anderen Belegtypen
+    /// (inkl. Eingangsrechnung, siehe Architektur-Plan Phase 4) beim ersten Speichern vergeben.</summary>
     public string BelegNummer { get; set; } = string.Empty;
 
     public DateOnly BelegDatum { get; set; }
 
-    public int KundeId { get; set; }
+    /// <summary>Genau eines von KundeId/LieferantId ist gesetzt (DB-CHECK-Constraint, siehe BelegConfiguration) —
+    /// abhängig vom Belegtyp: Verkaufsbelege (Angebot/Auftrag/Rechnung/Lieferschein) tragen KundeId,
+    /// Einkaufsbelege (Bestellung/Wareneingang/Eingangsrechnung) tragen LieferantId.
+    /// Siehe BelegTypErweiterung.IstEinkaufsBeleg.</summary>
+    public int? KundeId { get; set; }
     public Domain.Entities.Stammdaten.Kunde? Kunde { get; set; }
 
-    /// <summary>Eingefroren bei Erstellung — spätere Adressänderungen am Kunden wirken nicht rückwirkend.</summary>
+    public int? LieferantId { get; set; }
+    public Domain.Entities.Stammdaten.Lieferant? Lieferant { get; set; }
+
+    /// <summary>Eingefroren bei Erstellung — spätere Adressänderungen wirken nicht rückwirkend.
+    /// Bei Einkaufsbelegen invertierte Semantik: RechnungsadresseSnapshot = Anschrift des Lieferanten
+    /// (Geschäftspartner-Anschrift für den Druck), LieferadresseSnapshot = eigene Firma (wohin die Ware geht).</summary>
     public Adresse RechnungsadresseSnapshot { get; set; } = new();
     public Adresse LieferadresseSnapshot { get; set; } = new();
 
@@ -30,13 +40,19 @@ public abstract class Beleg : AuditableEntity, IHasRowVersion
     public decimal SummeMwSt { get; set; }
     public decimal SummeBrutto { get; set; }
 
-    /// <summary>Nur Rechnung: gesetzt beim Buchen (BelegDatum + ZahlungsbedingungZielTage).</summary>
+    /// <summary>Nur Rechnung: gesetzt beim Buchen (BelegDatum + ZahlungsbedingungZielTage). Bei Eingangsrechnung
+    /// ebenfalls beim Buchen gesetzt (für die Fälligkeitsberechnung des Kreditor-OP), s. EingangsrechnungBuchenService.</summary>
     public DateOnly? Faelligkeit { get; set; }
 
     public DateOnly? Leistungsdatum { get; set; }
 
     public string? Kopftext { get; set; }
     public string? Fusstext { get; set; }
+
+    /// <summary>Nur Eingangsrechnung: die Rechnungsnummer des Lieferanten. Die eigene BelegNummer (Nummernkreis
+    /// "ER-...") ist nur eine interne Referenz ohne GoBD-Lückenlosigkeitspflicht — GoBD-relevant ist das
+    /// Originaldokument des Lieferanten, dessen Nummer hier zusätzlich erfasst wird.</summary>
+    public string? ExterneReferenz { get; set; }
 
     public List<BelegPosition> Positionen { get; set; } = [];
     public List<BelegSteuerSumme> Steuersummen { get; set; } = [];

@@ -115,7 +115,10 @@ namespace Milet.Infrastructure.Persistence.Migrations
                     b.Property<int?>("GeaendertVonId")
                         .HasColumnType("int");
 
-                    b.Property<int>("KundeId")
+                    b.Property<int?>("KundeId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("LieferantId")
                         .HasColumnType("int");
 
                     b.Property<bool>("Mahnsperre")
@@ -142,7 +145,10 @@ namespace Milet.Infrastructure.Persistence.Migrations
                     b.HasIndex("BelegId")
                         .IsUnique();
 
-                    b.ToTable("OffenePosten", (string)null);
+                    b.ToTable("OffenePosten", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_OffenePosten_KundeOderLieferant", "([KundeId] IS NOT NULL AND [LieferantId] IS NULL) OR ([KundeId] IS NULL AND [LieferantId] IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("Milet.Domain.Entities.Lager.ArtikelBestand", b =>
@@ -829,14 +835,18 @@ namespace Milet.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("BelegTyp")
                         .IsRequired()
-                        .HasMaxLength(13)
-                        .HasColumnType("nvarchar(13)");
+                        .HasMaxLength(21)
+                        .HasColumnType("nvarchar(21)");
 
                     b.Property<DateTime>("ErstelltAm")
                         .HasColumnType("datetime2");
 
                     b.Property<int?>("ErstelltVonId")
                         .HasColumnType("int");
+
+                    b.Property<string>("ExterneReferenz")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateOnly?>("Faelligkeit")
                         .HasColumnType("date");
@@ -855,11 +865,14 @@ namespace Milet.Infrastructure.Persistence.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
-                    b.Property<int>("KundeId")
+                    b.Property<int?>("KundeId")
                         .HasColumnType("int");
 
                     b.Property<DateOnly?>("Leistungsdatum")
                         .HasColumnType("date");
+
+                    b.Property<int?>("LieferantId")
+                        .HasColumnType("int");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -896,11 +909,16 @@ namespace Milet.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("KundeId");
 
+                    b.HasIndex("LieferantId");
+
                     b.HasIndex("BelegTyp", "BelegNummer")
                         .IsUnique()
                         .HasFilter("[BelegNummer] <> ''");
 
-                    b.ToTable("Belege", (string)null);
+                    b.ToTable("Belege", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Belege_KundeOderLieferant", "([KundeId] IS NOT NULL AND [LieferantId] IS NULL) OR ([KundeId] IS NULL AND [LieferantId] IS NOT NULL)");
+                        });
 
                     b.HasDiscriminator<string>("BelegTyp").HasValue("Beleg");
 
@@ -1020,6 +1038,11 @@ namespace Milet.Infrastructure.Persistence.Migrations
                 {
                     b.HasBaseType("Milet.Domain.Entities.Verkauf.Beleg");
 
+                    b.ToTable(t =>
+                        {
+                            t.HasCheckConstraint("CK_Belege_KundeOderLieferant", "([KundeId] IS NOT NULL AND [LieferantId] IS NULL) OR ([KundeId] IS NULL AND [LieferantId] IS NOT NULL)");
+                        });
+
                     b.HasDiscriminator().HasValue("Angebot");
                 });
 
@@ -1027,12 +1050,46 @@ namespace Milet.Infrastructure.Persistence.Migrations
                 {
                     b.HasBaseType("Milet.Domain.Entities.Verkauf.Beleg");
 
+                    b.ToTable(t =>
+                        {
+                            t.HasCheckConstraint("CK_Belege_KundeOderLieferant", "([KundeId] IS NOT NULL AND [LieferantId] IS NULL) OR ([KundeId] IS NULL AND [LieferantId] IS NOT NULL)");
+                        });
+
                     b.HasDiscriminator().HasValue("Auftrag");
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Verkauf.Bestellung", b =>
+                {
+                    b.HasBaseType("Milet.Domain.Entities.Verkauf.Beleg");
+
+                    b.ToTable(t =>
+                        {
+                            t.HasCheckConstraint("CK_Belege_KundeOderLieferant", "([KundeId] IS NOT NULL AND [LieferantId] IS NULL) OR ([KundeId] IS NULL AND [LieferantId] IS NOT NULL)");
+                        });
+
+                    b.HasDiscriminator().HasValue("Bestellung");
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Verkauf.Eingangsrechnung", b =>
+                {
+                    b.HasBaseType("Milet.Domain.Entities.Verkauf.Beleg");
+
+                    b.ToTable(t =>
+                        {
+                            t.HasCheckConstraint("CK_Belege_KundeOderLieferant", "([KundeId] IS NOT NULL AND [LieferantId] IS NULL) OR ([KundeId] IS NULL AND [LieferantId] IS NOT NULL)");
+                        });
+
+                    b.HasDiscriminator().HasValue("Eingangsrechnung");
                 });
 
             modelBuilder.Entity("Milet.Domain.Entities.Verkauf.Lieferschein", b =>
                 {
                     b.HasBaseType("Milet.Domain.Entities.Verkauf.Beleg");
+
+                    b.ToTable(t =>
+                        {
+                            t.HasCheckConstraint("CK_Belege_KundeOderLieferant", "([KundeId] IS NOT NULL AND [LieferantId] IS NULL) OR ([KundeId] IS NULL AND [LieferantId] IS NOT NULL)");
+                        });
 
                     b.HasDiscriminator().HasValue("Lieferschein");
                 });
@@ -1041,7 +1098,24 @@ namespace Milet.Infrastructure.Persistence.Migrations
                 {
                     b.HasBaseType("Milet.Domain.Entities.Verkauf.Beleg");
 
+                    b.ToTable(t =>
+                        {
+                            t.HasCheckConstraint("CK_Belege_KundeOderLieferant", "([KundeId] IS NOT NULL AND [LieferantId] IS NULL) OR ([KundeId] IS NULL AND [LieferantId] IS NOT NULL)");
+                        });
+
                     b.HasDiscriminator().HasValue("Rechnung");
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Verkauf.Wareneingang", b =>
+                {
+                    b.HasBaseType("Milet.Domain.Entities.Verkauf.Beleg");
+
+                    b.ToTable(t =>
+                        {
+                            t.HasCheckConstraint("CK_Belege_KundeOderLieferant", "([KundeId] IS NOT NULL AND [LieferantId] IS NULL) OR ([KundeId] IS NULL AND [LieferantId] IS NOT NULL)");
+                        });
+
+                    b.HasDiscriminator().HasValue("Wareneingang");
                 });
 
             modelBuilder.Entity("Milet.Domain.Entities.Admin.Firmenstamm", b =>
@@ -1400,8 +1474,12 @@ namespace Milet.Infrastructure.Persistence.Migrations
                     b.HasOne("Milet.Domain.Entities.Stammdaten.Kunde", "Kunde")
                         .WithMany()
                         .HasForeignKey("KundeId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Milet.Domain.Entities.Stammdaten.Lieferant", "Lieferant")
+                        .WithMany()
+                        .HasForeignKey("LieferantId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.OwnsOne("Milet.Domain.ValueObjects.Adresse", "LieferadresseSnapshot", b1 =>
                         {
@@ -1503,6 +1581,8 @@ namespace Milet.Infrastructure.Persistence.Migrations
 
                     b.Navigation("LieferadresseSnapshot")
                         .IsRequired();
+
+                    b.Navigation("Lieferant");
 
                     b.Navigation("RechnungsadresseSnapshot")
                         .IsRequired();

@@ -1,6 +1,6 @@
 # Milet — Projektstatus
 
-Stand: 2026-08-26. Architekturplan: `PLAN.md`. Phase-2-Implementierungsplan: `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md`. Phase-3-Implementierungsplan (umgesetzt): `docs/superpowers/plans/2026-08-25-phase3-lager-lieferschein.md`. Ein früherer, nicht umgesetzter Planungsentwurf liegt zusätzlich unter `docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md` — dessen technische Befunde (READ-COMMITTED-Race, Nummernkreis-Seed) sind unter „Bekannte Risiken" übernommen.
+Stand: 2026-08-27. Architekturplan: `PLAN.md`. Phase-2-Implementierungsplan: `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md`. Phase-3-Implementierungsplan (umgesetzt): `docs/superpowers/plans/2026-08-25-phase3-lager-lieferschein.md`. Ein früherer, nicht umgesetzter Planungsentwurf liegt zusätzlich unter `docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md` — dessen technische Befunde (READ-COMMITTED-Race, Nummernkreis-Seed) sind unter „Bekannte Risiken" übernommen. Phase-4-Implementierungsplan (umgesetzt, manueller UI-Smoke-Test noch ausstehend): `docs/superpowers/plans/2026-08-26-phase4-einkauf.md`.
 
 ## Erledigt
 
@@ -120,6 +120,24 @@ Implementiert nach Plan `docs/superpowers/plans/2026-08-25-phase3-lager-liefersc
 
 **Nicht durchgeführt — Offen für Phase-3-Abnahme:** Der manuelle End-to-End-Smoke-Test im laufenden UI (Plan-Task-20-Step-4, 9 Teilschritte: Lagerort anlegen, Bestandskorrektur, Auftrag→Teillieferung→Lieferschein, Buchen, zweite Teillieferung, Sammelrechnung, Negativsperre-Check, Inventur-Abschluss, Seriennummern-Auswahl beim Buchen) wurde in diesem Durchgang **nicht** ausgeführt — dieser Verifikationslauf erfolgte durch einen headless Hintergrund-Agenten ohne Display-/Maus-Zugriff, der keine WinUI-Desktop-App starten oder bedienen kann. Build/Tests/Migration sind damit real verifiziert; der eigentliche fachliche End-to-End-Nachweis (inkl. eventueller dabei gefundener UI-Bugs, wie in den Phase-1/2-Abnahmen dokumentiert) fehlt noch und muss von einem Menschen (oder einer UI-Automation-fähigen Session, wie bei der Phase-1-Abnahme praktiziert) nachgeholt werden, bevor Phase 3 als vollständig abgenommen gilt.
 
+### Phase 4 — Einkauf ⚠️ (Build/Tests grün, manueller Smoke-Test ausstehend) (2026-08-27, Branch/Worktree `phase4-einkauf`)
+Implementiert nach Plan `docs/superpowers/plans/2026-08-26-phase4-einkauf.md` (17 Tasks, jeder Task einzeln gebaut/getestet/committet):
+
+**Domain:** `Beleg`-Partei-Erweiterung — `KundeId` wird nullable, neues `LieferantId` (Kunde XOR Lieferant, per DB-Check-Constraint `CK_Belege_KundeOderLieferant` erzwungen) — als Basis für die drei neuen TPH-Subtypen `Bestellung`/`Wareneingang`/`Eingangsrechnung`. `BestellVorschlagService` (reine Domain-Logik: Artikel mit Bestand unter `Mindestbestand`, `VorschlagsMenge`-Berechnung).
+
+**Application:** `IBestellVorschlagService`/`IWareneingangBuchenService`/`IEingangsrechnungBuchenService`-Interfaces, DTOs+Validatoren für Bestellung/Wareneingang/Eingangsrechnung (u. a. Pflicht-Lieferant statt Kunde). `IBelegUeberleitungService` um den Einkaufs-Pfad erweitert (Bestellung→Wareneingang→Eingangsrechnung, wiederverwendet die aus Phase 3 bestehende Teilmengen-/Offene-Mengen-Logik).
+
+**Infrastructure:** `BelegConfiguration` um CHECK-Constraint (Kunde XOR Lieferant) und Discriminator-Werte für die drei neuen Typen erweitert; Migration `EinkaufBestellungWareneingang` (erzeugt+angewendet in Task 7); Seed ergänzt die zuvor fehlenden Nummernkreise `WE`/`ER` (Code `BE` war bereits vorhanden) — behebt damit die in „Bekannte Risiken" dokumentierte Nummernkreis-Seed-Lücke für diese drei neuen Codes. `BelegService` um generalisierten Kunde/Lieferant-Zweig erweitert (trägt jetzt die gesamte Einkaufs-CRUD-Logik). `WareneingangBuchenService` (Bestandszugang über den bestehenden `BestandService` + Seriennummern-Neuanlage in einer Transaktion). `EingangsrechnungBuchenService` (Kreditor-OP-Anlage über `OffenePosten`, Betrags-Abweichungs-Soft-Warnung gegen den zugrundeliegenden Wareneingang, kein Blocker). 3 neue Integrationstest-Klassen: `BestellVorschlagServiceTests`, `WareneingangBuchenServiceTests`, `EingangsrechnungBuchenServiceTests` (Testcontainers).
+
+**App (WinUI):** Neues Einkauf-Menü; `EinkaufBelegEditViewModelBase` als gemeinsame UI-Basis für die drei neuen Editoren (analog zum Verkaufs-Pendant aus Phase 2); Bestellvorschlag-Seite (Artikel unter Mindestbestand, Lieferant-Auswahl, „Bestellung erzeugen"); Bestellung-/Wareneingang-/Eingangsrechnung-Editoren inkl. Überleitungs-Buttons (`WareneingangMengenDialog` für die Mengenauswahl beim Übergang Bestellung→Wareneingang, analog zum `TeillieferungDialog` aus Phase 3); Seriennummern-Erfassung beim Wareneingang-Buchen über den neuen `SeriennummernErfassungDialog` (erfasst NEUE Nummern — ein eigener, zu dieser Phase gehörender Dialog, analog zum, aber nicht identisch mit dem `SeriennummernAuswahlDialog` aus Phase 3, der stattdessen aus bestehenden Nummern AUSWÄHLT).
+
+**Verifiziert (dieser Task, Task 17, 2026-08-27):**
+- Build: `Milet.App.csproj -p:Platform=x64` → **0 Fehler**, 2 Warnungen (`WMC1506` XAML-Binding-Hinweise in `WareneingangMengenDialog.xaml` und `TeillieferungDialog.xaml`, gleiche unkritische Warnklasse wie in Phase 3). `Milet.Tools.Migrator.csproj` → **0 Fehler, 0 Warnungen**.
+- Tests einzeln (MTP-Modus): Domain **21/21**, Application **21/21**, IntegrationTests **24 gesamt: 4 bestanden, 0 fehlgeschlagen, 20 übersprungen** (alle Skips sauber „Docker nicht verfügbar" — inkl. der 3 neuen Testklassen `BestellVorschlagServiceTests`/`WareneingangBuchenServiceTests`/`EingangsrechnungBuchenServiceTests`; kein einziger Fail).
+- Migration: `Milet.Tools.Migrator` meldet „Datenbank ist aktuell — keine ausstehenden Migrationen." Migration `EinkaufBestellungWareneingang` (bereits in Task 7 erzeugt+angewendet) ist laut `__EFMigrationsHistory` in LocalDB vorhanden (per `sqlcmd` gegengeprüft, zusammen mit `InitialCreate`/`ListenpreisPrecision`/`VerkaufBelegModell`/`LagerLieferschein`); die Nummernkreis-Werte (`BE`/`WE`/`ER`, je `NaechsteNummer=1`) sowie unveränderte `Belege`/`OffenePosten`-Zeilenzahlen wurden bereits in Task 7 per `sqlcmd` unabhängig verifiziert.
+
+**Nicht durchgeführt — Offen für Phase-4-Abnahme:** Der manuelle End-to-End-Smoke-Test im laufenden UI (Plan-Task-17-Step-4, 10 Teilschritte: Lieferant anlegen, Artikel unter Mindestbestand, Bestellvorschlag→Bestellung erzeugen, Bestellung→Wareneingang, Wareneingang buchen inkl. Seriennummern-Erfassung, Wareneingang→Eingangsrechnung, Eingangsrechnung buchen, Abweichungsfall provozieren, Negativ-Check ohne Lieferanten) wurde in diesem Durchgang **nicht** ausgeführt — genau wie bei der Phase-3-Abnahme erfolgte dieser Verifikationslauf durch einen headless Hintergrund-Agenten ohne Display-/Maus-Zugriff, der keine WinUI-Desktop-App starten oder bedienen kann. Build/Tests/Migration sind damit real verifiziert; der fachliche End-to-End-Nachweis (inkl. eventueller dabei gefundener UI-Bugs) fehlt noch und muss von einem Menschen (oder einer UI-Automation-fähigen Session, wie bei der Phase-1-Abnahme praktiziert) nachgeholt werden, bevor Phase 4 als vollständig abgenommen gilt.
+
 ## Offen
 
 1. **Phase 3 — manueller UI-Smoke-Test ausstehend:** Die 9 Teilschritte aus dem Phase-3-Plan (Task 20, Step 4) — Lagerort/Bestandskorrektur, Auftrag→Teillieferung→Lieferschein→Buchen, zweite Teillieferung, Sammelrechnung, Negativsperre-Fehlermeldung statt Absturz, Inventur-Abschluss, Seriennummern-Auswahl-Dialog beim Buchen — sind noch nicht durchgeklickt worden (Build/Tests/Migration bereits grün, s. oben). Muss vor Abnahme von Phase 3 nachgeholt werden.
@@ -129,7 +147,7 @@ Implementiert nach Plan `docs/superpowers/plans/2026-08-25-phase3-lager-liefersc
    - Teillieferung (`UeberleitenMitAuswahlAsync`) und `InventurService` haben keinen automatisierten Test (Docker hier ohnehin nicht verfügbar, daher bisher nur compile-verifiziert).
    - Lagerort deaktivieren versteckt jetzt echten (nicht nur synthetischen Null-)Bestand dort in der Bestandsübersicht (Daten bleiben in der DB, nur diese eine Anzeige zeigt sie nicht mehr) — Regression aus dem C1-Fix in der finalen Review, noch nicht behoben.
    - Diverse Minor-Findings (PdfService-Exception-Parametername, `UeberleitenMitAuswahlAsync` verwirft Nicht-Artikel-Positionen, `LieferscheinListPage` Multiple-Selection+SelectedItem-Überschneidung, N+1-Lookups) — Details im finalen Review-Report, unkritisch.
-3. **Phasen 4–7** (Einkauf, Finanzen+Mail, DATEV+Reporting, Admin) — noch nicht begonnen, siehe `PLAN.md`. Phase 1+2 sind komplett abgenommen.
+3. **Phase 4 (Einkauf) — manueller UI-Smoke-Test ausstehend:** Implementiert nach Plan (`docs/superpowers/plans/2026-08-26-phase4-einkauf.md`, 17 Tasks) — Build/Tests/Migration grün (s. Phase-4-Abschnitt oben). Die 10 Teilschritte des manuellen End-to-End-Smoke-Tests (Plan-Task-17, Step 4: Bestellvorschlag→Bestellung→Wareneingang→Buchen inkl. Seriennummern→Eingangsrechnung→Buchen→Abweichungsfall→Negativ-Check) sind noch nicht durchgeklickt worden. Muss vor Abnahme von Phase 4 nachgeholt werden. **Phasen 5–7** (Finanzen+Mail, DATEV+Reporting, Admin) — noch nicht begonnen, siehe `PLAN.md`. Phase 1+2 sind komplett abgenommen.
 
 ## Gefixt während UI-Test (2026-08-25)
 - LocalDB-Datenbank hieß nach Projekt-Rename noch "Nexus" (Connection String erwartet "Milet") → "Fehler beim Laden" beim Öffnen der Kunden-Liste. Per `ALTER DATABASE ... MODIFY NAME` umbenannt (Seed-Daten erhalten), App neu gestartet — Kunden-Liste lädt jetzt.
@@ -142,14 +160,9 @@ Implementiert nach Plan `docs/superpowers/plans/2026-08-25-phase3-lager-liefersc
 - Graph-Auth, DATEV-Format — noch nicht relevant, erst ab Phase 5/6. QuestPDF-Lizenz (Community, <1M USD Umsatz) bereits gesetzt (`PdfService`-statischer Konstruktor).
 - Lieferadresse ist in Phase 2 nicht im Belegeditor editierbar (immer 1:1 aus Kundenstamm übernommen) — bewusste Vereinfachung, relevant erst mit Lieferschein (Phase 3).
 - **Offene-Mengen-Prüfung in `BelegUeberleitungService` (inkl. `UeberleitenMitAuswahlAsync`/`UeberleitenMehrereAsync`) schützt trotz gegenteiligem Kommentar im Code vermutlich nicht gegen parallele Überleitungen**: der In-Transaktion-Re-Check liest unter SQL Servers Default-Isolationslevel READ COMMITTED ohne Sperre — zwei gleichzeitige Transaktionen können beide „nichts geliefert" sehen und beide committen. Folgenlos bei Angebot→Auftrag (1:1, keine Teilmengen), aber ein echter potenzieller Bestandsfehler bei paralleler Teillieferung/Sammelrechnung. Noch nicht verifiziert (Docker hier nicht verfügbar) oder behoben — möglicher Fix: `UPDLOCK` auf dem/den Quellbeleg(en) beim Lesen. Fund stammt aus einem parallel entstandenen, nicht umgesetzten Planungsentwurf (`docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md`).
-- `StammdatenSeed` legt Nummernkreise nur an, wenn die `Nummernkreise`-Tabelle komplett leer ist, nicht „je fehlendem Code" — eine bereits migrierte Datenbank bekommt einen später neu hinzugefügten Nummernkreis-Code nie automatisch nachgetragen. Bisher folgenlos (alle bislang genutzten Codes existierten schon vor der ersten Migration), wird aber relevant, sobald eine spätere Phase einen neuen Code auf einer bestehenden DB einführt.
+- **[Behoben in Phase 4]** `StammdatenSeed` legt Nummernkreise nur an, wenn die `Nummernkreise`-Tabelle komplett leer ist, nicht „je fehlendem Code" — eine bereits migrierte Datenbank bekommt einen später neu hinzugefügten Nummernkreis-Code nie automatisch nachgetragen. Bisher folgenlos (alle bislang genutzten Codes existierten schon vor der ersten Migration), wird aber relevant, sobald eine spätere Phase einen neuen Code auf einer bestehenden DB einführt. Genau dieser Fall trat mit Phase 4 ein (neue Codes `WE`/`ER`) und wurde in Task 5 des Phase-4-Plans behoben — der Seed wurde auf „je fehlendem Code ergänzen" umgestellt statt „nur wenn Tabelle leer"; per `sqlcmd` verifiziert, dass `BE`/`WE`/`ER` alle mit `NaechsteNummer=1` existieren (s. Phase-4-Abschnitt oben).
 
-
-
-
-
-
-
+## Phasenübersicht
 
 
 
@@ -158,7 +171,7 @@ Implementiert nach Plan `docs/superpowers/plans/2026-08-25-phase3-lager-liefersc
 **1 Stammdaten**           Done
 **2 Verkauf+PDF**          Done
 **3 Lager+Lieferschein**   Done
-**4 Einkauf**              in progress
+**4 Einkauf**              Done (manueller UI-Smoke-Test ausstehend)
 **5 Finanzen+E-Mail**      open
 **6 DATEV+Reporting**      open
 **7 Admin+Härtung**        open
