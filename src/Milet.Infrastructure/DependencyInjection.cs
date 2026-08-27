@@ -8,6 +8,7 @@ using Milet.Application.Admin;
 using Milet.Application.Einkauf;
 using Milet.Application.Finanzen;
 using Milet.Application.Lager;
+using Milet.Application.Reporting;
 using Milet.Application.Stammdaten;
 using Milet.Application.Verkauf;
 using Milet.Infrastructure.Email;
@@ -68,6 +69,10 @@ public static class DependencyInjection
         services.AddScoped<IOffenePostenService, OffenePostenService>();
         services.AddScoped<IZahlungService, ZahlungService>();
         services.AddScoped<IMahnwesenService, MahnwesenService>();
+
+        services.AddScoped<IFibuKonfigurationService, FibuKonfigurationService>();
+        services.AddScoped<IDatevExportService, DatevExportService>();
+        services.AddScoped<IReportingService, ReportingService>();
 
         // E-Mail-Versand: nur registriert, wenn appsettings.json eine vollständige "Graph"-Sektion trägt —
         // sonst NichtKonfigurierterEmailService (wirft beim Versandversuch eine sprechende Exception,
