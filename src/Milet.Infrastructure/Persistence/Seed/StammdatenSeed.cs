@@ -115,6 +115,12 @@ public static class StammdatenSeed
             });
         }
 
+        // Zwischenspeichern nötig, bevor die MwSt-Sätze unten per Query nachgeladen werden: auf einer frisch
+        // migrierten (leeren) DB wurden sie gerade erst oben in diesem Aufruf per AddRange hinzugefügt, aber
+        // noch nicht gespeichert — eine LINQ-Query gegen den DbSet sieht ungespeicherte Added-Entities nicht
+        // (anders als db.MwStSaetze.Local), sonst bliebe der Kontenkontrolle-Backfill unten wirkungslos.
+        await db.SaveChangesAsync(ct);
+
         // SKR03-Standardkonten je Steuerschlüssel für den DATEV-Export — nur wo noch NULL gesetzt
         // (Update-in-place, nie bereits vom Nutzer gepflegte Werte überschreiben; editierbar über den
         // FibuKonten-Tab/MwSt-Tab in KleinstammPage). Grobe Orientierungswerte, kein Ersatz für die
