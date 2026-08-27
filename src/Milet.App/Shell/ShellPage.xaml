@@ -41,7 +41,11 @@
                     <NavigationViewItem Content="Inventur" Tag="inventur" Icon="List" />
                 </NavigationViewItem.MenuItems>
             </NavigationViewItem>
-            <NavigationViewItem Content="Finanzen" Tag="finanzen" Icon="Calculator" IsEnabled="False" />
+            <NavigationViewItem Content="Finanzen" Tag="finanzen" Icon="Calculator">
+                <NavigationViewItem.MenuItems>
+                    <NavigationViewItem Content="Offene Posten" Tag="offeneposten" Icon="PostUpdate" />
+                </NavigationViewItem.MenuItems>
+            </NavigationViewItem>
             <NavigationViewItem Content="Reporting" Tag="reporting" Icon="ReportHacked" IsEnabled="False" />
             <NavigationViewItem Content="Administration" Tag="admin" Icon="Setting" IsEnabled="False" />
         </NavigationView.MenuItems>

@@ -1,0 +1,81 @@
+<Page
+    x:Class="Milet.App.Views.Finanzen.OffenePostenListPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Padding="24" RowSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Offene Posten" Style="{StaticResource TitleTextBlockStyle}" />
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+            <ComboBox SelectedIndex="{x:Bind ViewModel.TypFilterIndex, Mode=TwoWay}" MinWidth="140">
+                <ComboBoxItem Content="Alle" />
+                <ComboBoxItem Content="Debitor" />
+                <ComboBoxItem Content="Kreditor" />
+            </ComboBox>
+            <ComboBox SelectedIndex="{x:Bind ViewModel.StatusFilterIndex, Mode=TwoWay}" MinWidth="160">
+                <ComboBoxItem Content="Alle Status" />
+                <ComboBoxItem Content="Offen" />
+                <ComboBoxItem Content="Teilweise bezahlt" />
+                <ComboBoxItem Content="Ausgeglichen" />
+            </ComboBox>
+            <CheckBox Content="Nur überfällige" IsChecked="{x:Bind ViewModel.NurUeberfaellige, Mode=TwoWay}" />
+            <Button Content="Filtern" Command="{x:Bind ViewModel.LadenCommand}" />
+            <ProgressRing IsActive="{x:Bind ViewModel.LaedtGerade, Mode=OneWay}" Width="24" Height="24" />
+        </StackPanel>
+
+        <ListView Grid.Row="2" x:Name="PostenListView"
+            ItemsSource="{x:Bind ViewModel.Posten, Mode=OneWay}"
+            SelectionMode="Multiple"
+            SelectionChanged="PostenListView_SelectionChanged">
+            <ListView.HeaderTemplate>
+                <DataTemplate>
+                    <Grid Padding="8,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140" /><ColumnDefinition Width="220" />
+                            <ColumnDefinition Width="90" /><ColumnDefinition Width="100" />
+                            <ColumnDefinition Width="100" /><ColumnDefinition Width="100" />
+                            <ColumnDefinition Width="90" /><ColumnDefinition Width="60" />
+                            <ColumnDefinition Width="130" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Beleg" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="1" Text="Partner" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="2" Text="Typ" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="3" Text="Betrag" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="4" Text="Offen" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="5" Text="Fällig" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="6" Text="Tage üb." FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="7" Text="Mahnst." FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="8" Text="Status" FontWeight="SemiBold" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.HeaderTemplate>
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid Padding="8,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140" /><ColumnDefinition Width="220" />
+                            <ColumnDefinition Width="90" /><ColumnDefinition Width="100" />
+                            <ColumnDefinition Width="100" /><ColumnDefinition Width="100" />
+                            <ColumnDefinition Width="90" /><ColumnDefinition Width="60" />
+                            <ColumnDefinition Width="130" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding BelegNummer}" />
+                        <TextBlock Grid.Column="1" Text="{Binding PartnerName}" />
+                        <TextBlock Grid.Column="2" Text="{Binding Typ}" />
+                        <TextBlock Grid.Column="3" Text="{Binding Betrag}" />
+                        <TextBlock Grid.Column="4" Text="{Binding OffenerBetrag}" />
+                        <TextBlock Grid.Column="5" Text="{Binding Faelligkeit}" />
+                        <TextBlock Grid.Column="6" Text="{Binding TageUeberfaellig}" />
+                        <TextBlock Grid.Column="7" Text="{Binding Mahnstufe}" />
+                        <TextBlock Grid.Column="8" Text="{Binding Status}" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</Page>
