@@ -7,7 +7,11 @@ public class OffenerPosten : AuditableEntity, IHasRowVersion
     public int Id { get; set; }
     public int BelegId { get; set; }
     public Entities.Verkauf.Beleg? Beleg { get; set; }
-    public int KundeId { get; set; }
+
+    /// <summary>Genau eines gesetzt, je Typ — analog Beleg.KundeId/LieferantId.</summary>
+    public int? KundeId { get; set; }
+    public int? LieferantId { get; set; }
+
     public OffenerPostenTyp Typ { get; set; } = OffenerPostenTyp.Debitor;
     public decimal Betrag { get; set; }
     public decimal OffenerBetrag { get; set; }
