@@ -13,9 +13,8 @@ public sealed class OffenePostenService(IDbContextFactory<MiletDbContext> dbCont
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
 
         var query = db.OffenePosten.AsNoTracking()
-            .Include(o => o.Beleg)
-            .Include(o => o.Kunde)
-            .Include(o => o.Lieferant)
+            .Include(o => o.Beleg!).ThenInclude(b => b.Kunde)
+            .Include(o => o.Beleg!).ThenInclude(b => b.Lieferant)
             .AsQueryable();
 
         if (filter?.Typ is { } typ) query = query.Where(o => o.Typ == typ);
@@ -33,7 +32,8 @@ public sealed class OffenePostenService(IDbContextFactory<MiletDbContext> dbCont
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
 
         var op = await db.OffenePosten.AsNoTracking()
-            .Include(o => o.Beleg).Include(o => o.Kunde).Include(o => o.Lieferant)
+            .Include(o => o.Beleg!).ThenInclude(b => b.Kunde)
+            .Include(o => o.Beleg!).ThenInclude(b => b.Lieferant)
             .FirstOrDefaultAsync(o => o.Id == id, ct)
             ?? throw new NotFoundException(nameof(OffenerPosten), id);
 
@@ -46,7 +46,7 @@ public sealed class OffenePostenService(IDbContextFactory<MiletDbContext> dbCont
         o.Beleg?.BelegNummer ?? string.Empty,
         o.KundeId,
         o.LieferantId,
-        o.Kunde?.Adresse.Name1 ?? o.Lieferant?.Adresse.Name1 ?? string.Empty,
+        o.Beleg?.Kunde?.Adresse.Name1 ?? o.Beleg?.Lieferant?.Adresse.Name1 ?? string.Empty,
         o.Typ,
         o.Betrag,
         o.OffenerBetrag,

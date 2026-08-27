@@ -61,7 +61,7 @@ public sealed class MahnwesenService(IDbContextFactory<MiletDbContext> dbContext
 
         var offenePosten = await db.OffenePosten.AsNoTracking()
             .Where(o => o.Typ == OffenerPostenTyp.Debitor && !o.Mahnsperre && o.OffenerBetrag > 0m)
-            .Include(o => o.Beleg).Include(o => o.Kunde)
+            .Include(o => o.Beleg!).ThenInclude(b => b.Kunde)
             .ToListAsync(ct);
 
         var kandidaten = offenePosten
@@ -70,7 +70,7 @@ public sealed class MahnwesenService(IDbContextFactory<MiletDbContext> dbContext
             .Select(x => new
             {
                 x.Op.KundeId,
-                KundenName = x.Op.Kunde?.Adresse.Name1 ?? string.Empty,
+                KundenName = x.Op.Beleg?.Kunde?.Adresse.Name1 ?? string.Empty,
                 Kandidat = new MahnKandidatDto(
                     x.Op.Id, x.Op.BelegId, x.Op.Beleg?.BelegNummer ?? string.Empty, x.Op.OffenerBetrag,
                     x.Op.Faelligkeit, x.Op.Mahnstufe, x.Stufe!.Value),
@@ -79,7 +79,7 @@ public sealed class MahnwesenService(IDbContextFactory<MiletDbContext> dbContext
 
         return kandidaten
             .GroupBy(k => (k.KundeId, k.KundenName))
-            .Select(g => new MahnlaufGruppeDto(g.Key.KundeId, g.Key.KundenName, g.Select(x => x.Kandidat).ToList()))
+            .Select(g => new MahnlaufGruppeDto(g.Key.KundeId!.Value, g.Key.KundenName, g.Select(x => x.Kandidat).ToList()))
             .OrderBy(g => g.KundenName)
             .ToList();
     }
@@ -98,8 +98,8 @@ public sealed class MahnwesenService(IDbContextFactory<MiletDbContext> dbContext
         var heute = DateOnly.FromDateTime(DateTime.Today);
 
         var offenePosten = await db.OffenePosten
-            .Where(o => offenerPostenIds.Contains(o.Id))
-            .Include(o => o.Beleg).Include(o => o.Kunde)
+            .Where(o => offenerPostenIds.Contains(o.Id) && o.Typ == OffenerPostenTyp.Debitor)
+            .Include(o => o.Beleg!).ThenInclude(b => b.Kunde)
             .ToListAsync(ct);
 
         // Re-check zum Ausführungszeitpunkt — die vom Nutzer ausgewählten Kandidaten stammen aus einer
@@ -122,7 +122,7 @@ public sealed class MahnwesenService(IDbContextFactory<MiletDbContext> dbContext
 
             var mahnung = new Mahnung
             {
-                KundeId = gruppe.Key.KundeId,
+                KundeId = gruppe.Key.KundeId!.Value,
                 MahnDatum = heute,
                 Mahnstufe = gruppe.Key.Stufe!.Value,
                 Gebuehr = stufeConfig.Gebuehr,
@@ -130,7 +130,7 @@ public sealed class MahnwesenService(IDbContextFactory<MiletDbContext> dbContext
                 Positionen = positionen,
             };
             db.Mahnungen.Add(mahnung);
-            mahnungen.Add((mahnung, gruppe.First().Op.Kunde?.Adresse.Name1 ?? string.Empty));
+            mahnungen.Add((mahnung, gruppe.First().Op.Beleg?.Kunde?.Adresse.Name1 ?? string.Empty));
 
             foreach (var (op, stufe) in gruppe)
             {
@@ -145,5 +145,20 @@ public sealed class MahnwesenService(IDbContextFactory<MiletDbContext> dbContext
             x.Entity.Id, x.Entity.KundeId, x.KundenName, x.Entity.MahnDatum, x.Entity.Mahnstufe, x.Entity.Gebuehr, x.Entity.Gesamtbetrag,
             x.Entity.Positionen.Select(p => new MahnungPositionDto(p.OffenerPostenId, p.BelegNummerSnapshot, p.OffenerBetragSnapshot)).ToList()))
             .ToList();
+    }
+
+    public async Task<MahnungDto> LadeMahnungAsync(int id, CancellationToken ct = default)
+    {
+        await using var db = await dbContextFactory.CreateDbContextAsync(ct);
+
+        var mahnung = await db.Mahnungen.AsNoTracking()
+            .Include(m => m.Kunde).Include(m => m.Positionen)
+            .FirstOrDefaultAsync(m => m.Id == id, ct)
+            ?? throw new NotFoundException(nameof(Mahnung), id);
+
+        return new MahnungDto(
+            mahnung.Id, mahnung.KundeId, mahnung.Kunde?.Adresse.Name1 ?? string.Empty, mahnung.MahnDatum,
+            mahnung.Mahnstufe, mahnung.Gebuehr, mahnung.Gesamtbetrag,
+            mahnung.Positionen.Select(p => new MahnungPositionDto(p.OffenerPostenId, p.BelegNummerSnapshot, p.OffenerBetragSnapshot)).ToList());
     }
 }

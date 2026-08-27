@@ -20,4 +20,5 @@ public interface IMahnwesenService
 
     Task<IReadOnlyList<MahnlaufGruppeDto>> ErmittleFaelligeAsync(CancellationToken ct = default);
     Task<IReadOnlyList<MahnungDto>> MahnlaufDurchfuehrenAsync(IReadOnlyList<int> offenerPostenIds, CancellationToken ct = default);
+    Task<MahnungDto> LadeMahnungAsync(int id, CancellationToken ct = default);
 }
