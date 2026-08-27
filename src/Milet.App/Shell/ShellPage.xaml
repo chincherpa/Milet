@@ -45,9 +45,10 @@
                 <NavigationViewItem.MenuItems>
                     <NavigationViewItem Content="Offene Posten" Tag="offeneposten" Icon="PostUpdate" />
                     <NavigationViewItem Content="Mahnlauf" Tag="mahnlauf" Icon="Bookmarks" />
+                    <NavigationViewItem Content="DATEV-Export" Tag="datevexport" Icon="Export" />
                 </NavigationViewItem.MenuItems>
             </NavigationViewItem>
-            <NavigationViewItem Content="Reporting" Tag="reporting" Icon="ReportHacked" IsEnabled="False" />
+            <NavigationViewItem Content="Reporting" Tag="reporting" Icon="ReportHacked" />
             <NavigationViewItem Content="Administration" Tag="admin" Icon="Setting" IsEnabled="False" />
         </NavigationView.MenuItems>
         <Frame x:Name="ContentFrame" />

@@ -7,6 +7,7 @@ using Milet.App.ViewModels;
 using Milet.App.ViewModels.Einkauf;
 using Milet.App.ViewModels.Finanzen;
 using Milet.App.ViewModels.Lager;
+using Milet.App.ViewModels.Reporting;
 using Milet.App.ViewModels.Stammdaten;
 using Milet.App.ViewModels.Verkauf;
 using Milet.App.Views;
@@ -94,6 +95,9 @@ public partial class App : Microsoft.UI.Xaml.Application
 
         builder.Services.AddTransient<OffenePostenListViewModel>();
         builder.Services.AddTransient<MahnlaufViewModel>();
+        builder.Services.AddTransient<DatevExportViewModel>();
+
+        builder.Services.AddTransient<ReportingViewModel>();
 
         return builder.Build();
     }

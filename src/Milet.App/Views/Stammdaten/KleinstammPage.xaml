@@ -79,6 +79,8 @@
                         <NumberBox Header="Satz % *" Value="{x:Bind ViewModel.MwStSatzWert, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" Minimum="0" Maximum="100" />
                         <NumberBox Header="Steuerschlüssel (DATEV)" Value="{x:Bind ViewModel.MwStSteuerSchluessel, Mode=TwoWay, Converter={StaticResource NullableInt32ToDoubleConverter}}" Minimum="0" />
                         <DatePicker Header="Gültig ab" Date="{x:Bind ViewModel.MwStGueltigAb, Mode=TwoWay, Converter={StaticResource DateOnlyToDateTimeOffsetConverter}}" />
+                        <NumberBox Header="Erlöskonto (DATEV, Ausgangsrechnungen)" Value="{x:Bind ViewModel.MwStErloeskontoNr, Mode=TwoWay, Converter={StaticResource NullableInt32ToDoubleConverter}}" Minimum="0" SpinButtonPlacementMode="Compact" />
+                        <NumberBox Header="Aufwandskonto (DATEV, Eingangsrechnungen)" Value="{x:Bind ViewModel.MwStAufwandskontoNr, Mode=TwoWay, Converter={StaticResource NullableInt32ToDoubleConverter}}" Minimum="0" SpinButtonPlacementMode="Compact" />
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <Button Content="Neu" Command="{x:Bind ViewModel.MwStSatzNeuCommand}" />
                             <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.MwStSatzSpeichernCommand}" />
@@ -302,6 +304,23 @@
                         </StackPanel>
                     </StackPanel>
                 </Grid>
+            </PivotItem>
+
+            <PivotItem Header="FibuKonten">
+                <StackPanel MaxWidth="420" HorizontalAlignment="Left" Spacing="12">
+                    <TextBlock Text="Konfiguration für den DATEV-EXTF-Export (Buchungsstapel) — Erlös-/Aufwandskonten je MwSt-Satz werden auf dem Tab &quot;MwSt-Sätze&quot; gepflegt." TextWrapping="Wrap" Opacity="0.7" />
+                    <InfoBar IsOpen="{x:Bind ViewModel.FibuKonfigurationFehler, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.FibuKonfigurationFehler, Mode=OneWay}" />
+                    <ComboBox Header="Kontenrahmen" HorizontalAlignment="Stretch" SelectedIndex="{x:Bind ViewModel.FibuKontenrahmenIndex, Mode=TwoWay}">
+                        <ComboBoxItem Content="SKR03" />
+                        <ComboBoxItem Content="SKR04" />
+                    </ComboBox>
+                    <NumberBox Header="Beraternummer *" Value="{x:Bind ViewModel.FibuBeraterNr, Mode=TwoWay}" Minimum="0" />
+                    <NumberBox Header="Mandantennummer *" Value="{x:Bind ViewModel.FibuMandantNr, Mode=TwoWay}" Minimum="0" />
+                    <NumberBox Header="Wirtschaftsjahr-Beginn (Monat)" Value="{x:Bind ViewModel.FibuWirtschaftsjahrBeginnMonat, Mode=TwoWay}" Minimum="1" Maximum="12" />
+                    <NumberBox Header="Sachkontenlänge" Value="{x:Bind ViewModel.FibuSachkontenLaenge, Mode=TwoWay}" Minimum="4" Maximum="8" />
+                    <NumberBox Header="Bankkonto (Zahlungen) *" Value="{x:Bind ViewModel.FibuBankkontoNr, Mode=TwoWay}" Minimum="0" />
+                    <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.FibuKonfigurationSpeichernCommand}" />
+                </StackPanel>
             </PivotItem>
 
         </Pivot>

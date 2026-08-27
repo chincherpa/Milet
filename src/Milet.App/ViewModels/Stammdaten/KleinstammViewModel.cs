@@ -2,8 +2,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FluentValidation;
 using Milet.App.Services;
+using Milet.Application.Admin;
 using Milet.Application.Finanzen;
 using Milet.Application.Stammdaten;
+using Milet.Domain.Entities.Admin;
 
 namespace Milet.App.ViewModels.Stammdaten;
 
@@ -19,6 +21,7 @@ public sealed partial class KleinstammViewModel : ObservableObject
     private readonly IDialogService _dialogService;
     private readonly Milet.Application.Lager.ILagerortService _lagerortService;
     private readonly IMahnwesenService _mahnwesenService;
+    private readonly IFibuKonfigurationService _fibuKonfigurationService;
 
     public KleinstammViewModel(
         IEinheitenService einheitenService,
@@ -30,7 +33,8 @@ public sealed partial class KleinstammViewModel : ObservableObject
         IArtikelService artikelService,
         IDialogService dialogService,
         Milet.Application.Lager.ILagerortService lagerortService,
-        IMahnwesenService mahnwesenService)
+        IMahnwesenService mahnwesenService,
+        IFibuKonfigurationService fibuKonfigurationService)
     {
         _einheitenService = einheitenService;
         _mwStSaetzeService = mwStSaetzeService;
@@ -42,6 +46,7 @@ public sealed partial class KleinstammViewModel : ObservableObject
         _dialogService = dialogService;
         _lagerortService = lagerortService;
         _mahnwesenService = mahnwesenService;
+        _fibuKonfigurationService = fibuKonfigurationService;
 
         _ = EinheitenLadenAsync();
         _ = MwStSaetzeLadenAsync();
@@ -51,6 +56,7 @@ public sealed partial class KleinstammViewModel : ObservableObject
         _ = ArtikelLookupsLadenAsync();
         _ = LagerortenLadenAsync();
         _ = MahnstufenLadenAsync();
+        _ = FibuKonfigurationLadenAsync();
     }
 
     // ---- Einheiten ----
@@ -162,6 +168,12 @@ public sealed partial class KleinstammViewModel : ObservableObject
     public partial DateOnly MwStGueltigAb { get; set; } = DateOnly.FromDateTime(DateTime.Today);
 
     [ObservableProperty]
+    public partial int? MwStErloeskontoNr { get; set; }
+
+    [ObservableProperty]
+    public partial int? MwStAufwandskontoNr { get; set; }
+
+    [ObservableProperty]
     public partial string? MwStFehler { get; set; }
 
     partial void OnMwStSatzAusgewaehltChanged(MwStSatzDto? value)
@@ -171,6 +183,8 @@ public sealed partial class KleinstammViewModel : ObservableObject
         MwStSatzWert = value?.Satz ?? 0;
         MwStSteuerSchluessel = value?.SteuerSchluessel;
         MwStGueltigAb = value?.GueltigAb ?? DateOnly.FromDateTime(DateTime.Today);
+        MwStErloeskontoNr = value?.ErloeskontoNr;
+        MwStAufwandskontoNr = value?.AufwandskontoNr;
     }
 
     [RelayCommand]
@@ -190,6 +204,8 @@ public sealed partial class KleinstammViewModel : ObservableObject
             Satz = MwStSatzWert,
             SteuerSchluessel = MwStSteuerSchluessel,
             GueltigAb = MwStGueltigAb,
+            ErloeskontoNr = MwStErloeskontoNr,
+            AufwandskontoNr = MwStAufwandskontoNr,
         };
 
         try
@@ -783,6 +799,70 @@ public sealed partial class KleinstammViewModel : ObservableObject
         catch (Exception ex)
         {
             await _dialogService.ZeigeFehlerAsync("Fehler beim Löschen", ex.Message);
+        }
+    }
+
+    // ---- FibuKonten (DATEV-Export-Konfiguration, Singleton) ----
+
+    [ObservableProperty]
+    public partial int FibuKontenrahmenIndex { get; set; }
+
+    [ObservableProperty]
+    public partial int FibuBeraterNr { get; set; }
+
+    [ObservableProperty]
+    public partial int FibuMandantNr { get; set; }
+
+    [ObservableProperty]
+    public partial int FibuWirtschaftsjahrBeginnMonat { get; set; } = 1;
+
+    [ObservableProperty]
+    public partial int FibuSachkontenLaenge { get; set; } = 4;
+
+    [ObservableProperty]
+    public partial int FibuBankkontoNr { get; set; }
+
+    [ObservableProperty]
+    public partial string? FibuKonfigurationFehler { get; set; }
+
+    [RelayCommand]
+    private async Task FibuKonfigurationLadenAsync()
+    {
+        var dto = await _fibuKonfigurationService.LadeAsync();
+        FibuKontenrahmenIndex = dto.Kontenrahmen == Kontenrahmen.Skr04 ? 1 : 0;
+        FibuBeraterNr = dto.BeraterNr;
+        FibuMandantNr = dto.MandantNr;
+        FibuWirtschaftsjahrBeginnMonat = dto.WirtschaftsjahrBeginnMonat;
+        FibuSachkontenLaenge = dto.SachkontenLaenge;
+        FibuBankkontoNr = dto.BankkontoNr;
+    }
+
+    [RelayCommand]
+    private async Task FibuKonfigurationSpeichernAsync()
+    {
+        FibuKonfigurationFehler = null;
+        var dto = new FibuKonfigurationDto
+        {
+            Kontenrahmen = FibuKontenrahmenIndex == 1 ? Kontenrahmen.Skr04 : Kontenrahmen.Skr03,
+            BeraterNr = FibuBeraterNr,
+            MandantNr = FibuMandantNr,
+            WirtschaftsjahrBeginnMonat = FibuWirtschaftsjahrBeginnMonat,
+            SachkontenLaenge = FibuSachkontenLaenge,
+            BankkontoNr = FibuBankkontoNr,
+        };
+
+        try
+        {
+            await _fibuKonfigurationService.SpeichereAsync(dto);
+            await FibuKonfigurationLadenAsync();
+        }
+        catch (ValidationException ex)
+        {
+            FibuKonfigurationFehler = string.Join(Environment.NewLine, ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (Exception ex)
+        {
+            FibuKonfigurationFehler = ex.Message;
         }
     }
 }
