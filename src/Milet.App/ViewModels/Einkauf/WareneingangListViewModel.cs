@@ -32,7 +32,6 @@ public sealed partial class WareneingangListViewModel : ObservableObject
         finally { LaedtGerade = false; }
     }
 
-    [RelayCommand] private void Neu() => _navigation.Navigate<WareneingangEditViewModel>(0);
     [RelayCommand] private void Bearbeiten() { if (Ausgewaehlt is { } beleg) _navigation.Navigate<WareneingangEditViewModel>(beleg.Id); }
 
     [RelayCommand]

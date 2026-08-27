@@ -14,7 +14,6 @@
         <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
             <TextBox Width="300" PlaceholderText="Suche (Nummer oder Lieferant)…" Text="{x:Bind ViewModel.Suchtext, Mode=TwoWay}" />
             <Button Content="Suchen" Command="{x:Bind ViewModel.LadenCommand}" />
-            <Button Content="Neu" Command="{x:Bind ViewModel.NeuCommand}" />
             <Button Content="Bearbeiten" Command="{x:Bind ViewModel.BearbeitenCommand}" />
             <Button Content="Löschen" Command="{x:Bind ViewModel.LoeschenCommand}" />
             <ProgressRing IsActive="{x:Bind ViewModel.LaedtGerade, Mode=OneWay}" Width="24" Height="24" />
