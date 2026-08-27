@@ -82,6 +82,14 @@ public sealed class EingangsrechnungBuchenServiceTests : IAsyncLifetime
                 MwStSatzWert = 19m, ArtikelId = _artikelId, LagerortId = _lagerortId,
             }],
         };
+        // Kopfsummen (SummeNetto/SummeMwSt/SummeBrutto/Steuersummen) sind plain properties ohne berechneten
+        // Getter (Beleg.cs) — sie werden von keiner Stelle unterhalb (WareneingangBuchenService, Interceptors,
+        // ToDto) automatisch befüllt. Ohne diese Berechnung bliebe SummeBrutto beim Default 0m, wodurch
+        // EingangsrechnungBuchenService (das genau diese Spalte als erwarteterBetrag liest) fälschlich eine
+        // Abweichung meldet. Gleiche Berechnung wie in VerteuerePositionAsync und in BelegUeberleitungService selbst.
+        var steuersummen = SteuerRechner.BerechneSteuersummen(wareneingang.Positionen);
+        wareneingang.Steuersummen = steuersummen.ToList();
+        (wareneingang.SummeNetto, wareneingang.SummeMwSt, wareneingang.SummeBrutto) = SteuerRechner.BerechneKopfsummen(steuersummen);
         db.Add(wareneingang);
         await db.SaveChangesAsync(ct);
 
@@ -146,7 +154,11 @@ public sealed class EingangsrechnungBuchenServiceTests : IAsyncLifetime
         var ergebnis = await service.BuchenAsync(eingangsrechnungId, ct);
 
         Assert.True(ergebnis.BetragWeichtAb);
-        Assert.True(ergebnis.AbweichungBetrag > 0);
+        // Wareneingang bleibt bei 119,00 (100 netto + 19% MwSt); Eingangsrechnung nach Verteuerung bei 178,50
+        // (150 netto + 19% MwSt) -> Abweichung exakt 59,50. Exakter Wert statt reinem ">0"-Check, damit eine
+        // künftige Regression auf den ursprünglichen Bug (Wareneingang-Summen nicht berechnet -> erwarteterBetrag
+        // fälschlich 0) tatsächlich auffällt statt zufällig weiter zu bestehen.
+        Assert.Equal(59.50m, ergebnis.AbweichungBetrag);
         await using var db = new MiletDbContext(_options);
         Assert.Equal(1, await db.OffenePosten.CountAsync(o => o.BelegId == eingangsrechnungId, ct));
     }
