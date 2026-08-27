@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FluentValidation;
 using Milet.App.Services;
+using Milet.Application.Finanzen;
 using Milet.Application.Stammdaten;
 
 namespace Milet.App.ViewModels.Stammdaten;
@@ -17,6 +18,7 @@ public sealed partial class KleinstammViewModel : ObservableObject
     private readonly IArtikelService _artikelService;
     private readonly IDialogService _dialogService;
     private readonly Milet.Application.Lager.ILagerortService _lagerortService;
+    private readonly IMahnwesenService _mahnwesenService;
 
     public KleinstammViewModel(
         IEinheitenService einheitenService,
@@ -27,7 +29,8 @@ public sealed partial class KleinstammViewModel : ObservableObject
         IArtikelPreiseService artikelPreiseService,
         IArtikelService artikelService,
         IDialogService dialogService,
-        Milet.Application.Lager.ILagerortService lagerortService)
+        Milet.Application.Lager.ILagerortService lagerortService,
+        IMahnwesenService mahnwesenService)
     {
         _einheitenService = einheitenService;
         _mwStSaetzeService = mwStSaetzeService;
@@ -38,6 +41,7 @@ public sealed partial class KleinstammViewModel : ObservableObject
         _artikelService = artikelService;
         _dialogService = dialogService;
         _lagerortService = lagerortService;
+        _mahnwesenService = mahnwesenService;
 
         _ = EinheitenLadenAsync();
         _ = MwStSaetzeLadenAsync();
@@ -46,6 +50,7 @@ public sealed partial class KleinstammViewModel : ObservableObject
         _ = PreislistenLadenAsync();
         _ = ArtikelLookupsLadenAsync();
         _ = LagerortenLadenAsync();
+        _ = MahnstufenLadenAsync();
     }
 
     // ---- Einheiten ----
@@ -687,6 +692,93 @@ public sealed partial class KleinstammViewModel : ObservableObject
             await _lagerortService.LoescheAsync(lagerort.Id);
             LagerortNeu();
             await LagerortenLadenAsync();
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ZeigeFehlerAsync("Fehler beim Löschen", ex.Message);
+        }
+    }
+
+    // ---- Mahnstufen ----
+
+    [ObservableProperty]
+    public partial IReadOnlyList<MahnstufeDto> MahnstufenListe { get; set; } = [];
+
+    [ObservableProperty]
+    public partial MahnstufeDto? MahnstufeAusgewaehlt { get; set; }
+
+    [ObservableProperty]
+    public partial int MahnstufeStufe { get; set; }
+
+    [ObservableProperty]
+    public partial int MahnstufeKarenztage { get; set; }
+
+    [ObservableProperty]
+    public partial decimal MahnstufeGebuehr { get; set; }
+
+    [ObservableProperty]
+    public partial string? MahnstufeMahntext { get; set; }
+
+    [ObservableProperty]
+    public partial string? MahnstufeFehler { get; set; }
+
+    partial void OnMahnstufeAusgewaehltChanged(MahnstufeDto? value)
+    {
+        MahnstufeFehler = null;
+        MahnstufeStufe = value?.Stufe ?? 0;
+        MahnstufeKarenztage = value?.Karenztage ?? 0;
+        MahnstufeGebuehr = value?.Gebuehr ?? 0;
+        MahnstufeMahntext = value?.Mahntext;
+    }
+
+    [RelayCommand]
+    private async Task MahnstufenLadenAsync() => MahnstufenListe = await _mahnwesenService.ListeStufenAsync();
+
+    [RelayCommand]
+    private void MahnstufeNeu() => MahnstufeAusgewaehlt = null;
+
+    [RelayCommand]
+    private async Task MahnstufeSpeichernAsync()
+    {
+        MahnstufeFehler = null;
+        var dto = new MahnstufeDto(
+            MahnstufeAusgewaehlt?.Id ?? 0, MahnstufeStufe, MahnstufeKarenztage, MahnstufeGebuehr, MahnstufeMahntext);
+
+        try
+        {
+            await _mahnwesenService.SpeichereStufeAsync(dto);
+            await MahnstufenLadenAsync();
+            MahnstufeNeu();
+        }
+        catch (ValidationException ex)
+        {
+            MahnstufeFehler = string.Join(Environment.NewLine, ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (Exception ex)
+        {
+            MahnstufeFehler = ex.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task MahnstufeLoeschenAsync()
+    {
+        if (MahnstufeAusgewaehlt is not { } stufe)
+        {
+            return;
+        }
+
+        var bestaetigt = await _dialogService.BestaetigenAsync("Mahnstufe löschen", $"Mahnstufe {stufe.Stufe} wirklich löschen?");
+        if (!bestaetigt)
+        {
+            return;
+        }
+
+        try
+        {
+            await _mahnwesenService.LoescheStufeAsync(stufe.Id);
+            MahnstufeNeu();
+            await MahnstufenLadenAsync();
         }
         catch (Exception ex)
         {

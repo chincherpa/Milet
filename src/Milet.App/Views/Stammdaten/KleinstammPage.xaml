@@ -269,6 +269,41 @@
                 </Grid>
             </PivotItem>
 
+            <PivotItem Header="Mahnstufen">
+                <Grid ColumnSpacing="24">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="380" />
+                        <ColumnDefinition Width="360" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <ListView Grid.Column="0" Style="{StaticResource MasterListStyle}" ItemsSource="{x:Bind ViewModel.MahnstufenListe, Mode=OneWay}" SelectedItem="{x:Bind ViewModel.MahnstufeAusgewaehlt, Mode=TwoWay}" SelectionMode="Single">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="12" Padding="4">
+                                    <TextBlock Text="{Binding Stufe}" />
+                                    <TextBlock Text="{Binding Karenztage}" Opacity="0.7" />
+                                    <TextBlock Text="{Binding Gebuehr}" Opacity="0.7" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <StackPanel Grid.Column="1" Spacing="12">
+                        <InfoBar IsOpen="{x:Bind ViewModel.MahnstufeFehler, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.MahnstufeFehler, Mode=OneWay}" />
+                        <NumberBox Header="Stufe *" Value="{x:Bind ViewModel.MahnstufeStufe, Mode=TwoWay}" Minimum="1" />
+                        <NumberBox Header="Karenztage" Value="{x:Bind ViewModel.MahnstufeKarenztage, Mode=TwoWay}" Minimum="0" />
+                        <NumberBox Header="Gebühr" Value="{x:Bind ViewModel.MahnstufeGebuehr, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" Minimum="0" />
+                        <TextBox Header="Mahntext" Text="{x:Bind ViewModel.MahnstufeMahntext, Mode=TwoWay}" AcceptsReturn="True" Height="80" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Neu" Command="{x:Bind ViewModel.MahnstufeNeuCommand}" />
+                            <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.MahnstufeSpeichernCommand}" />
+                            <Button Content="Löschen" Command="{x:Bind ViewModel.MahnstufeLoeschenCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </PivotItem>
+
         </Pivot>
     </Grid>
 </Page>
