@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Milet.Application.Abstractions;
 using Milet.Application.Admin;
 using Milet.Application.Einkauf;
+using Milet.Application.Finanzen;
 using Milet.Application.Lager;
 using Milet.Application.Stammdaten;
 using Milet.Application.Verkauf;
@@ -60,6 +61,8 @@ public static class DependencyInjection
         services.AddScoped<IBestellVorschlagService, BestellVorschlagService>();
         services.AddScoped<IWareneingangBuchenService, WareneingangBuchenService>();
         services.AddScoped<IEingangsrechnungBuchenService, EingangsrechnungBuchenService>();
+
+        services.AddScoped<IOffenePostenService, OffenePostenService>();
 
         return services;
     }
