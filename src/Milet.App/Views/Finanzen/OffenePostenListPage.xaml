@@ -25,6 +25,7 @@
             </ComboBox>
             <CheckBox Content="Nur überfällige" IsChecked="{x:Bind ViewModel.NurUeberfaellige, Mode=TwoWay}" />
             <Button Content="Filtern" Command="{x:Bind ViewModel.LadenCommand}" />
+            <Button Content="Zahlung erfassen" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.ZahlungErfassenCommand}" />
             <ProgressRing IsActive="{x:Bind ViewModel.LaedtGerade, Mode=OneWay}" Width="24" Height="24" />
         </StackPanel>
 
