@@ -18,5 +18,6 @@ public class OffenerPosten : AuditableEntity, IHasRowVersion
     public DateOnly Faelligkeit { get; set; }
     public int Mahnstufe { get; set; }
     public bool Mahnsperre { get; set; }
+    public OffenerPostenStatus Status { get; set; } = OffenerPostenStatus.Offen;
     public byte[] RowVersion { get; set; } = [];
 }
