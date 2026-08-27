@@ -18,6 +18,8 @@ public sealed class BelegUeberleitungService(
         [BelegTyp.Angebot] = [BelegTyp.Auftrag],
         [BelegTyp.Auftrag] = [BelegTyp.Rechnung, BelegTyp.Lieferschein],
         [BelegTyp.Lieferschein] = [BelegTyp.Rechnung],
+        [BelegTyp.Bestellung] = [BelegTyp.Wareneingang],
+        [BelegTyp.Wareneingang] = [BelegTyp.Eingangsrechnung],
     };
 
     private static BelegTyp TypVon(Beleg b) => b switch
@@ -26,6 +28,9 @@ public sealed class BelegUeberleitungService(
         Auftrag => BelegTyp.Auftrag,
         Rechnung => BelegTyp.Rechnung,
         Lieferschein => BelegTyp.Lieferschein,
+        Bestellung => BelegTyp.Bestellung,
+        Wareneingang => BelegTyp.Wareneingang,
+        Eingangsrechnung => BelegTyp.Eingangsrechnung,
         _ => throw new InvalidOperationException($"Unbekannter Beleg-Subtyp {b.GetType().Name}."),
     };
 
@@ -35,6 +40,9 @@ public sealed class BelegUeberleitungService(
         BelegTyp.Auftrag => new Auftrag(),
         BelegTyp.Rechnung => new Rechnung(),
         BelegTyp.Lieferschein => new Lieferschein(),
+        BelegTyp.Bestellung => new Bestellung(),
+        BelegTyp.Wareneingang => new Wareneingang(),
+        BelegTyp.Eingangsrechnung => new Eingangsrechnung(),
         _ => throw new ArgumentOutOfRangeException(nameof(typ)),
     };
 
@@ -44,6 +52,9 @@ public sealed class BelegUeberleitungService(
         BelegTyp.Auftrag => "AU",
         BelegTyp.Rechnung => "RE",
         BelegTyp.Lieferschein => "LS",
+        BelegTyp.Bestellung => "BE",
+        BelegTyp.Wareneingang => "WE",
+        BelegTyp.Eingangsrechnung => "ER",
         _ => throw new ArgumentOutOfRangeException(nameof(typ)),
     };
 
@@ -59,10 +70,10 @@ public sealed class BelegUeberleitungService(
         var quellTyp = TypVon(quellBeleg);
         if (!ErlaubteUebergaenge.TryGetValue(quellTyp, out var erlaubteZiele) || !erlaubteZiele.Contains(zielTyp))
             throw new InvalidOperationException($"Überleitung von {quellTyp} nach {zielTyp} wird nicht unterstützt.");
-        if (zielTyp == BelegTyp.Lieferschein)
-            throw new InvalidOperationException("Lieferschein-Erstellung erfordert Mengenauswahl und Lagerort — verwenden Sie UeberleitenMitAuswahlAsync.");
-        if (quellTyp == BelegTyp.Lieferschein && quellBeleg.Status != BelegStatus.Gebucht)
-            throw new InvalidOperationException($"Lieferschein '{quellBeleg.BelegNummer}' muss erst gebucht werden, bevor er berechnet werden kann.");
+        if (zielTyp is BelegTyp.Lieferschein or BelegTyp.Wareneingang)
+            throw new InvalidOperationException($"{zielTyp}-Erstellung erfordert Mengenauswahl und Lagerort — verwenden Sie UeberleitenMitAuswahlAsync.");
+        if (quellTyp is BelegTyp.Lieferschein or BelegTyp.Wareneingang && quellBeleg.Status != BelegStatus.Gebucht)
+            throw new InvalidOperationException($"{quellTyp} '{quellBeleg.BelegNummer}' muss erst gebucht werden, bevor er überführt werden kann.");
 
         // Offene-Mengen-Prüfung explizit in derselben Transaktion — Schutz gegen Race zweier gleichzeitiger Überleitungen.
         var quellPositionIds = quellBeleg.Positionen.Select(p => p.Id).ToList();
@@ -76,6 +87,7 @@ public sealed class BelegUeberleitungService(
             : await numberRangeService.NaechsteNummerAsync(NummernkreisCode(zielTyp), ct);
         zielBeleg.BelegDatum = DateOnly.FromDateTime(DateTime.Today);
         zielBeleg.KundeId = quellBeleg.KundeId;
+        zielBeleg.LieferantId = quellBeleg.LieferantId;
         zielBeleg.RechnungsadresseSnapshot = quellBeleg.RechnungsadresseSnapshot.Kopie();
         zielBeleg.LieferadresseSnapshot = quellBeleg.LieferadresseSnapshot.Kopie();
         zielBeleg.ZahlungsbedingungZielTage = quellBeleg.ZahlungsbedingungZielTage;
@@ -169,13 +181,13 @@ public sealed class BelegUeberleitungService(
         var quellTyp = TypVon(quellBeleg);
         if (!ErlaubteUebergaenge.TryGetValue(quellTyp, out var erlaubteZiele) || !erlaubteZiele.Contains(zielTyp))
             throw new InvalidOperationException($"Überleitung von {quellTyp} nach {zielTyp} wird nicht unterstützt.");
-        if (quellTyp == BelegTyp.Lieferschein && quellBeleg.Status != BelegStatus.Gebucht)
-            throw new InvalidOperationException($"Lieferschein '{quellBeleg.BelegNummer}' muss erst gebucht werden, bevor er berechnet werden kann.");
+        if (quellTyp is BelegTyp.Lieferschein or BelegTyp.Wareneingang && quellBeleg.Status != BelegStatus.Gebucht)
+            throw new InvalidOperationException($"{quellTyp} '{quellBeleg.BelegNummer}' muss erst gebucht werden, bevor er überführt werden kann.");
 
-        if (zielTyp == BelegTyp.Lieferschein)
+        if (zielTyp is BelegTyp.Lieferschein or BelegTyp.Wareneingang)
         {
             if (lagerortId is null)
-                throw new InvalidOperationException("Lagerort ist für die Lieferschein-Erstellung erforderlich.");
+                throw new InvalidOperationException($"Lagerort ist für die {zielTyp}-Erstellung erforderlich.");
             if (quellBeleg.Kunde?.Liefersperre == true)
                 throw new InvalidOperationException($"Kunde '{quellBeleg.Kunde.Kundennummer}' hat Liefersperre.");
         }
@@ -191,6 +203,7 @@ public sealed class BelegUeberleitungService(
             : await numberRangeService.NaechsteNummerAsync(NummernkreisCode(zielTyp), ct);
         zielBeleg.BelegDatum = DateOnly.FromDateTime(DateTime.Today);
         zielBeleg.KundeId = quellBeleg.KundeId;
+        zielBeleg.LieferantId = quellBeleg.LieferantId;
         zielBeleg.RechnungsadresseSnapshot = quellBeleg.RechnungsadresseSnapshot.Kopie();
         zielBeleg.LieferadresseSnapshot = quellBeleg.LieferadresseSnapshot.Kopie();
         zielBeleg.ZahlungsbedingungZielTage = quellBeleg.ZahlungsbedingungZielTage;
@@ -234,7 +247,7 @@ public sealed class BelegUeberleitungService(
                 SteuerSchluessel = quellPosition.SteuerSchluessel,
                 GesamtNetto = SteuerRechner.BerechnePosition(gewaehlteMenge, quellPosition.Einzelpreis, quellPosition.RabattProzent),
                 UrsprungsPositionId = quellPosition.Id,
-                LagerortId = zielTyp == BelegTyp.Lieferschein ? lagerortId : null,
+                LagerortId = zielTyp is BelegTyp.Lieferschein or BelegTyp.Wareneingang ? lagerortId : null,
             });
         }
 
