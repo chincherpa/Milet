@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Milet.Application.Abstractions;
+using Milet.Application.Admin;
 using Milet.Application.Common;
 using Milet.Application.Stammdaten;
 using Milet.Domain.Entities.Stammdaten;
@@ -11,7 +12,8 @@ namespace Milet.Infrastructure.Services;
 
 public sealed class KundenService(
     IDbContextFactory<MiletDbContext> dbContextFactory,
-    INumberRangeService numberRangeService) : IKundenService
+    INumberRangeService numberRangeService,
+    IBerechtigungsService berechtigung) : IKundenService
 {
     private static readonly KundeValidator Validator = new();
 
@@ -45,6 +47,7 @@ public sealed class KundenService(
 
     public async Task<KundeDto> SpeichereAsync(KundeDto dto, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Stammdaten);
         await Validator.ValidateAndThrowAsync(dto, ct);
 
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
@@ -75,6 +78,7 @@ public sealed class KundenService(
 
     public async Task LoescheAsync(int id, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Stammdaten);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
 
         var kunde = await db.Kunden.FirstOrDefaultAsync(k => k.Id == id, ct)

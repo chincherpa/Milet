@@ -1,5 +1,7 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Milet.Application.Abstractions;
+using Milet.Application.Admin;
 using Milet.Application.Lager;
 using Milet.Domain.Entities.Lager;
 using Milet.Infrastructure.Persistence;
@@ -7,7 +9,9 @@ using Milet.Infrastructure.Services.Mapping;
 
 namespace Milet.Infrastructure.Services;
 
-public sealed class BestandService(IDbContextFactory<MiletDbContext> dbContextFactory) : IBestandService
+public sealed class BestandService(
+    IDbContextFactory<MiletDbContext> dbContextFactory,
+    IBerechtigungsService berechtigung) : IBestandService
 {
     private static readonly BestandskorrekturValidator Validator = new();
 
@@ -45,6 +49,7 @@ public sealed class BestandService(IDbContextFactory<MiletDbContext> dbContextFa
 
     public async Task KorrigiereAsync(BestandskorrekturDto dto, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Lager);
         await Validator.ValidateAndThrowAsync(dto, ct);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         await using var transaction = await db.Database.BeginTransactionAsync(ct);

@@ -1,5 +1,7 @@
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Milet.Application.Abstractions;
+using Milet.Application.Admin;
 using Milet.Application.Finanzen;
 using Milet.Domain.Entities.Finanzen;
 using Milet.Domain.Entities.Verkauf;
@@ -14,7 +16,9 @@ namespace Milet.Infrastructure.Services;
 /// Lieferanten bzw. Steuersätze ohne gepflegtes Erlös-/Aufwandskonto erzeugen keine Buchungszeile und
 /// werden NICHT als exportiert markiert — sie erscheinen bei der nächsten Vorschau/Export wieder,
 /// sobald die Kontenzuordnung nachgepflegt ist (kein stiller Datenverlust).</summary>
-public sealed class DatevExportService(IDbContextFactory<MiletDbContext> dbContextFactory) : IDatevExportService
+public sealed class DatevExportService(
+    IDbContextFactory<MiletDbContext> dbContextFactory,
+    IBerechtigungsService berechtigung) : IDatevExportService
 {
     static DatevExportService() => Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
@@ -34,6 +38,7 @@ public sealed class DatevExportService(IDbContextFactory<MiletDbContext> dbConte
 
     public async Task<DatevExportErgebnisDto> ExportierenAsync(DateOnly von, DateOnly bis, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Finanzen);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         await using var transaktion = await db.Database.BeginTransactionAsync(ct);
 

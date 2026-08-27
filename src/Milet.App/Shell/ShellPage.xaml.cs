@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml.Controls;
 using Milet.App.Services;
 using Milet.App.ViewModels;
+using Milet.App.ViewModels.Admin;
 using Milet.App.ViewModels.Einkauf;
 using Milet.App.ViewModels.Finanzen;
 using Milet.App.ViewModels.Lager;
@@ -9,12 +10,15 @@ using Milet.App.ViewModels.Reporting;
 using Milet.App.ViewModels.Stammdaten;
 using Milet.App.ViewModels.Verkauf;
 using Milet.App.Views;
+using Milet.App.Views.Admin;
 using Milet.App.Views.Einkauf;
 using Milet.App.Views.Finanzen;
 using Milet.App.Views.Lager;
 using Milet.App.Views.Reporting;
 using Milet.App.Views.Stammdaten;
 using Milet.App.Views.Verkauf;
+using Milet.Application.Abstractions;
+using Milet.Application.Admin;
 
 namespace Milet.App.Shell;
 
@@ -64,7 +68,37 @@ public sealed partial class ShellPage : Page
 
         _navigation.Register<ReportingViewModel, ReportingPage>();
 
+        _navigation.Register<AdministrationViewModel, AdministrationPage>();
+
         _navigation.Navigate<DashboardViewModel>();
+        AktualisiereMenueSichtbarkeit();
+    }
+
+    /// <summary>UI-Sichtbarkeit gemäß den Rechten des angemeldeten Benutzers (s. PLAN.md "RBAC":
+    /// "Rechte-Guard in Services UND UI-Sichtbarkeit") — die Service-Guards (PruefeRecht) bleiben
+    /// die eigentliche Durchsetzung, das hier blendet nur unerreichbare Menüpunkte aus.</summary>
+    private void AktualisiereMenueSichtbarkeit()
+    {
+        var session = App.Host.Services.GetRequiredService<ICurrentSessionService>();
+
+        SetzeMenuePunktSichtbarkeit("stammdaten", RechtCodes.Stammdaten, session);
+        SetzeMenuePunktSichtbarkeit("verkauf", RechtCodes.Verkauf, session);
+        SetzeMenuePunktSichtbarkeit("einkauf", RechtCodes.Einkauf, session);
+        SetzeMenuePunktSichtbarkeit("lager", RechtCodes.Lager, session);
+        SetzeMenuePunktSichtbarkeit("finanzen", RechtCodes.Finanzen, session);
+        SetzeMenuePunktSichtbarkeit("reporting", RechtCodes.Reporting, session);
+        SetzeMenuePunktSichtbarkeit("admin", RechtCodes.Administration, session);
+    }
+
+    private void SetzeMenuePunktSichtbarkeit(string tag, string rechtCode, ICurrentSessionService session)
+    {
+        var item = NavView.MenuItems
+            .OfType<NavigationViewItem>()
+            .FirstOrDefault(i => i.Tag as string == tag);
+        if (item is not null)
+        {
+            item.IsEnabled = session.HatRecht(rechtCode);
+        }
     }
 
     private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
@@ -132,6 +166,9 @@ public sealed partial class ShellPage : Page
                 break;
             case "reporting":
                 _navigation.Navigate<ReportingViewModel>();
+                break;
+            case "admin":
+                _navigation.Navigate<AdministrationViewModel>();
                 break;
         }
     }

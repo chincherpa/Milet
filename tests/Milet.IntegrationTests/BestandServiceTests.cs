@@ -47,7 +47,7 @@ public sealed class BestandServiceTests : IAsyncLifetime
     public async Task Korrektur_UnzureichenderBestand_WirftNegativsperre()
     {
         var ct = TestContext.Current.CancellationToken;
-        var service = new BestandService(new TestDbContextFactory(_options));
+        var service = new BestandService(new TestDbContextFactory(_options), AllesErlaubtBerechtigungsService.Instanz);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.KorrigiereAsync(new() { ArtikelId = _artikelId, LagerortId = _lagerortId, MengeDelta = -1, Grund = "Test" }, ct));
@@ -57,7 +57,7 @@ public sealed class BestandServiceTests : IAsyncLifetime
     public async Task Korrektur_PositivGefolgtVonNegativUeberBestand_LetzeBuchungWirftBestandBleibtKonsistent()
     {
         var ct = TestContext.Current.CancellationToken;
-        var service = new BestandService(new TestDbContextFactory(_options));
+        var service = new BestandService(new TestDbContextFactory(_options), AllesErlaubtBerechtigungsService.Instanz);
 
         await service.KorrigiereAsync(new() { ArtikelId = _artikelId, LagerortId = _lagerortId, MengeDelta = 10, Grund = "Erstbestückung" }, ct);
         await Assert.ThrowsAsync<InvalidOperationException>(
@@ -73,7 +73,7 @@ public sealed class BestandServiceTests : IAsyncLifetime
     {
         var ct = TestContext.Current.CancellationToken;
         var factory = new TestDbContextFactory(_options);
-        var service = new BestandService(factory);
+        var service = new BestandService(factory, AllesErlaubtBerechtigungsService.Instanz);
 
         await service.KorrigiereAsync(new() { ArtikelId = _artikelId, LagerortId = _lagerortId, MengeDelta = 100, Grund = "Start" }, ct);
 

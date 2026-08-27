@@ -69,7 +69,7 @@ public sealed class RechnungBuchenServiceTests : IAsyncLifetime
         var ct = TestContext.Current.CancellationToken;
         var rechnungIds = await Task.WhenAll(Enumerable.Range(0, 15).Select(_ => NeueRechnungAsync(ct)));
 
-        var service = new RechnungBuchenService(_factory, new NumberRangeService(_factory));
+        var service = new RechnungBuchenService(_factory, new NumberRangeService(_factory), AllesErlaubtBerechtigungsService.Instanz);
         var ergebnisse = await Task.WhenAll(rechnungIds.Select(id => service.BuchenAsync(id, ct)));
 
         Assert.Equal(15, ergebnisse.Select(r => r.BelegNummer).Distinct().Count());
@@ -81,7 +81,7 @@ public sealed class RechnungBuchenServiceTests : IAsyncLifetime
     {
         var ct = TestContext.Current.CancellationToken;
         var rechnungId = await NeueRechnungAsync(ct);
-        var service = new RechnungBuchenService(_factory, new NumberRangeService(_factory));
+        var service = new RechnungBuchenService(_factory, new NumberRangeService(_factory), AllesErlaubtBerechtigungsService.Instanz);
         await service.BuchenAsync(rechnungId, ct);
 
         await using var db = new MiletDbContext(_options);

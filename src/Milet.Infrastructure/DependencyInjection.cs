@@ -25,7 +25,10 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("Milet")
             ?? throw new InvalidOperationException("ConnectionStrings:Milet fehlt in der Konfiguration.");
 
-        services.AddSingleton<ICurrentUserService, SystemCurrentUserService>();
+        services.AddSingleton<CurrentSessionService>();
+        services.AddSingleton<ICurrentUserService>(sp => sp.GetRequiredService<CurrentSessionService>());
+        services.AddSingleton<ICurrentSessionService>(sp => sp.GetRequiredService<CurrentSessionService>());
+        services.AddSingleton<IBerechtigungsService, BerechtigungsService>();
         services.AddSingleton<AuditSaveChangesInterceptor>();
         services.AddSingleton<BelegImmutabilityInterceptor>();
 
@@ -73,6 +76,12 @@ public static class DependencyInjection
         services.AddScoped<IFibuKonfigurationService, FibuKonfigurationService>();
         services.AddScoped<IDatevExportService, DatevExportService>();
         services.AddScoped<IReportingService, ReportingService>();
+
+        services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IBenutzerverwaltungService, BenutzerverwaltungService>();
+        services.AddScoped<IRollenverwaltungService, RollenverwaltungService>();
+        services.AddScoped<IAuditLogService, AuditLogService>();
+        services.AddScoped<ISchemaVersionService, SchemaVersionService>();
 
         // E-Mail-Versand: nur registriert, wenn appsettings.json eine vollständige "Graph"-Sektion trägt —
         // sonst NichtKonfigurierterEmailService (wirft beim Versandversuch eine sprechende Exception,

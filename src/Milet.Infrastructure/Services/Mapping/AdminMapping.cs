@@ -46,4 +46,43 @@ internal static class AdminMapping
         entity.SachkontenLaenge = dto.SachkontenLaenge;
         entity.BankkontoNr = dto.BankkontoNr;
     }
+
+    public static RechtDto ToDto(this Recht r) => new()
+    {
+        Id = r.Id,
+        Code = r.Code,
+        Bezeichnung = r.Bezeichnung,
+    };
+
+    public static RolleDto ToDto(this Rolle r) => new()
+    {
+        Id = r.Id,
+        Name = r.Name,
+        Beschreibung = r.Beschreibung,
+        RechteCodes = r.Rechte.Select(x => x.Code).ToList(),
+        RowVersion = r.RowVersion,
+    };
+
+    public static BenutzerDto ToDto(this Benutzer b) => new()
+    {
+        Id = b.Id,
+        Benutzername = b.Benutzername,
+        Anzeigename = b.Anzeigename,
+        Email = b.Email,
+        RolleId = b.RolleId,
+        RollenName = b.Rolle?.Name,
+        Aktiv = b.Aktiv,
+        RowVersion = b.RowVersion,
+    };
+
+    public static AuditLogDto ToDto(this AuditLog a) => new()
+    {
+        Id = a.Id,
+        Zeitpunkt = a.Zeitpunkt,
+        BenutzerName = a.BenutzerName,
+        EntityName = a.EntityName,
+        EntityId = a.EntityId,
+        Aktion = a.Aktion,
+        Aenderungen = a.Aenderungen,
+    };
 }

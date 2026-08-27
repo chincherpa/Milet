@@ -49,7 +49,7 @@
                 </NavigationViewItem.MenuItems>
             </NavigationViewItem>
             <NavigationViewItem Content="Reporting" Tag="reporting" Icon="ReportHacked" />
-            <NavigationViewItem Content="Administration" Tag="admin" Icon="Setting" IsEnabled="False" />
+            <NavigationViewItem Content="Administration" Tag="admin" Icon="Setting" />
         </NavigationView.MenuItems>
         <Frame x:Name="ContentFrame" />
     </NavigationView>

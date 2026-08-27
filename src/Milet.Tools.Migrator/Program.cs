@@ -60,6 +60,9 @@ else
 await StammdatenSeed.ApplyAsync(db);
 Console.WriteLine("Grunddaten (Einheiten, MwSt-Sätze, Zahlungsbedingungen, Nummernkreise) geprüft/angelegt.");
 
+await AdminSeed.ApplyAsync(db);
+Console.WriteLine($"RBAC-Grunddaten (Rechte, Administrator-Rolle, Erstbenutzer '{AdminSeed.StandardAdminBenutzername}') geprüft/angelegt.");
+
 var dummyAngelegt = await DummyDatenSeed.ApplyAsync(host.Services);
 Console.WriteLine(dummyAngelegt
     ? "Testdaten (Kunden, Lieferanten, Artikel, Angebote/Aufträge/Rechnungen) angelegt."

@@ -52,6 +52,10 @@ public sealed class MiletDbContext(DbContextOptions<MiletDbContext> options) : D
     public DbSet<Milet.Domain.Entities.Finanzen.MahnungPosition> MahnungPositionen => Set<Milet.Domain.Entities.Finanzen.MahnungPosition>();
     public DbSet<Milet.Domain.Entities.Finanzen.EmailVersand> EmailVersand => Set<Milet.Domain.Entities.Finanzen.EmailVersand>();
     public DbSet<FibuKonfiguration> FibuKonfiguration => Set<FibuKonfiguration>();
+    public DbSet<Recht> Rechte => Set<Recht>();
+    public DbSet<Rolle> Rollen => Set<Rolle>();
+    public DbSet<Benutzer> Benutzer => Set<Benutzer>();
+    public DbSet<AuditLog> AuditLog => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

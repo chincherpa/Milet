@@ -1,5 +1,7 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Milet.Application.Abstractions;
+using Milet.Application.Admin;
 using Milet.Application.Common;
 using Milet.Application.Finanzen;
 using Milet.Domain.Entities.Finanzen;
@@ -8,7 +10,9 @@ using Milet.Infrastructure.Persistence;
 
 namespace Milet.Infrastructure.Services;
 
-public sealed class MahnwesenService(IDbContextFactory<MiletDbContext> dbContextFactory) : IMahnwesenService
+public sealed class MahnwesenService(
+    IDbContextFactory<MiletDbContext> dbContextFactory,
+    IBerechtigungsService berechtigung) : IMahnwesenService
 {
     private static readonly MahnstufeValidator Validator = new();
 
@@ -22,6 +26,7 @@ public sealed class MahnwesenService(IDbContextFactory<MiletDbContext> dbContext
 
     public async Task<MahnstufeDto> SpeichereStufeAsync(MahnstufeDto dto, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Finanzen);
         await Validator.ValidateAndThrowAsync(dto, ct);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
 
@@ -44,6 +49,7 @@ public sealed class MahnwesenService(IDbContextFactory<MiletDbContext> dbContext
 
     public async Task LoescheStufeAsync(int id, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Finanzen);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         var entity = await db.Mahnstufen.FirstOrDefaultAsync(m => m.Id == id, ct)
             ?? throw new NotFoundException(nameof(Mahnstufe), id);
@@ -86,6 +92,7 @@ public sealed class MahnwesenService(IDbContextFactory<MiletDbContext> dbContext
 
     public async Task<IReadOnlyList<MahnungDto>> MahnlaufDurchfuehrenAsync(IReadOnlyList<int> offenerPostenIds, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Finanzen);
         if (offenerPostenIds.Count == 0)
         {
             return [];

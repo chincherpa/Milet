@@ -55,4 +55,86 @@ public class AdminValidatorTests
 
         Assert.False(ergebnis.IsValid);
     }
+
+    private static BenutzerDto GueltigerNeuerBenutzer() => new()
+    {
+        Benutzername = "mmuster",
+        Anzeigename = "Max Mustermann",
+        RolleId = 1,
+        NeuesPasswort = "sicheres-passwort",
+    };
+
+    [Fact]
+    public void Benutzer_GueltigeNeuanlage_KeineFehler()
+    {
+        var ergebnis = new BenutzerValidator().Validate(GueltigerNeuerBenutzer());
+
+        Assert.True(ergebnis.IsValid);
+    }
+
+    [Fact]
+    public void Benutzer_NeuanlageOhnePasswort_Fehler()
+    {
+        var dto = GueltigerNeuerBenutzer() with { NeuesPasswort = null };
+
+        var ergebnis = new BenutzerValidator().Validate(dto);
+
+        Assert.False(ergebnis.IsValid);
+    }
+
+    [Fact]
+    public void Benutzer_NeuanlageMitZuKurzemPasswort_Fehler()
+    {
+        var dto = GueltigerNeuerBenutzer() with { NeuesPasswort = "kurz" };
+
+        var ergebnis = new BenutzerValidator().Validate(dto);
+
+        Assert.False(ergebnis.IsValid);
+    }
+
+    [Fact]
+    public void Benutzer_BestehenderBenutzerOhnePasswortaenderung_KeineFehler()
+    {
+        var dto = GueltigerNeuerBenutzer() with { Id = 7, NeuesPasswort = null };
+
+        var ergebnis = new BenutzerValidator().Validate(dto);
+
+        Assert.True(ergebnis.IsValid);
+    }
+
+    [Fact]
+    public void Benutzer_OhneRolle_Fehler()
+    {
+        var dto = GueltigerNeuerBenutzer() with { RolleId = 0 };
+
+        var ergebnis = new BenutzerValidator().Validate(dto);
+
+        Assert.False(ergebnis.IsValid);
+    }
+
+    [Fact]
+    public void Benutzer_UngueltigeEmail_Fehler()
+    {
+        var dto = GueltigerNeuerBenutzer() with { Email = "keine-email" };
+
+        var ergebnis = new BenutzerValidator().Validate(dto);
+
+        Assert.False(ergebnis.IsValid);
+    }
+
+    [Fact]
+    public void Rolle_GueltigerName_KeineFehler()
+    {
+        var ergebnis = new RolleValidator().Validate(new RolleDto { Name = "Verkauf" });
+
+        Assert.True(ergebnis.IsValid);
+    }
+
+    [Fact]
+    public void Rolle_LeererName_Fehler()
+    {
+        var ergebnis = new RolleValidator().Validate(new RolleDto { Name = string.Empty });
+
+        Assert.False(ergebnis.IsValid);
+    }
 }

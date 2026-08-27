@@ -323,6 +323,24 @@
                 </StackPanel>
             </PivotItem>
 
+            <PivotItem Header="Firmenstamm">
+                <StackPanel MaxWidth="420" HorizontalAlignment="Left" Spacing="12">
+                    <TextBlock Text="Briefkopf-Angaben für PDF-Ausgaben (Belege, Mahnungen)." TextWrapping="Wrap" Opacity="0.7" />
+                    <InfoBar IsOpen="{x:Bind ViewModel.FirmenstammFehler, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.FirmenstammFehler, Mode=OneWay}" />
+                    <TextBox Header="Firmenname *" Text="{x:Bind ViewModel.FirmaFirmenname, Mode=TwoWay}" />
+                    <TextBox Header="Straße" Text="{x:Bind ViewModel.FirmaStrasse, Mode=TwoWay}" />
+                    <TextBox Header="PLZ" Text="{x:Bind ViewModel.FirmaPlz, Mode=TwoWay}" />
+                    <TextBox Header="Ort" Text="{x:Bind ViewModel.FirmaOrt, Mode=TwoWay}" />
+                    <TextBox Header="Land" Text="{x:Bind ViewModel.FirmaLand, Mode=TwoWay}" />
+                    <TextBox Header="USt-IdNr." Text="{x:Bind ViewModel.FirmaUStIdNr, Mode=TwoWay}" />
+                    <TextBox Header="Telefon" Text="{x:Bind ViewModel.FirmaTelefon, Mode=TwoWay}" />
+                    <TextBox Header="E-Mail" Text="{x:Bind ViewModel.FirmaEmail, Mode=TwoWay}" />
+                    <TextBox Header="IBAN" Text="{x:Bind ViewModel.FirmaIban, Mode=TwoWay}" />
+                    <TextBox Header="BIC" Text="{x:Bind ViewModel.FirmaBic, Mode=TwoWay}" />
+                    <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.FirmenstammSpeichernCommand}" />
+                </StackPanel>
+            </PivotItem>
+
         </Pivot>
     </Grid>
 </Page>
