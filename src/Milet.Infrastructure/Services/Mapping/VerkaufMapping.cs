@@ -32,6 +32,9 @@ internal static class VerkaufMapping
             Auftrag => BelegTyp.Auftrag,
             Rechnung => BelegTyp.Rechnung,
             Lieferschein => BelegTyp.Lieferschein,
+            Bestellung => BelegTyp.Bestellung,
+            Wareneingang => BelegTyp.Wareneingang,
+            Eingangsrechnung => BelegTyp.Eingangsrechnung,
             _ => throw new InvalidOperationException($"Unbekannter Beleg-Subtyp {b.GetType().Name}."),
         };
 
@@ -41,8 +44,10 @@ internal static class VerkaufMapping
             BelegTyp = typ,
             BelegNummer = b.BelegNummer,
             BelegDatum = b.BelegDatum,
-            KundeId = b.KundeId,
+            KundeId = b.KundeId ?? 0,
             KundeAnzeige = b.Kunde is null ? string.Empty : $"{b.Kunde.Kundennummer} — {b.Kunde.Adresse.Name1}",
+            LieferantId = b.LieferantId,
+            LieferantAnzeige = b.Lieferant is null ? string.Empty : $"{b.Lieferant.Lieferantennummer} — {b.Lieferant.Adresse.Name1}",
             RechnungsadresseSnapshot = b.RechnungsadresseSnapshot.ToDto(),
             LieferadresseSnapshot = b.LieferadresseSnapshot.ToDto(),
             ZahlungsbedingungZielTage = b.ZahlungsbedingungZielTage,
@@ -56,6 +61,7 @@ internal static class VerkaufMapping
             Leistungsdatum = b.Leistungsdatum,
             Kopftext = b.Kopftext,
             Fusstext = b.Fusstext,
+            ExterneReferenz = b.ExterneReferenz,
             Positionen = mitPositionen ? b.Positionen.OrderBy(p => p.PositionsNr).Select(p => p.ToDto()).ToList() : [],
             RowVersion = b.RowVersion,
         };
