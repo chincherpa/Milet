@@ -123,6 +123,15 @@ public sealed class WareneingangBuchenServiceTests : IAsyncLifetime
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.BuchenAsync(wareneingang.Id, new Dictionary<int, IReadOnlyList<string>> { [positionId] = ["SN-A"] }, ct));
+
+        // Transaktion muss vollständig zurückgerollt sein: weder Bestand noch Lagerbewegungen dürfen angelegt sein
+        await using var db = new MiletDbContext(_options);
+        var bestand = await db.ArtikelBestaende.FirstOrDefaultAsync(
+            b => b.ArtikelId == _artikelSerialisiertId && b.LagerortId == _lagerortId, ct);
+        Assert.Null(bestand);
+        var bewegungen = await db.Lagerbewegungen.CountAsync(
+            l => l.ArtikelId == _artikelSerialisiertId && l.LagerortId == _lagerortId, ct);
+        Assert.Equal(0, bewegungen);
     }
 
     private static bool DockerVerfuegbar()

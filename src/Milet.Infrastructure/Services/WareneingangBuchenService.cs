@@ -44,6 +44,10 @@ public sealed class WareneingangBuchenService(IDbContextFactory<MiletDbContext> 
                 if (!neueSeriennummernJePosition.TryGetValue(position.Id, out var nummern) || nummern.Count != position.Menge)
                     throw new InvalidOperationException($"Position {position.PositionsNr}: es müssen genau {position.Menge} Seriennummer(n) erfasst werden.");
 
+                // In-Memory-Check: doppelte innerhalb der gleichen Eingabe (vor SaveChangesAsync würden sie nicht gemerkt)
+                if (nummern.Distinct(StringComparer.Ordinal).Count() != nummern.Count)
+                    throw new InvalidOperationException($"Position {position.PositionsNr}: doppelte Seriennummer(n) in der Eingabe.");
+
                 var doppelte = await db.Seriennummern.AsNoTracking()
                     .Where(s => s.ArtikelId == artikelId && nummern.Contains(s.Nummer))
                     .Select(s => s.Nummer)
