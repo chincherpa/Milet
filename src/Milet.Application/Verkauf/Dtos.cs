@@ -30,6 +30,8 @@ public sealed record BelegDto
     public DateOnly BelegDatum { get; init; } = DateOnly.FromDateTime(DateTime.Today);
     public int KundeId { get; init; }
     public string KundeAnzeige { get; init; } = string.Empty;
+    public int? LieferantId { get; init; }
+    public string LieferantAnzeige { get; init; } = string.Empty;
     public AdresseDto RechnungsadresseSnapshot { get; init; } = new();
     public AdresseDto LieferadresseSnapshot { get; init; } = new();
     public int ZahlungsbedingungZielTage { get; init; }
@@ -43,6 +45,7 @@ public sealed record BelegDto
     public DateOnly? Leistungsdatum { get; init; }
     public string? Kopftext { get; init; }
     public string? Fusstext { get; init; }
+    public string? ExterneReferenz { get; init; }
     public IReadOnlyList<BelegPositionDto> Positionen { get; init; } = [];
     public byte[] RowVersion { get; init; } = [];
 }
