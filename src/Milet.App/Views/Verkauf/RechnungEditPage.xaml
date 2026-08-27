@@ -105,8 +105,10 @@
                 <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" IsEnabled="{x:Bind ViewModel.IstBearbeitbar, Mode=OneWay}" Command="{x:Bind ViewModel.SpeichernCommand}" />
                 <Button Content="Buchen" Visibility="{x:Bind ViewModel.ZeigtBuchenButton}" Command="{x:Bind ViewModel.BuchenCommand}" />
                 <Button Content="PDF" Command="{x:Bind ViewModel.PdfCommand}" />
+                <Button Content="E-Mail senden" Command="{x:Bind ViewModel.EmailSendenCommand}" />
                 <Button Content="Abbrechen" Command="{x:Bind ViewModel.AbbrechenCommand}" />
             </StackPanel>
+            <TextBlock Text="{x:Bind ViewModel.EmailStatus, Mode=OneWay}" Opacity="0.8" />
         </StackPanel>
     </ScrollViewer>
 </Page>

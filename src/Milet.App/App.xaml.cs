@@ -55,6 +55,10 @@ public partial class App : Microsoft.UI.Xaml.Application
 
         builder.Services.AddInfrastructure(builder.Configuration);
 
+        // Überschreibt den NullWindowHandleProvider-Fallback aus AddInfrastructure — DI löst bei mehreren
+        // Registrierungen desselben Diensts die zuletzt registrierte auf.
+        builder.Services.AddSingleton<Milet.Application.Abstractions.IWindowHandleProvider, WinUiWindowHandleProvider>();
+
         builder.Services.AddSingleton<INavigationService, NavigationService>();
         builder.Services.AddSingleton<IDialogService, DialogService>();
 

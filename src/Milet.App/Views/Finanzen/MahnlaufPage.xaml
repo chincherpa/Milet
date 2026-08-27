@@ -100,7 +100,11 @@
                 </ListView.ItemTemplate>
             </ListView>
 
-            <Button Grid.Column="1" Content="PDF erstellen" Command="{x:Bind ViewModel.MahnungPdfCommand}" VerticalAlignment="Top" />
+            <StackPanel Grid.Column="1" Spacing="8">
+                <Button Content="PDF erstellen" Command="{x:Bind ViewModel.MahnungPdfCommand}" HorizontalAlignment="Stretch" />
+                <Button Content="E-Mail senden" Command="{x:Bind ViewModel.EmailSendenCommand}" HorizontalAlignment="Stretch" />
+                <TextBlock Text="{x:Bind ViewModel.EmailStatus, Mode=OneWay}" Opacity="0.8" TextWrapping="Wrap" MaxWidth="180" />
+            </StackPanel>
         </Grid>
     </Grid>
 </Page>
