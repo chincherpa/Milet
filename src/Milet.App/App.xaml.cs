@@ -89,6 +89,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         builder.Services.AddTransient<EingangsrechnungEditViewModel>();
 
         builder.Services.AddTransient<OffenePostenListViewModel>();
+        builder.Services.AddTransient<MahnlaufViewModel>();
 
         return builder.Build();
     }

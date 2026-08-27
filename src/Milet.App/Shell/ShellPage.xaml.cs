@@ -57,6 +57,7 @@ public sealed partial class ShellPage : Page
         _navigation.Register<EingangsrechnungEditViewModel, EingangsrechnungEditPage>();
 
         _navigation.Register<OffenePostenListViewModel, OffenePostenListPage>();
+        _navigation.Register<MahnlaufViewModel, MahnlaufPage>();
 
         _navigation.Navigate<DashboardViewModel>();
     }
@@ -117,6 +118,9 @@ public sealed partial class ShellPage : Page
                 break;
             case "offeneposten":
                 _navigation.Navigate<OffenePostenListViewModel>();
+                break;
+            case "mahnlauf":
+                _navigation.Navigate<MahnlaufViewModel>();
                 break;
         }
     }
