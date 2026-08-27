@@ -101,6 +101,40 @@ public static class StammdatenSeed
             });
         }
 
+        if (!await db.FibuKonfiguration.AnyAsync(ct))
+        {
+            db.FibuKonfiguration.Add(new FibuKonfiguration
+            {
+                Id = 1,
+                Kontenrahmen = Kontenrahmen.Skr03,
+                BeraterNr = 1001,
+                MandantNr = 1,
+                WirtschaftsjahrBeginnMonat = 1,
+                SachkontenLaenge = 4,
+                BankkontoNr = 1200,
+            });
+        }
+
+        // SKR03-Standardkonten je Steuerschlüssel für den DATEV-Export — nur wo noch NULL gesetzt
+        // (Update-in-place, nie bereits vom Nutzer gepflegte Werte überschreiben; editierbar über den
+        // FibuKonten-Tab/MwSt-Tab in KleinstammPage). Grobe Orientierungswerte, kein Ersatz für die
+        // Abstimmung mit dem tatsächlichen Kontenrahmen/Steuerberater des Nutzers.
+        var skr03KontenJeSteuerschluessel = new Dictionary<int, (int Erloes, int Aufwand)>
+        {
+            [3] = (8400, 3400), // 19 % USt
+            [2] = (8300, 3300), // 7 % USt
+            [0] = (8120, 3200), // steuerfrei
+        };
+        var mwStOhneKonten = await db.MwStSaetze
+            .Where(m => m.SteuerSchluessel != null && (m.ErloeskontoNr == null || m.AufwandskontoNr == null))
+            .ToListAsync(ct);
+        foreach (var mwSt in mwStOhneKonten)
+        {
+            if (!skr03KontenJeSteuerschluessel.TryGetValue(mwSt.SteuerSchluessel!.Value, out var konten)) continue;
+            mwSt.ErloeskontoNr ??= konten.Erloes;
+            mwSt.AufwandskontoNr ??= konten.Aufwand;
+        }
+
         await db.SaveChangesAsync(ct);
     }
 }

@@ -51,6 +51,7 @@ public sealed class MiletDbContext(DbContextOptions<MiletDbContext> options) : D
     public DbSet<Milet.Domain.Entities.Finanzen.Mahnung> Mahnungen => Set<Milet.Domain.Entities.Finanzen.Mahnung>();
     public DbSet<Milet.Domain.Entities.Finanzen.MahnungPosition> MahnungPositionen => Set<Milet.Domain.Entities.Finanzen.MahnungPosition>();
     public DbSet<Milet.Domain.Entities.Finanzen.EmailVersand> EmailVersand => Set<Milet.Domain.Entities.Finanzen.EmailVersand>();
+    public DbSet<FibuKonfiguration> FibuKonfiguration => Set<FibuKonfiguration>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
