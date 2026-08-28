@@ -14,7 +14,8 @@ namespace Milet.Infrastructure.Services;
 
 public sealed class WareneingangBuchenService(
     IDbContextFactory<MiletDbContext> dbContextFactory,
-    IBerechtigungsService berechtigung) : IWareneingangBuchenService
+    IBerechtigungsService berechtigung,
+    ICurrentUserService currentUser) : IWareneingangBuchenService
 {
     public async Task<Verkauf.BelegDto> BuchenAsync(
         int wareneingangId, IReadOnlyDictionary<int, IReadOnlyList<string>> neueSeriennummernJePosition, CancellationToken ct = default)
@@ -42,7 +43,8 @@ public sealed class WareneingangBuchenService(
             // Positives Delta — BestandService.BucheBewegungAsync ist unverändert wiederverwendbar (siehe
             // Phase-3-Kommentar dort): die atomare UPDATE-Bedingung "Menge + delta >= 0" ist bei einem Zugang
             // immer erfüllt, und legt bei erstem Bestand am Lagerort die ArtikelBestand-Zeile automatisch an.
-            await BestandService.BucheBewegungAsync(db, artikelId, lagerortId, position.Menge, LagerbewegungTyp.Wareneingang, position.Id, ct);
+            await BestandService.BucheBewegungAsync(db, artikelId, lagerortId, position.Menge, LagerbewegungTyp.Wareneingang, position.Id, ct,
+                benutzerId: currentUser.BenutzerId);
 
             if (artikel.HatSeriennummern)
             {

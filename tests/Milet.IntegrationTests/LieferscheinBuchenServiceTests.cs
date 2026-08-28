@@ -93,7 +93,7 @@ public sealed class LieferscheinBuchenServiceTests : IAsyncLifetime
     {
         var ct = TestContext.Current.CancellationToken;
         var lieferschein = await NeuerLieferscheinAsync(_artikelId, 5, ct);
-        var service = new LieferscheinBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new LieferscheinBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
 
         var gebucht = await service.BuchenAsync(lieferschein.Id, new Dictionary<int, IReadOnlyList<int>>(), ct);
 
@@ -108,7 +108,7 @@ public sealed class LieferscheinBuchenServiceTests : IAsyncLifetime
     {
         var ct = TestContext.Current.CancellationToken;
         var lieferschein = await NeuerLieferscheinAsync(_artikelId, 100, ct);
-        var service = new LieferscheinBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new LieferscheinBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.BuchenAsync(lieferschein.Id, new Dictionary<int, IReadOnlyList<int>>(), ct));
@@ -124,7 +124,7 @@ public sealed class LieferscheinBuchenServiceTests : IAsyncLifetime
         await using var seedDb = new MiletDbContext(_options);
         var seriennummerIds = await seedDb.Seriennummern.Where(s => s.ArtikelId == _artikelSerialisiertId).Select(s => s.Id).ToListAsync(ct);
 
-        var service = new LieferscheinBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new LieferscheinBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
         await service.BuchenAsync(lieferschein.Id, new Dictionary<int, IReadOnlyList<int>> { [positionId] = seriennummerIds }, ct);
 
         await using var db = new MiletDbContext(_options);
@@ -138,7 +138,7 @@ public sealed class LieferscheinBuchenServiceTests : IAsyncLifetime
     {
         var ct = TestContext.Current.CancellationToken;
         var lieferschein = await NeuerLieferscheinAsync(_artikelSerialisiertId, 2, ct);
-        var service = new LieferscheinBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new LieferscheinBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.BuchenAsync(lieferschein.Id, new Dictionary<int, IReadOnlyList<int>>(), ct));
@@ -149,7 +149,7 @@ public sealed class LieferscheinBuchenServiceTests : IAsyncLifetime
     {
         var ct = TestContext.Current.CancellationToken;
         var lieferscheine = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => NeuerLieferscheinAsync(_artikelId, 5, ct)));
-        var service = new LieferscheinBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new LieferscheinBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
 
         var ergebnisse = await Task.WhenAll(lieferscheine.Select(async l =>
         {

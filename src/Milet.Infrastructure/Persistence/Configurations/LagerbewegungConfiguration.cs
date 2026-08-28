@@ -11,6 +11,7 @@ public sealed class LagerbewegungConfiguration : IEntityTypeConfiguration<Lagerb
         b.ToTable("Lagerbewegungen");
         b.HasKey(x => x.Id);
         b.Property(x => x.Menge).HasPrecision(18, 3);
+        b.Property(x => x.Grund).HasMaxLength(200);
 
         b.HasOne(x => x.Artikel).WithMany().HasForeignKey(x => x.ArtikelId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne(x => x.Lagerort).WithMany().HasForeignKey(x => x.LagerortId).OnDelete(DeleteBehavior.Restrict);

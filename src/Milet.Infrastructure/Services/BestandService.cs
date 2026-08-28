@@ -11,7 +11,8 @@ namespace Milet.Infrastructure.Services;
 
 public sealed class BestandService(
     IDbContextFactory<MiletDbContext> dbContextFactory,
-    IBerechtigungsService berechtigung) : IBestandService
+    IBerechtigungsService berechtigung,
+    ICurrentUserService currentUser) : IBestandService
 {
     private static readonly BestandskorrekturValidator Validator = new();
 
@@ -27,7 +28,11 @@ public sealed class BestandService(
         }
 
         var artikel = await artikelQuery.ToListAsync(ct);
-        var lagerorte = await db.Lagerorte.AsNoTracking().Where(l => l.Aktiv).ToListAsync(ct);
+        // Alle Lagerorte laden, nicht nur aktive — sonst verschwindet ein deaktivierter Lagerort mit noch
+        // vorhandenem echtem Bestand komplett aus der Übersicht (Regression aus dem ursprünglichen C1-Fix,
+        // der hier nur "Aktiv" filterte). Unten wird stattdessen nur die synthetische Nullzeile inaktiver
+        // Lagerorte unterdrückt, echter (nicht-Null-)Bestand bleibt sichtbar.
+        var lagerorte = await db.Lagerorte.AsNoTracking().ToListAsync(ct);
         var bestaende = await db.ArtikelBestaende.AsNoTracking().ToListAsync(ct);
         var bestaendeLookup = bestaende.ToDictionary(b => (b.ArtikelId, b.LagerortId), b => b.Menge);
 
@@ -40,6 +45,7 @@ public sealed class BestandService(
             foreach (var l in lagerorte)
             {
                 var menge = bestaendeLookup.GetValueOrDefault((a.Id, l.Id), 0m);
+                if (!l.Aktiv && menge == 0m) continue;
                 ergebnis.Add(new ArtikelBestandDto(a.Id, a.Artikelnummer, a.Bezeichnung, a.HatSeriennummern, l.Id, l.Bezeichnung, menge, a.Mindestbestand));
             }
         }
@@ -53,7 +59,8 @@ public sealed class BestandService(
         await Validator.ValidateAndThrowAsync(dto, ct);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
-        await BucheBewegungAsync(db, dto.ArtikelId, dto.LagerortId, dto.MengeDelta, LagerbewegungTyp.Korrektur, belegPositionId: null, ct);
+        await BucheBewegungAsync(db, dto.ArtikelId, dto.LagerortId, dto.MengeDelta, LagerbewegungTyp.Korrektur, belegPositionId: null, ct,
+            benutzerId: currentUser.BenutzerId, grund: dto.Grund);
         await transaction.CommitAsync(ct);
     }
 
@@ -61,7 +68,8 @@ public sealed class BestandService(
     /// Läuft innerhalb der Transaktion des Aufrufers (Aufrufer öffnet/committet); wiederverwendbar von Bestandskorrektur, Lieferschein-Buchen, Inventur-Abschluss.</summary>
     internal static async Task BucheBewegungAsync(
         MiletDbContext db, int artikelId, int lagerortId, decimal mengeDelta,
-        LagerbewegungTyp typ, int? belegPositionId, CancellationToken ct)
+        LagerbewegungTyp typ, int? belegPositionId, CancellationToken ct,
+        int? benutzerId = null, string? grund = null)
     {
         var betroffeneZeilen = await db.Database.ExecuteSqlInterpolatedAsync(
             $"""
@@ -84,6 +92,8 @@ public sealed class BestandService(
             Typ = typ,
             Menge = mengeDelta,
             BelegPositionId = belegPositionId,
+            BenutzerId = benutzerId,
+            Grund = grund,
             Zeitpunkt = DateTime.UtcNow,
         });
 

@@ -86,7 +86,7 @@ public sealed class WareneingangBuchenServiceTests : IAsyncLifetime
     {
         var ct = TestContext.Current.CancellationToken;
         var wareneingang = await NeuerWareneingangAsync(_artikelId, 20, ct);
-        var service = new WareneingangBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new WareneingangBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
 
         var gebucht = await service.BuchenAsync(wareneingang.Id, new Dictionary<int, IReadOnlyList<string>>(), ct);
 
@@ -102,7 +102,7 @@ public sealed class WareneingangBuchenServiceTests : IAsyncLifetime
         var ct = TestContext.Current.CancellationToken;
         var wareneingang = await NeuerWareneingangAsync(_artikelSerialisiertId, 2, ct);
         var positionId = wareneingang.Positionen[0].Id;
-        var service = new WareneingangBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new WareneingangBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
 
         await service.BuchenAsync(wareneingang.Id, new Dictionary<int, IReadOnlyList<string>> { [positionId] = ["SN-A", "SN-B"] }, ct);
 
@@ -119,7 +119,7 @@ public sealed class WareneingangBuchenServiceTests : IAsyncLifetime
         var ct = TestContext.Current.CancellationToken;
         var wareneingang = await NeuerWareneingangAsync(_artikelSerialisiertId, 2, ct);
         var positionId = wareneingang.Positionen[0].Id;
-        var service = new WareneingangBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new WareneingangBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.BuchenAsync(wareneingang.Id, new Dictionary<int, IReadOnlyList<string>> { [positionId] = ["SN-A"] }, ct));

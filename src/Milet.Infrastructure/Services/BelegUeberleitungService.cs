@@ -63,8 +63,13 @@ public sealed class BelegUeberleitungService(
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
-        var quellBeleg = await db.Belege.Include(b => b.Positionen)
-            .FirstOrDefaultAsync(b => b.Id == quellBelegId, ct)
+        // UPDLOCK+ROWLOCK auf dem Quellbeleg: sperrt die Zeile für die Dauer der Transaktion, damit zwei
+        // gleichzeitige Überleitungen aus demselben Quellbeleg nicht beide auf demselben (veralteten)
+        // Stand der offenen Menge aufsetzen können (READ COMMITTED ohne Sperre würde das zulassen).
+        var quellBeleg = await db.Belege
+            .FromSqlInterpolated($"SELECT * FROM Belege WITH (UPDLOCK, ROWLOCK) WHERE Id = {quellBelegId}")
+            .Include(b => b.Positionen)
+            .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException(nameof(Beleg), quellBelegId);
 
         var quellTyp = TypVon(quellBeleg);
@@ -75,7 +80,9 @@ public sealed class BelegUeberleitungService(
         if (quellTyp is BelegTyp.Lieferschein or BelegTyp.Wareneingang && quellBeleg.Status != BelegStatus.Gebucht)
             throw new InvalidOperationException($"{quellTyp} '{quellBeleg.BelegNummer}' muss erst gebucht werden, bevor er überführt werden kann.");
 
-        // Offene-Mengen-Prüfung explizit in derselben Transaktion — Schutz gegen Race zweier gleichzeitiger Überleitungen.
+        // Offene-Mengen-Berechnung liest jetzt unter dem oben genommenen UPDLOCK — eine zweite, gleichzeitig
+        // laufende Überleitung aus demselben Quellbeleg blockiert an der UPDLOCK-Zeile, bis diese Transaktion
+        // committet/rollt zurück, und sieht danach die bereits aktualisierten Folgepositionen.
         var quellPositionIds = quellBeleg.Positionen.Select(p => p.Id).ToList();
         var folgepositionen = await db.BelegPositionen.AsNoTracking()
             .Where(p => p.UrsprungsPositionId != null && quellPositionIds.Contains(p.UrsprungsPositionId.Value))
@@ -174,8 +181,11 @@ public sealed class BelegUeberleitungService(
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
-        var quellBeleg = await db.Belege.Include(b => b.Positionen).Include(b => b.Kunde)
-            .FirstOrDefaultAsync(b => b.Id == quellBelegId, ct)
+        // UPDLOCK+ROWLOCK auf dem Quellbeleg — s. Begründung in UeberleitenAsync (Schutz gegen parallele Teillieferung/Sammelrechnung).
+        var quellBeleg = await db.Belege
+            .FromSqlInterpolated($"SELECT * FROM Belege WITH (UPDLOCK, ROWLOCK) WHERE Id = {quellBelegId}")
+            .Include(b => b.Positionen).Include(b => b.Kunde)
+            .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException(nameof(Beleg), quellBelegId);
 
         var quellTyp = TypVon(quellBeleg);
@@ -216,7 +226,31 @@ public sealed class BelegUeberleitungService(
         var positionsNr = 1;
         foreach (var quellPosition in quellBeleg.Positionen.OrderBy(p => p.PositionsNr))
         {
-            if (quellPosition.PositionsTyp != PositionsTyp.Artikel) continue;
+            if (quellPosition.PositionsTyp != PositionsTyp.Artikel)
+            {
+                // Freitext-/Zwischensummen-Zeilen haben keine Mengenauswahl — sie werden auf die erste
+                // Teilüberleitung mitgenommen (nicht verworfen wie zuvor) und danach nicht erneut dupliziert,
+                // sobald bereits eine Folgeposition auf sie referenziert.
+                if (folgepositionen.Any(p => p.UrsprungsPositionId == quellPosition.Id))
+                    continue;
+
+                zielBeleg.Positionen.Add(new BelegPosition
+                {
+                    PositionsNr = positionsNr++,
+                    PositionsTyp = quellPosition.PositionsTyp,
+                    Bezeichnung = quellPosition.Bezeichnung,
+                    EinheitKuerzel = quellPosition.EinheitKuerzel,
+                    Menge = quellPosition.Menge,
+                    Einzelpreis = quellPosition.Einzelpreis,
+                    RabattProzent = quellPosition.RabattProzent,
+                    MwStSatzId = quellPosition.MwStSatzId,
+                    MwStSatzWert = quellPosition.MwStSatzWert,
+                    SteuerSchluessel = quellPosition.SteuerSchluessel,
+                    GesamtNetto = SteuerRechner.BerechnePosition(quellPosition.Menge, quellPosition.Einzelpreis, quellPosition.RabattProzent),
+                    UrsprungsPositionId = quellPosition.Id,
+                });
+                continue;
+            }
 
             var offeneMenge = BelegPosition.OffeneMenge(quellPosition, folgepositionen);
             if (!mengenJePosition.TryGetValue(quellPosition.Id, out var gewaehlteMenge) || gewaehlteMenge <= 0)
@@ -286,8 +320,13 @@ public sealed class BelegUeberleitungService(
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
-        var quellBelege = await db.Belege.Include(b => b.Positionen)
-            .Where(b => quellBelegIds.Contains(b.Id))
+        // UPDLOCK+ROWLOCK auf allen Quellbelegen — s. Begründung in UeberleitenAsync. Platzhalter statt
+        // eingebetteter Werte: echte SQL-Parameter, kein String-Interpolation-Injection-Risiko.
+        var idPlatzhalter = string.Join(",", quellBelegIds.Select((_, i) => $"{{{i}}}"));
+        var sperrSql = $"SELECT * FROM Belege WITH (UPDLOCK, ROWLOCK) WHERE Id IN ({idPlatzhalter})";
+        var quellBelege = await db.Belege
+            .FromSqlRaw(sperrSql, [.. quellBelegIds.Cast<object>()])
+            .Include(b => b.Positionen)
             .ToListAsync(ct);
         if (quellBelege.Count != quellBelegIds.Count)
             throw new NotFoundException(nameof(Beleg), string.Join(",", quellBelegIds));

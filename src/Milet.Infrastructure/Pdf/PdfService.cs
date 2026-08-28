@@ -24,7 +24,7 @@ public sealed class PdfService(
             BelegTyp.Angebot => "Angebot",
             BelegTyp.Auftrag => "Auftragsbestätigung",
             BelegTyp.Rechnung => "Rechnung",
-            _ => throw new ArgumentOutOfRangeException(nameof(belegId)),
+            _ => throw new InvalidOperationException($"PDF-Erzeugung für Belegtyp '{beleg.BelegTyp}' wird nicht unterstützt."),
         };
         return new BelegPdfDocument(beleg, firma, titel).GeneratePdf();
     }

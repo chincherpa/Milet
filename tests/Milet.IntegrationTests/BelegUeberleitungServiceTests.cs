@@ -106,6 +106,50 @@ public sealed class BelegUeberleitungServiceTests : IAsyncLifetime
             () => service.UeberleitenMehrereAsync([lieferschein.Id], BelegTyp.Rechnung, ct));
     }
 
+    [Fact]
+    public async Task UeberleitenMitAuswahlAsync_ParalleleTeillieferungen_UebersteigenNieOffeneMenge()
+    {
+        // Regressionstest für den in STATUS.md dokumentierten Race: zwei gleichzeitige Teillieferungen aus
+        // demselben Auftrag dürfen zusammen nicht mehr als die offene Menge (10) überleiten. Vor dem
+        // UPDLOCK-Fix in BelegUeberleitungService konnten beide Transaktionen unter READ COMMITTED
+        // "10 offen" sehen und je 6 überleiten (16 > 10).
+        var ct = TestContext.Current.CancellationToken;
+        await using var db = new MiletDbContext(_options);
+        var kunde = await db.Kunden.FirstAsync(k => k.Id == _kundeId, ct);
+        var auftrag = new Auftrag
+        {
+            BelegNummer = $"AU-TEST-{Guid.NewGuid():N}"[..15],
+            BelegDatum = DateOnly.FromDateTime(DateTime.Today),
+            KundeId = kunde.Id,
+            Status = BelegStatus.Entwurf,
+            RechnungsadresseSnapshot = kunde.Adresse.Kopie(),
+            LieferadresseSnapshot = kunde.Adresse.Kopie(),
+            Positionen = [new BelegPosition { PositionsNr = 1, Bezeichnung = "Testartikel", Menge = 10, Einzelpreis = 10m, GesamtNetto = 100m, MwStSatzWert = 19m }],
+        };
+        db.Add(auftrag);
+        await db.SaveChangesAsync(ct);
+        var positionId = auftrag.Positionen[0].Id;
+        var mengen = new Dictionary<int, decimal> { [positionId] = 6m };
+
+        async Task<decimal> VersuchenAsync()
+        {
+            var service = new BelegUeberleitungService(_factory, new NumberRangeService(_factory));
+            try
+            {
+                var rechnung = await service.UeberleitenMitAuswahlAsync(auftrag.Id, BelegTyp.Rechnung, mengen, null, ct);
+                return rechnung.Positionen[0].Menge;
+            }
+            catch (InvalidOperationException)
+            {
+                return 0m;
+            }
+        }
+
+        var ergebnisse = await Task.WhenAll(Task.Run(VersuchenAsync, ct), Task.Run(VersuchenAsync, ct));
+
+        Assert.True(ergebnisse.Sum() <= 10m, $"Insgesamt {ergebnisse.Sum()} überleitet, offene Menge war nur 10 — Race nicht verhindert.");
+    }
+
     private static bool DockerVerfuegbar()
     {
         try

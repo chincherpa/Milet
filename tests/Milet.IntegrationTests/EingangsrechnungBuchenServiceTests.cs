@@ -93,7 +93,7 @@ public sealed class EingangsrechnungBuchenServiceTests : IAsyncLifetime
         db.Add(wareneingang);
         await db.SaveChangesAsync(ct);
 
-        var wareneingangBuchenService = new WareneingangBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var wareneingangBuchenService = new WareneingangBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
         await wareneingangBuchenService.BuchenAsync(wareneingang.Id, new Dictionary<int, IReadOnlyList<string>>(), ct);
 
         var ueberleitungService = new BelegUeberleitungService(_factory, new NumberRangeService(_factory));

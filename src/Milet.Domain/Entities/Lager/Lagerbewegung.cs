@@ -27,4 +27,9 @@ public class Lagerbewegung
 
     public DateTime Zeitpunkt { get; set; }
     public int? BenutzerId { get; set; }
+
+    /// <summary>Freitext-Begründung, bislang nur bei manueller Korrektur (<see cref="LagerbewegungTyp.Korrektur"/>) und
+    /// Inventur-Abschluss (<see cref="LagerbewegungTyp.InventurKorrektur"/>) befüllt — bei Lieferschein-/Wareneingang-Buchungen
+    /// erklärt sich die Bewegung bereits über <see cref="BelegPositionId"/>.</summary>
+    public string? Grund { get; set; }
 }

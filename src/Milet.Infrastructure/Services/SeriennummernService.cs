@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Milet.Application.Abstractions;
+using Milet.Application.Admin;
 using Milet.Application.Lager;
 using Milet.Domain.Entities.Lager;
 using Milet.Infrastructure.Persistence;
@@ -6,7 +8,10 @@ using Milet.Infrastructure.Services.Mapping;
 
 namespace Milet.Infrastructure.Services;
 
-public sealed class SeriennummernService(IDbContextFactory<MiletDbContext> dbContextFactory) : ISeriennummernService
+public sealed class SeriennummernService(
+    IDbContextFactory<MiletDbContext> dbContextFactory,
+    IBerechtigungsService berechtigung,
+    ICurrentUserService currentUser) : ISeriennummernService
 {
     public async Task<IReadOnlyList<SeriennummerDto>> SucheAsync(int? artikelId, CancellationToken ct = default)
     {
@@ -29,6 +34,7 @@ public sealed class SeriennummernService(IDbContextFactory<MiletDbContext> dbCon
 
     public async Task ErfasseAsync(int artikelId, int lagerortId, string nummer, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Lager);
         if (string.IsNullOrWhiteSpace(nummer))
             throw new InvalidOperationException("Seriennummer darf nicht leer sein.");
 
@@ -39,7 +45,8 @@ public sealed class SeriennummernService(IDbContextFactory<MiletDbContext> dbCon
             throw new InvalidOperationException($"Seriennummer '{nummer}' ist für diesen Artikel bereits erfasst.");
 
         db.Seriennummern.Add(new Seriennummer { ArtikelId = artikelId, Nummer = nummer, Status = SeriennummerStatus.AufLager, LagerortId = lagerortId });
-        await BestandService.BucheBewegungAsync(db, artikelId, lagerortId, 1m, LagerbewegungTyp.Korrektur, belegPositionId: null, ct);
+        await BestandService.BucheBewegungAsync(db, artikelId, lagerortId, 1m, LagerbewegungTyp.Korrektur, belegPositionId: null, ct,
+            benutzerId: currentUser.BenutzerId, grund: "Seriennummer-Nacherfassung");
         await transaction.CommitAsync(ct);
     }
 }

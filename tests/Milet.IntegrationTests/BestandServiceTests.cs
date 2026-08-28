@@ -47,7 +47,7 @@ public sealed class BestandServiceTests : IAsyncLifetime
     public async Task Korrektur_UnzureichenderBestand_WirftNegativsperre()
     {
         var ct = TestContext.Current.CancellationToken;
-        var service = new BestandService(new TestDbContextFactory(_options), AllesErlaubtBerechtigungsService.Instanz);
+        var service = new BestandService(new TestDbContextFactory(_options), AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.KorrigiereAsync(new() { ArtikelId = _artikelId, LagerortId = _lagerortId, MengeDelta = -1, Grund = "Test" }, ct));
@@ -57,7 +57,7 @@ public sealed class BestandServiceTests : IAsyncLifetime
     public async Task Korrektur_PositivGefolgtVonNegativUeberBestand_LetzeBuchungWirftBestandBleibtKonsistent()
     {
         var ct = TestContext.Current.CancellationToken;
-        var service = new BestandService(new TestDbContextFactory(_options), AllesErlaubtBerechtigungsService.Instanz);
+        var service = new BestandService(new TestDbContextFactory(_options), AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
 
         await service.KorrigiereAsync(new() { ArtikelId = _artikelId, LagerortId = _lagerortId, MengeDelta = 10, Grund = "Erstbestückung" }, ct);
         await Assert.ThrowsAsync<InvalidOperationException>(
@@ -73,7 +73,7 @@ public sealed class BestandServiceTests : IAsyncLifetime
     {
         var ct = TestContext.Current.CancellationToken;
         var factory = new TestDbContextFactory(_options);
-        var service = new BestandService(factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new BestandService(factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
 
         await service.KorrigiereAsync(new() { ArtikelId = _artikelId, LagerortId = _lagerortId, MengeDelta = 100, Grund = "Start" }, ct);
 
@@ -92,6 +92,31 @@ public sealed class BestandServiceTests : IAsyncLifetime
         Assert.True(bestand.Menge >= 0);
         Assert.Equal(ledgerSumme, bestand.Menge);
         Assert.Equal(100m - 5m * ergebnisse.Count(erfolg => erfolg), bestand.Menge);
+    }
+
+    [Fact]
+    public async Task SucheAsync_DeaktivierterLagerortMitBestand_BleibtSichtbar_LeererDeaktivierterVerschwindet()
+    {
+        // Regressionstest für den in STATUS.md dokumentierten Bug: die Cartesian-Product-Logik (Erstbestand-Fix,
+        // Commit 011ab89) filterte Lagerorte auf "Aktiv" und ließ dadurch echten Bestand an einem inzwischen
+        // deaktivierten Lagerort komplett aus der Übersicht verschwinden.
+        var ct = TestContext.Current.CancellationToken;
+        await using var db = new MiletDbContext(_options);
+        var deaktiviert = new Lagerort { Code = "DEAKT", Bezeichnung = "Deaktiviertes Lager", Aktiv = false };
+        var leerUndDeaktiviert = new Lagerort { Code = "LEER", Bezeichnung = "Leeres deaktiviertes Lager", Aktiv = false };
+        db.AddRange(deaktiviert, leerUndDeaktiviert);
+        await db.SaveChangesAsync(ct);
+
+        var service = new BestandService(new TestDbContextFactory(_options), AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
+        await service.KorrigiereAsync(new() { ArtikelId = _artikelId, LagerortId = deaktiviert.Id, MengeDelta = 7, Grund = "Restbestand vor Deaktivierung" }, ct);
+
+        var ergebnis = await service.SucheAsync(null, ct);
+
+        var zeileMitBestand = ergebnis.SingleOrDefault(b => b.ArtikelId == _artikelId && b.LagerortId == deaktiviert.Id);
+        Assert.NotNull(zeileMitBestand);
+        Assert.Equal(7m, zeileMitBestand.Menge);
+
+        Assert.DoesNotContain(ergebnis, b => b.ArtikelId == _artikelId && b.LagerortId == leerUndDeaktiviert.Id);
     }
 
     private static bool DockerVerfuegbar()

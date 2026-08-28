@@ -17,3 +17,14 @@ internal sealed class AllesErlaubtBerechtigungsService : IBerechtigungsService
     {
     }
 }
+
+/// <summary>Gemeinsamer Test-Stub für Services, die jetzt ICurrentUserService injizieren (z. B. für
+/// Lagerbewegung.BenutzerId), aber in einem Test ohne echten Login/DI-Container konstruiert werden.</summary>
+internal sealed class TestCurrentUserService : ICurrentUserService
+{
+    public static readonly TestCurrentUserService Instanz = new();
+
+    public int? BenutzerId => null;
+
+    public string BenutzerName => "Test";
+}

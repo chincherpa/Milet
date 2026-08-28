@@ -22,7 +22,6 @@
 
         <ListView Grid.Row="2" x:Name="LieferscheineListView"
             ItemsSource="{x:Bind ViewModel.Belege, Mode=OneWay}"
-            SelectedItem="{x:Bind ViewModel.Ausgewaehlt, Mode=TwoWay}"
             SelectionMode="Multiple"
             SelectionChanged="LieferscheineListView_SelectionChanged">
             <ListView.HeaderTemplate>
