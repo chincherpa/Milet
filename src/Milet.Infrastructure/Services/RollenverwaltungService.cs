@@ -43,6 +43,12 @@ public sealed class RollenverwaltungService(
 
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
 
+        if (dto.Id != 0)
+        {
+            await StelleSicherDassEinAdminBleibtAsync(
+                db, dto.Id, behaeltAdminRecht: dto.RechteCodes.Contains(RechtCodes.Administration), ct);
+        }
+
         Rolle rolle;
         if (dto.Id == 0)
         {
@@ -81,7 +87,38 @@ public sealed class RollenverwaltungService(
         var rolle = await db.Rollen.FirstOrDefaultAsync(r => r.Id == id, ct)
             ?? throw new NotFoundException(nameof(Rolle), id);
 
+        await StelleSicherDassEinAdminBleibtAsync(db, id, behaeltAdminRecht: false, ct);
+
         db.Rollen.Remove(rolle);
         await db.SaveChangesDeletingAsync(nameof(Rolle), id, ct);
+    }
+
+    /// <summary>
+    /// Gegenstück zur gleichnamigen Prüfung in <c>BenutzerverwaltungService</c>, von der anderen Seite her:
+    /// wird der Administrator-Rolle das Recht entzogen oder die Rolle gelöscht, darf danach nicht die
+    /// gesamte Installation ohne erreichbare Administration dastehen.
+    /// </summary>
+    private static async Task StelleSicherDassEinAdminBleibtAsync(
+        MiletDbContext db, int rolleId, bool behaeltAdminRecht, CancellationToken ct)
+    {
+        if (behaeltAdminRecht) return;
+
+        var adminRollenIds = await db.Rollen
+            .Where(r => r.Rechte.Any(recht => recht.Code == RechtCodes.Administration))
+            .Select(r => r.Id)
+            .ToListAsync(ct);
+        if (!adminRollenIds.Contains(rolleId)) return;
+
+        var adminsVorher = await db.Benutzer.CountAsync(b => b.Aktiv && adminRollenIds.Contains(b.RolleId), ct);
+        if (adminsVorher == 0) return;
+
+        var verbleibendeAdminRollen = adminRollenIds.Where(id => id != rolleId).ToList();
+        var verbleibendeAdmins = await db.Benutzer.CountAsync(
+            b => b.Aktiv && verbleibendeAdminRollen.Contains(b.RolleId), ct);
+        if (verbleibendeAdmins > 0) return;
+
+        throw new InvalidOperationException(
+            "Der Rolle kann das Administrationsrecht nicht entzogen werden (und sie kann nicht gelöscht "
+            + "werden): danach hätte kein aktiver Benutzer mehr Zugriff auf die Administration.");
     }
 }

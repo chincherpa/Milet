@@ -1,3 +1,5 @@
+using Milet.Domain.Entities.Verkauf;
+
 namespace Milet.Application.Admin;
 
 /// <summary>
@@ -13,6 +15,17 @@ public static class RechtCodes
     public const string Finanzen = "Finanzen";
     public const string Reporting = "Reporting";
     public const string Administration = "Administration";
+
+    /// <summary>
+    /// Recht, das ein Beleg dieses Typs verlangt. Einzige Quelle für alle Belegpfade (Anlegen/Ändern,
+    /// Überleiten, Buchen) — die Zuordnung darf nicht je Service auseinanderlaufen.
+    /// </summary>
+    public static string FuerBelegTyp(BelegTyp typ) => typ switch
+    {
+        BelegTyp.Lieferschein => Lager,
+        _ when typ.IstEinkaufsBeleg() => Einkauf,
+        _ => Verkauf,
+    };
 
     public static readonly IReadOnlyList<string> Alle =
     [

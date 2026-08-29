@@ -32,12 +32,22 @@ public sealed class WareneingangBuchenService(
         if (wareneingang.Positionen.Count == 0)
             throw new InvalidOperationException("Wareneingang ohne Positionen kann nicht gebucht werden.");
 
+        // Artikel einmal vorab laden statt je Position eine Abfrage — gebraucht wird nur HatSeriennummern.
+        var artikelIds = wareneingang.Positionen
+            .Where(p => p.PositionsTyp == PositionsTyp.Artikel && p.ArtikelId != null)
+            .Select(p => p.ArtikelId!.Value)
+            .Distinct()
+            .ToList();
+        var artikelJeId = await db.Artikel.AsNoTracking()
+            .Where(a => artikelIds.Contains(a.Id))
+            .ToDictionaryAsync(a => a.Id, ct);
+
         foreach (var position in wareneingang.Positionen.Where(p => p.PositionsTyp == PositionsTyp.Artikel))
         {
             if (position.ArtikelId is not { } artikelId || position.LagerortId is not { } lagerortId)
                 throw new InvalidOperationException($"Position {position.PositionsNr}: Artikel oder Lagerort fehlt.");
 
-            var artikel = await db.Artikel.AsNoTracking().FirstAsync(a => a.Id == artikelId, ct);
+            var artikel = artikelJeId[artikelId];
 
             // Positives Delta — BestandService.BucheBewegungAsync ist unverändert wiederverwendbar (siehe
             // Phase-3-Kommentar dort): die atomare UPDATE-Bedingung "Menge + delta >= 0" ist bei einem Zugang
@@ -46,8 +56,14 @@ public sealed class WareneingangBuchenService(
 
             if (artikel.HatSeriennummern)
             {
-                if (!neueSeriennummernJePosition.TryGetValue(position.Id, out var nummern) || nummern.Count != position.Menge)
-                    throw new InvalidOperationException($"Position {position.PositionsNr}: es müssen genau {position.Menge} Seriennummer(n) erfasst werden.");
+                // Menge hat Präzision (18,3) — s. gleiche Prüfung in LieferscheinBuchenService.
+                if (position.Menge != decimal.Truncate(position.Menge))
+                    throw new InvalidOperationException(
+                        $"Position {position.PositionsNr}: seriennummernpflichtige Artikel können nur in ganzen Mengen vereinnahmt werden (Menge {position.Menge:0.###}).");
+
+                var benoetigt = (int)position.Menge;
+                if (!neueSeriennummernJePosition.TryGetValue(position.Id, out var nummern) || nummern.Count != benoetigt)
+                    throw new InvalidOperationException($"Position {position.PositionsNr}: es müssen genau {benoetigt} Seriennummer(n) erfasst werden.");
 
                 // In-Memory-Check: doppelte innerhalb der gleichen Eingabe (vor SaveChangesAsync würden sie nicht gemerkt).
                 // OrdinalIgnoreCase, weil der DB-Unique-Index (SeriennummerConfiguration) unter der Standard-Collation

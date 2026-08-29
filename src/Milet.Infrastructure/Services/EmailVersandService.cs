@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Milet.Application.Abstractions;
+using Milet.Application.Admin;
 using Milet.Application.Finanzen;
 using Milet.Application.Verkauf;
 using Milet.Domain.Entities.Finanzen;
@@ -9,17 +10,22 @@ namespace Milet.Infrastructure.Services;
 
 public sealed class EmailVersandService(
     IDbContextFactory<MiletDbContext> dbContextFactory, IPdfService pdfService, IEmailService emailService,
-    IBelegService belegService, IMahnwesenService mahnwesenService) : IEmailVersandService
+    IBelegService belegService, IMahnwesenService mahnwesenService,
+    IBerechtigungsService berechtigung) : IEmailVersandService
 {
     public async Task<EmailVersandDto> SendeBelegPdfAsync(int belegId, string empfaenger, string betreff, string text, CancellationToken ct = default)
     {
         var beleg = await belegService.LadeAsync(belegId, ct);
+        // Der Versand gibt einen Beleg an eine frei wählbare Adresse heraus — dafür gilt dasselbe Recht
+        // wie für den Beleg selbst (Verkaufsbeleg: Verkauf, Lieferschein: Lager, Einkaufsbeleg: Einkauf).
+        berechtigung.PruefeRecht(RechtCodes.FuerBelegTyp(beleg.BelegTyp));
         var pdf = await pdfService.GeneriereBelegPdfAsync(belegId, ct);
         return await VersendenUndProtokollierenAsync(empfaenger, betreff, text, pdf, $"{beleg.BelegNummer}.pdf", belegId: belegId, mahnungId: null, ct);
     }
 
     public async Task<EmailVersandDto> SendeMahnungPdfAsync(int mahnungId, string empfaenger, string betreff, string text, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Finanzen);
         var mahnung = await mahnwesenService.LadeMahnungAsync(mahnungId, ct);
         var pdf = await pdfService.GeneriereMahnungPdfAsync(mahnungId, ct);
         return await VersendenUndProtokollierenAsync(empfaenger, betreff, text, pdf, $"Mahnung-{mahnung.Id}.pdf", belegId: null, mahnungId: mahnungId, ct);

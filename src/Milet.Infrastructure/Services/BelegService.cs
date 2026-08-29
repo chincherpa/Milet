@@ -13,17 +13,9 @@ namespace Milet.Infrastructure.Services;
 
 public sealed class BelegService(
     IDbContextFactory<MiletDbContext> dbContextFactory,
-    INumberRangeService numberRangeService,
     IBerechtigungsService berechtigung) : IBelegService
 {
     private static readonly BelegValidator Validator = new();
-
-    private static string RechtFuerTyp(BelegTyp typ) => typ switch
-    {
-        BelegTyp.Lieferschein => RechtCodes.Lager,
-        _ when typ.IstEinkaufsBeleg() => RechtCodes.Einkauf,
-        _ => RechtCodes.Verkauf,
-    };
 
     private static IQueryable<Beleg> SetFuerTyp(MiletDbContext db, BelegTyp typ) => typ switch
     {
@@ -91,9 +83,16 @@ public sealed class BelegService(
 
     public async Task<BelegDto> SpeichereAsync(BelegDto dto, CancellationToken ct = default)
     {
-        berechtigung.PruefeRecht(RechtFuerTyp(dto.BelegTyp));
+        // Vorabprüfung anhand des DTO-Typs: im Neuanlage-Pfad gibt es noch keinen Beleg, aus dem sich
+        // das Recht ableiten ließe. Im Update-Pfad ist sie nur die erste Hürde — maßgeblich ist die
+        // zweite Prüfung unten gegen den tatsächlich geladenen Subtyp (der Aufrufer darf den Typ nicht
+        // selbst bestimmen).
+        berechtigung.PruefeRecht(RechtCodes.FuerBelegTyp(dto.BelegTyp));
         await Validator.ValidateAndThrowAsync(dto, ct);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
+        // Transaktion umschließt Nummernvergabe und Speichern: schlägt das Speichern fehl, rollt die
+        // vergebene Belegnummer mit zurück (sonst entstünde eine Lücke im Nummernkreis).
+        await using var transaktion = await db.Database.BeginTransactionAsync(ct);
 
         Beleg beleg;
         if (dto.Id == 0)
@@ -101,7 +100,7 @@ public sealed class BelegService(
             beleg = NeueInstanz(dto.BelegTyp);
             beleg.BelegNummer = dto.BelegTyp == BelegTyp.Rechnung
                 ? string.Empty
-                : await numberRangeService.NaechsteNummerAsync(NummernkreisCode(dto.BelegTyp), ct);
+                : await NumberRangeService.NaechsteNummerAsync(db, NummernkreisCode(dto.BelegTyp), ct);
 
             if (dto.BelegTyp.IstEinkaufsBeleg())
             {
@@ -141,6 +140,15 @@ public sealed class BelegService(
                 .FirstOrDefaultAsync(b => b.Id == dto.Id, ct)
                 ?? throw new NotFoundException(nameof(Beleg), dto.Id);
 
+            // db.Belege lädt typunabhängig — ohne diese Prüfung könnte ein DTO mit BelegTyp = Angebot
+            // (Recht Verkauf) und der Id einer Bestellung (Recht Einkauf) den Guard oben passieren und
+            // anschließend den Einkaufsbeleg ändern.
+            var tatsaechlicherTyp = BelegTypErweiterung.TypVon(beleg);
+            if (tatsaechlicherTyp != dto.BelegTyp)
+                throw new InvalidOperationException(
+                    $"Beleg '{beleg.BelegNummer}' ist vom Typ {tatsaechlicherTyp}, übergeben wurde {dto.BelegTyp}.");
+            berechtigung.PruefeRecht(RechtCodes.FuerBelegTyp(tatsaechlicherTyp));
+
             if (beleg.Status != BelegStatus.Entwurf)
                 throw new InvalidOperationException($"Beleg '{beleg.BelegNummer}' ist bereits gebucht und kann nicht mehr geändert werden.");
 
@@ -161,6 +169,7 @@ public sealed class BelegService(
         (beleg.SummeNetto, beleg.SummeMwSt, beleg.SummeBrutto) = SteuerRechner.BerechneKopfsummen(neueSteuersummen);
 
         await db.SaveChangesTranslatingConcurrencyAsync(nameof(Beleg), beleg.Id, ct);
+        await transaktion.CommitAsync(ct);
         return beleg.ToDto(mitPositionen: true);
     }
 
@@ -221,12 +230,73 @@ public sealed class BelegService(
     public async Task LoescheAsync(int id, CancellationToken ct = default)
     {
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
-        var beleg = await db.Belege.FirstOrDefaultAsync(b => b.Id == id, ct)
+        await using var transaktion = await db.Database.BeginTransactionAsync(ct);
+
+        var beleg = await db.Belege.Include(b => b.Positionen).FirstOrDefaultAsync(b => b.Id == id, ct)
             ?? throw new NotFoundException(nameof(Beleg), id);
-        berechtigung.PruefeRecht(RechtFuerTyp(beleg.ToDto(mitPositionen: false).BelegTyp));
+        berechtigung.PruefeRecht(RechtCodes.FuerBelegTyp(BelegTypErweiterung.TypVon(beleg)));
         if (beleg.Status != BelegStatus.Entwurf)
             throw new InvalidOperationException($"Beleg '{beleg.BelegNummer}' ist bereits gebucht und kann nicht gelöscht werden.");
+
+        await SetzeQuellbelegeZurueckAsync(db, beleg, ct);
+
         db.Remove(beleg);
-        await db.SaveChangesTranslatingConcurrencyAsync(nameof(Beleg), id, ct);
+        // SaveChangesDeletingAsync statt ...TranslatingConcurrency: BelegPosition.UrsprungsPositionId ist
+        // mit DeleteBehavior.Restrict konfiguriert — ist eine Position dieses Belegs selbst schon Quelle
+        // einer Folgeposition, scheitert der Cascade-Delete an der FK-Constraint und der Benutzer soll
+        // eine verständliche Meldung sehen statt der rohen SQL-Fehlermeldung.
+        await db.SaveChangesDeletingAsync(nameof(Beleg), id, ct);
+        await transaktion.CommitAsync(ct);
+    }
+
+    /// <summary>
+    /// Ein per Überleitung entstandener Entwurf hat den Quellbeleg auf <see cref="BelegStatus.Erledigt"/>
+    /// gesetzt. Wird er wieder gelöscht, ist dessen Menge erneut offen — ohne diese Korrektur bliebe der
+    /// Quellbeleg „erledigt" und verschwände dauerhaft aus den Offene-Aufträge-/Offene-Posten-Sichten.
+    ///
+    /// Der Status vor der Überleitung ist nirgends festgehalten; zurückgesetzt wird deshalb auf den
+    /// Status, den ein überleitbarer Beleg dieses Typs zwingend hatte: Lieferschein und Wareneingang
+    /// müssen gebucht sein, um überleitbar zu sein, alle übrigen sind an dieser Stelle Entwürfe.
+    /// </summary>
+    private static async Task SetzeQuellbelegeZurueckAsync(MiletDbContext db, Beleg zuLoeschen, CancellationToken ct)
+    {
+        var ursprungsPositionIds = zuLoeschen.Positionen
+            .Where(p => p.UrsprungsPositionId != null)
+            .Select(p => p.UrsprungsPositionId!.Value)
+            .Distinct()
+            .ToList();
+        if (ursprungsPositionIds.Count == 0) return;
+
+        var quellBelegIds = await db.BelegPositionen.AsNoTracking()
+            .Where(p => ursprungsPositionIds.Contains(p.Id))
+            .Select(p => p.BelegId)
+            .Distinct()
+            .ToListAsync(ct);
+        if (quellBelegIds.Count == 0) return;
+
+        var quellPositionen = await db.BelegPositionen.AsNoTracking()
+            .Where(p => quellBelegIds.Contains(p.BelegId))
+            .ToListAsync(ct);
+        var quellPositionIds = quellPositionen.Select(p => p.Id).ToList();
+
+        // Die Positionen des zu löschenden Belegs zählen nach dem Löschen nicht mehr als übernommen.
+        var zuLoeschendeIds = zuLoeschen.Positionen.Select(p => p.Id).ToHashSet();
+        var verbleibendeFolgepositionen = await db.BelegPositionen.AsNoTracking()
+            .Where(p => p.UrsprungsPositionId != null && quellPositionIds.Contains(p.UrsprungsPositionId.Value))
+            .ToListAsync(ct);
+        verbleibendeFolgepositionen.RemoveAll(p => zuLoeschendeIds.Contains(p.Id));
+
+        var quellBelege = await db.Belege.Where(b => quellBelegIds.Contains(b.Id) && b.Status == BelegStatus.Erledigt).ToListAsync(ct);
+        foreach (var quellBeleg in quellBelege)
+        {
+            var wiederOffen = quellPositionen
+                .Where(p => p.BelegId == quellBeleg.Id && p.PositionsTyp == PositionsTyp.Artikel)
+                .Any(p => BelegPosition.OffeneMenge(p, verbleibendeFolgepositionen) > 0);
+            if (!wiederOffen) continue;
+
+            quellBeleg.Status = BelegTypErweiterung.TypVon(quellBeleg) is BelegTyp.Lieferschein or BelegTyp.Wareneingang
+                ? BelegStatus.Gebucht
+                : BelegStatus.Entwurf;
+        }
     }
 }

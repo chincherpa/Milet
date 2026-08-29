@@ -44,26 +44,37 @@ public static class StammdatenSeed
 
         // Fix für ein bekanntes Risiko (STATUS.md „Bekannte Risiken"): vorher wurden Nummernkreise nur angelegt,
         // wenn die ganze Tabelle leer war — ein später hinzugefügter Code (hier: WE, ER) wurde auf einer bereits
-        // migrierten DB dadurch nie automatisch nachgetragen. Jetzt: je fehlendem Code einzeln ergänzen,
-        // vorhandene Zeilen werden nie angefasst (kein Reset von NaechsteNummer bei bereits existierenden Codes).
+        // migrierten DB dadurch nie automatisch nachgetragen. Jetzt: je fehlender (Code, Jahr)-Kombination einzeln
+        // ergänzen, vorhandene Zeilen werden nie angefasst (kein Reset von NaechsteNummer bei bereits existierenden
+        // Kreisen).
+        //
+        // Der Abgleich läuft über (Code, Jahr) — passend zum Unique-Index in NummernkreisConfiguration. Ein
+        // Abgleich nur über den Code würde am 01.01. keinen Kreis für das neue Jahr nachtragen, während
+        // NumberRangeService strikt nach dem laufenden Jahr sucht: das System könnte danach keine Belegnummer
+        // mehr vergeben. Verlassen muss man sich darauf nicht — NumberRangeService legt einen fehlenden
+        // Jahreskreis beim ersten Zugriff selbst an; dieser Seed ist der Weg, es beim Migratorlauf sauber
+        // vorzubereiten.
+        //
+        // Jahr aus DateTime.Today (lokal), nicht UtcNow: gleiche Quelle wie NumberRangeService und das Belegdatum.
+        var aktuellesJahr = DateTime.Today.Year;
         var benoetigteNummernkreise = new[]
         {
             new Nummernkreis { Code = "KD", NaechsteNummer = 10001, Format = "KD-{0}" },
             new Nummernkreis { Code = "LF", NaechsteNummer = 70001, Format = "LF-{0}" },
             new Nummernkreis { Code = "ART", NaechsteNummer = 1001, Format = "ART-{0:00000}" },
-            new Nummernkreis { Code = "AN", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "AN-{1}-{0:0000}" },
-            new Nummernkreis { Code = "AU", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "AU-{1}-{0:0000}" },
-            new Nummernkreis { Code = "LS", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "LS-{1}-{0:0000}" },
-            new Nummernkreis { Code = "RE", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "RE-{1}-{0:0000}" },
-            new Nummernkreis { Code = "GS", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "GS-{1}-{0:0000}" },
-            new Nummernkreis { Code = "BE", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "BE-{1}-{0:0000}" },
-            new Nummernkreis { Code = "WE", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "WE-{1}-{0:0000}" },
-            new Nummernkreis { Code = "ER", Jahr = DateTime.UtcNow.Year, NaechsteNummer = 1, Format = "ER-{1}-{0:0000}" },
+            new Nummernkreis { Code = "AN", Jahr = aktuellesJahr, NaechsteNummer = 1, Format = "AN-{1}-{0:0000}" },
+            new Nummernkreis { Code = "AU", Jahr = aktuellesJahr, NaechsteNummer = 1, Format = "AU-{1}-{0:0000}" },
+            new Nummernkreis { Code = "LS", Jahr = aktuellesJahr, NaechsteNummer = 1, Format = "LS-{1}-{0:0000}" },
+            new Nummernkreis { Code = "RE", Jahr = aktuellesJahr, NaechsteNummer = 1, Format = "RE-{1}-{0:0000}" },
+            new Nummernkreis { Code = "GS", Jahr = aktuellesJahr, NaechsteNummer = 1, Format = "GS-{1}-{0:0000}" },
+            new Nummernkreis { Code = "BE", Jahr = aktuellesJahr, NaechsteNummer = 1, Format = "BE-{1}-{0:0000}" },
+            new Nummernkreis { Code = "WE", Jahr = aktuellesJahr, NaechsteNummer = 1, Format = "WE-{1}-{0:0000}" },
+            new Nummernkreis { Code = "ER", Jahr = aktuellesJahr, NaechsteNummer = 1, Format = "ER-{1}-{0:0000}" },
         };
-        var vorhandeneCodes = await db.Nummernkreise.Select(n => n.Code).ToListAsync(ct);
+        var vorhandeneKreise = await db.Nummernkreise.Select(n => new { n.Code, n.Jahr }).ToListAsync(ct);
         foreach (var kreis in benoetigteNummernkreise)
         {
-            if (!vorhandeneCodes.Contains(kreis.Code))
+            if (!vorhandeneKreise.Any(v => v.Code == kreis.Code && v.Jahr == kreis.Jahr))
             {
                 db.Nummernkreise.Add(kreis);
             }

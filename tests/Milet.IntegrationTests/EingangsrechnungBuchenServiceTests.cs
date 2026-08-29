@@ -96,7 +96,7 @@ public sealed class EingangsrechnungBuchenServiceTests : IAsyncLifetime
         var wareneingangBuchenService = new WareneingangBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
         await wareneingangBuchenService.BuchenAsync(wareneingang.Id, new Dictionary<int, IReadOnlyList<string>>(), ct);
 
-        var ueberleitungService = new BelegUeberleitungService(_factory, new NumberRangeService(_factory));
+        var ueberleitungService = new BelegUeberleitungService(_factory, AllesErlaubtBerechtigungsService.Instanz);
         var eingangsrechnung = await ueberleitungService.UeberleitenAsync(wareneingang.Id, BelegTyp.Eingangsrechnung, ct);
         return eingangsrechnung.Id;
     }

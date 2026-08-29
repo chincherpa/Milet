@@ -2,6 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Milet.Application.Abstractions;
+using Milet.Application.Admin;
+using Milet.Domain.Services;
 using Milet.Infrastructure;
 using Milet.Infrastructure.Persistence;
 using Milet.Infrastructure.Persistence.Seed;
@@ -62,6 +65,27 @@ Console.WriteLine("Grunddaten (Einheiten, MwSt-Sätze, Zahlungsbedingungen, Numm
 
 await AdminSeed.ApplyAsync(db);
 Console.WriteLine($"RBAC-Grunddaten (Rechte, Administrator-Rolle, Erstbenutzer '{AdminSeed.StandardAdminBenutzername}') geprüft/angelegt.");
+
+// Das Initialpasswort steht im öffentlichen Quellcode (AdminSeed) und ist damit jedem bekannt. Erzwingen
+// lässt sich der Wechsel derzeit nicht (ein „Passwort muss geändert werden"-Flag auf Benutzer wäre eine
+// Schemaänderung, s. STATUS.md) — der Migrator weist bei jedem Lauf sichtbar darauf hin, solange es steht.
+var standardAdmin = await db.Benutzer.AsNoTracking()
+    .FirstOrDefaultAsync(b => b.Benutzername == AdminSeed.StandardAdminBenutzername);
+if (standardAdmin is not null && PasswortHasher.Verify(AdminSeed.StandardAdminPasswort, standardAdmin.PasswortHash))
+{
+    Console.WriteLine();
+    Console.WriteLine($"  ACHTUNG: Benutzer '{AdminSeed.StandardAdminBenutzername}' hat noch das dokumentierte "
+        + "Initialpasswort. Es ist über das Repository öffentlich bekannt und muss vor der Produktivsetzung "
+        + "geändert werden (Administration → Benutzer → Passwort zurücksetzen).");
+    Console.WriteLine();
+}
+
+// DummyDatenSeed läuft bewusst über die echten Application-Services (s. Klassenkommentar dort) — und die
+// prüfen seit Phase 7 RBAC. Der Migrator hat keine Anmeldung: ohne diese technische Sitzung scheitert der
+// erste Migratorlauf auf einer leeren Datenbank mit KeinZugriffException('Stammdaten'). Die Sitzung wird
+// erst hier geöffnet, nachdem Migrationen und Grunddaten durch sind — Schema und Rechtekatalog stehen dann.
+var sitzung = host.Services.GetRequiredService<ICurrentSessionService>();
+sitzung.Anmelden(standardAdmin?.Id ?? 0, "Migrator", "Administrator", RechtCodes.Alle);
 
 var dummyAngelegt = await DummyDatenSeed.ApplyAsync(host.Services);
 Console.WriteLine(dummyAngelegt

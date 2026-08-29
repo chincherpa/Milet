@@ -12,7 +12,6 @@ namespace Milet.Infrastructure.Services;
 
 public sealed class RechnungBuchenService(
     IDbContextFactory<MiletDbContext> dbContextFactory,
-    INumberRangeService numberRangeService,
     IBerechtigungsService berechtigung) : IRechnungBuchenService
 {
     public async Task<BelegDto> BuchenAsync(int rechnungId, CancellationToken ct = default)
@@ -30,7 +29,11 @@ public sealed class RechnungBuchenService(
         if (rechnung.Positionen.Count == 0)
             throw new InvalidOperationException("Rechnung ohne Positionen kann nicht gebucht werden.");
 
-        rechnung.BelegNummer = await numberRangeService.NaechsteNummerAsync("RE", ct);
+        // Nummernvergabe bewusst über die Context-Überladung: sie läuft in DIESER Transaktion, sodass die
+        // Rechnungsnummer bei einem Fehlschlag des SaveChanges unten mit zurückrollt. Über die
+        // Instanzmethode (eigener Context, eigene Verbindung) bliebe sie verbraucht — und genau in der
+        // Rechnungsnummernfolge ist eine Lücke nach §14 UStG nicht zulässig.
+        rechnung.BelegNummer = await NumberRangeService.NaechsteNummerAsync(db, "RE", ct);
         rechnung.Faelligkeit = rechnung.BelegDatum.AddDays(rechnung.ZahlungsbedingungZielTage);
         rechnung.Status = BelegStatus.Gebucht;
 
