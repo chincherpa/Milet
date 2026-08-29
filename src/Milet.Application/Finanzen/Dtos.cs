@@ -68,4 +68,12 @@ public sealed record DatevExportVorschauDto(
 
 /// <summary>Ergebnis eines tatsächlichen Exports — die fertige CSV (CP1252-kodiert) plus Vorschlags-
 /// dateiname. Markiert die exportierten Belege/Zahlungen mit <c>ExportiertAm</c>.</summary>
-public sealed record DatevExportErgebnisDto(byte[] CsvBytes, string Dateiname, int AnzahlBuchungszeilen);
+/// <summary>Ergebnis eines Exportlaufs. <see cref="BelegIds"/>/<see cref="ZahlungIds"/> sind die Vorgänge,
+/// die in der Datei stehen — der Aufrufer meldet sie über <c>IDatevExportService.MarkiereAlsExportiertAsync</c>
+/// zurück, sobald die Datei tatsächlich geschrieben ist.</summary>
+public sealed record DatevExportErgebnisDto(
+    byte[] CsvBytes,
+    string Dateiname,
+    int AnzahlBuchungszeilen,
+    IReadOnlyList<int> BelegIds,
+    IReadOnlyList<int> ZahlungIds);

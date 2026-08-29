@@ -1,5 +1,7 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Milet.Application.Abstractions;
+using Milet.Application.Admin;
 using Milet.Application.Common;
 using Milet.Application.Stammdaten;
 using Milet.Domain.Entities.Stammdaten;
@@ -7,7 +9,14 @@ using Milet.Infrastructure.Persistence;
 
 namespace Milet.Infrastructure.Services;
 
-public sealed class EinheitenService(IDbContextFactory<MiletDbContext> dbContextFactory) : IEinheitenService
+// Alle Kleinstamm-Services prüfen RechtCodes.Stammdaten in jeder mutierenden Methode — analog zu
+// KundenService/ArtikelService. Das wiegt hier schwerer als bei den übrigen Stammdaten: MwStSatz
+// (SteuerSchluessel, Erlös-/Aufwandskonto) schlägt direkt in den DATEV-Buchungsstapel durch, und
+// Zahlungsbedingung (ZielTage/SkontoProzent) in die Fälligkeits- und Skontoberechnung gebuchter Belege.
+
+public sealed class EinheitenService(
+    IDbContextFactory<MiletDbContext> dbContextFactory,
+    IBerechtigungsService berechtigung) : IEinheitenService
 {
     private static readonly EinheitValidator Validator = new();
 
@@ -21,6 +30,7 @@ public sealed class EinheitenService(IDbContextFactory<MiletDbContext> dbContext
 
     public async Task<EinheitDto> SpeichereAsync(EinheitDto dto, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Stammdaten);
         await Validator.ValidateAndThrowAsync(dto, ct);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
 
@@ -42,6 +52,7 @@ public sealed class EinheitenService(IDbContextFactory<MiletDbContext> dbContext
 
     public async Task LoescheAsync(int id, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Stammdaten);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         var entity = await db.Einheiten.FirstOrDefaultAsync(e => e.Id == id, ct)
             ?? throw new NotFoundException(nameof(Einheit), id);
@@ -51,7 +62,9 @@ public sealed class EinheitenService(IDbContextFactory<MiletDbContext> dbContext
     }
 }
 
-public sealed class MwStSaetzeService(IDbContextFactory<MiletDbContext> dbContextFactory) : IMwStSaetzeService
+public sealed class MwStSaetzeService(
+    IDbContextFactory<MiletDbContext> dbContextFactory,
+    IBerechtigungsService berechtigung) : IMwStSaetzeService
 {
     private static readonly MwStSatzValidator Validator = new();
 
@@ -69,6 +82,7 @@ public sealed class MwStSaetzeService(IDbContextFactory<MiletDbContext> dbContex
 
     public async Task<MwStSatzDto> SpeichereAsync(MwStSatzDto dto, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Stammdaten);
         await Validator.ValidateAndThrowAsync(dto, ct);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
 
@@ -93,6 +107,7 @@ public sealed class MwStSaetzeService(IDbContextFactory<MiletDbContext> dbContex
 
     public async Task LoescheAsync(int id, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Stammdaten);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         var entity = await db.MwStSaetze.FirstOrDefaultAsync(m => m.Id == id, ct)
             ?? throw new NotFoundException(nameof(MwStSatz), id);
@@ -102,7 +117,9 @@ public sealed class MwStSaetzeService(IDbContextFactory<MiletDbContext> dbContex
     }
 }
 
-public sealed class ZahlungsbedingungenService(IDbContextFactory<MiletDbContext> dbContextFactory) : IZahlungsbedingungenService
+public sealed class ZahlungsbedingungenService(
+    IDbContextFactory<MiletDbContext> dbContextFactory,
+    IBerechtigungsService berechtigung) : IZahlungsbedingungenService
 {
     private static readonly ZahlungsbedingungValidator Validator = new();
 
@@ -116,6 +133,7 @@ public sealed class ZahlungsbedingungenService(IDbContextFactory<MiletDbContext>
 
     public async Task<ZahlungsbedingungDto> SpeichereAsync(ZahlungsbedingungDto dto, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Stammdaten);
         await Validator.ValidateAndThrowAsync(dto, ct);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
 
@@ -138,6 +156,7 @@ public sealed class ZahlungsbedingungenService(IDbContextFactory<MiletDbContext>
 
     public async Task LoescheAsync(int id, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Stammdaten);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         var entity = await db.Zahlungsbedingungen.FirstOrDefaultAsync(z => z.Id == id, ct)
             ?? throw new NotFoundException(nameof(Zahlungsbedingung), id);
@@ -147,7 +166,9 @@ public sealed class ZahlungsbedingungenService(IDbContextFactory<MiletDbContext>
     }
 }
 
-public sealed class VersandartenService(IDbContextFactory<MiletDbContext> dbContextFactory) : IVersandartenService
+public sealed class VersandartenService(
+    IDbContextFactory<MiletDbContext> dbContextFactory,
+    IBerechtigungsService berechtigung) : IVersandartenService
 {
     private static readonly VersandartValidator Validator = new();
 
@@ -161,6 +182,7 @@ public sealed class VersandartenService(IDbContextFactory<MiletDbContext> dbCont
 
     public async Task<VersandartDto> SpeichereAsync(VersandartDto dto, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Stammdaten);
         await Validator.ValidateAndThrowAsync(dto, ct);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
 
@@ -181,6 +203,7 @@ public sealed class VersandartenService(IDbContextFactory<MiletDbContext> dbCont
 
     public async Task LoescheAsync(int id, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Stammdaten);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         var entity = await db.Versandarten.FirstOrDefaultAsync(v => v.Id == id, ct)
             ?? throw new NotFoundException(nameof(Versandart), id);
@@ -190,7 +213,9 @@ public sealed class VersandartenService(IDbContextFactory<MiletDbContext> dbCont
     }
 }
 
-public sealed class PreislistenService(IDbContextFactory<MiletDbContext> dbContextFactory) : IPreislistenService
+public sealed class PreislistenService(
+    IDbContextFactory<MiletDbContext> dbContextFactory,
+    IBerechtigungsService berechtigung) : IPreislistenService
 {
     private static readonly PreislisteValidator Validator = new();
 
@@ -204,6 +229,7 @@ public sealed class PreislistenService(IDbContextFactory<MiletDbContext> dbConte
 
     public async Task<PreislisteDto> SpeichereAsync(PreislisteDto dto, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Stammdaten);
         await Validator.ValidateAndThrowAsync(dto, ct);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
 
@@ -225,6 +251,7 @@ public sealed class PreislistenService(IDbContextFactory<MiletDbContext> dbConte
 
     public async Task LoescheAsync(int id, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Stammdaten);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         var entity = await db.Preislisten.FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new NotFoundException(nameof(Preisliste), id);
@@ -234,7 +261,9 @@ public sealed class PreislistenService(IDbContextFactory<MiletDbContext> dbConte
     }
 }
 
-public sealed class ArtikelPreiseService(IDbContextFactory<MiletDbContext> dbContextFactory) : IArtikelPreiseService
+public sealed class ArtikelPreiseService(
+    IDbContextFactory<MiletDbContext> dbContextFactory,
+    IBerechtigungsService berechtigung) : IArtikelPreiseService
 {
     private static readonly ArtikelPreisValidator Validator = new();
 
@@ -258,6 +287,7 @@ public sealed class ArtikelPreiseService(IDbContextFactory<MiletDbContext> dbCon
 
     public async Task<ArtikelPreisDto> SpeichereAsync(ArtikelPreisDto dto, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Stammdaten);
         await Validator.ValidateAndThrowAsync(dto, ct);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
 
@@ -280,6 +310,7 @@ public sealed class ArtikelPreiseService(IDbContextFactory<MiletDbContext> dbCon
 
     public async Task LoescheAsync(int id, CancellationToken ct = default)
     {
+        berechtigung.PruefeRecht(RechtCodes.Stammdaten);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         var entity = await db.ArtikelPreise.FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new NotFoundException(nameof(ArtikelPreis), id);

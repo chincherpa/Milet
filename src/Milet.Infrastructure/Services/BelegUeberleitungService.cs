@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Milet.Application.Abstractions;
+using Milet.Application.Admin;
 using Milet.Application.Common;
 using Milet.Application.Verkauf;
 using Milet.Domain.Entities.Verkauf;
@@ -11,7 +12,7 @@ namespace Milet.Infrastructure.Services;
 
 public sealed class BelegUeberleitungService(
     IDbContextFactory<MiletDbContext> dbContextFactory,
-    INumberRangeService numberRangeService) : IBelegUeberleitungService
+    IBerechtigungsService berechtigung) : IBelegUeberleitungService
 {
     private static readonly Dictionary<BelegTyp, BelegTyp[]> ErlaubteUebergaenge = new()
     {
@@ -22,17 +23,17 @@ public sealed class BelegUeberleitungService(
         [BelegTyp.Wareneingang] = [BelegTyp.Eingangsrechnung],
     };
 
-    private static BelegTyp TypVon(Beleg b) => b switch
+    /// <summary>
+    /// Die Überleitung legt Belege an, verbraucht Nummernkreise und schreibt den Status des Quellbelegs
+    /// fort — sie ist damit ein vollwertiger Schreibpfad und muss dasselbe Recht verlangen wie
+    /// BelegService/die Buchen-Services. Geprüft wird Quell- UND Zieltyp: sonst könnte etwa aus einem
+    /// Einkaufsbeleg mit reinem Verkaufsrecht ein Folgebeleg entstehen (und umgekehrt).
+    /// </summary>
+    private void PruefeUeberleitungsRecht(BelegTyp quellTyp, BelegTyp zielTyp)
     {
-        Angebot => BelegTyp.Angebot,
-        Auftrag => BelegTyp.Auftrag,
-        Rechnung => BelegTyp.Rechnung,
-        Lieferschein => BelegTyp.Lieferschein,
-        Bestellung => BelegTyp.Bestellung,
-        Wareneingang => BelegTyp.Wareneingang,
-        Eingangsrechnung => BelegTyp.Eingangsrechnung,
-        _ => throw new InvalidOperationException($"Unbekannter Beleg-Subtyp {b.GetType().Name}."),
-    };
+        berechtigung.PruefeRecht(RechtCodes.FuerBelegTyp(quellTyp));
+        berechtigung.PruefeRecht(RechtCodes.FuerBelegTyp(zielTyp));
+    }
 
     private static Beleg NeueInstanz(BelegTyp typ) => typ switch
     {
@@ -67,7 +68,8 @@ public sealed class BelegUeberleitungService(
             .FirstOrDefaultAsync(b => b.Id == quellBelegId, ct)
             ?? throw new NotFoundException(nameof(Beleg), quellBelegId);
 
-        var quellTyp = TypVon(quellBeleg);
+        var quellTyp = BelegTypErweiterung.TypVon(quellBeleg);
+        PruefeUeberleitungsRecht(quellTyp, zielTyp);
         if (!ErlaubteUebergaenge.TryGetValue(quellTyp, out var erlaubteZiele) || !erlaubteZiele.Contains(zielTyp))
             throw new InvalidOperationException($"Überleitung von {quellTyp} nach {zielTyp} wird nicht unterstützt.");
         if (zielTyp is BelegTyp.Lieferschein or BelegTyp.Wareneingang)
@@ -84,7 +86,9 @@ public sealed class BelegUeberleitungService(
         var zielBeleg = NeueInstanz(zielTyp);
         zielBeleg.BelegNummer = zielTyp == BelegTyp.Rechnung
             ? string.Empty
-            : await numberRangeService.NaechsteNummerAsync(NummernkreisCode(zielTyp), ct);
+            // Context-Überladung: die Nummer wird in DIESER Transaktion gezogen und rollt mit zurück,
+            // wenn die Überleitung scheitert (z. B. „Keine offenen Positionen zum Überleiten vorhanden.").
+            : await NumberRangeService.NaechsteNummerAsync(db, NummernkreisCode(zielTyp), ct);
         zielBeleg.BelegDatum = DateOnly.FromDateTime(DateTime.Today);
         zielBeleg.KundeId = quellBeleg.KundeId;
         zielBeleg.LieferantId = quellBeleg.LieferantId;
@@ -96,7 +100,6 @@ public sealed class BelegUeberleitungService(
         zielBeleg.Kopftext = quellBeleg.Kopftext;
         zielBeleg.Fusstext = quellBeleg.Fusstext;
 
-        var quellVollstaendigUebernommen = true;
         var positionsNr = 1;
         foreach (var quellPosition in quellBeleg.Positionen.OrderBy(p => p.PositionsNr))
         {
@@ -106,9 +109,6 @@ public sealed class BelegUeberleitungService(
 
             if (quellPosition.PositionsTyp == PositionsTyp.Artikel && menge <= 0)
                 continue;
-
-            if (quellPosition.PositionsTyp == PositionsTyp.Artikel && menge < quellPosition.Menge)
-                quellVollstaendigUebernommen = false;
 
             zielBeleg.Positionen.Add(new BelegPosition
             {
@@ -137,7 +137,12 @@ public sealed class BelegUeberleitungService(
 
         db.Add(zielBeleg);
 
-        if (quellVollstaendigUebernommen && quellBeleg.Status is BelegStatus.Entwurf or BelegStatus.Gebucht)
+        // Diese Methode übernimmt je Artikelposition die volle offene Menge — nach der Überleitung ist am
+        // Quellbeleg per Konstruktion nichts mehr offen, der Status geht also immer auf Erledigt. Die
+        // frühere Bedingung verglich die übernommene mit der GESAMTmenge der Quellposition: ein in zwei
+        // Schritten gelieferter Auftrag (10 Stück, 4 geliefert, jetzt die restlichen 6) blieb dadurch
+        // dauerhaft im Entwurf, obwohl nichts mehr offen war.
+        if (quellBeleg.Status is BelegStatus.Entwurf or BelegStatus.Gebucht)
             quellBeleg.Status = BelegStatus.Erledigt;
 
         await db.SaveChangesAsync(ct);
@@ -178,7 +183,8 @@ public sealed class BelegUeberleitungService(
             .FirstOrDefaultAsync(b => b.Id == quellBelegId, ct)
             ?? throw new NotFoundException(nameof(Beleg), quellBelegId);
 
-        var quellTyp = TypVon(quellBeleg);
+        var quellTyp = BelegTypErweiterung.TypVon(quellBeleg);
+        PruefeUeberleitungsRecht(quellTyp, zielTyp);
         if (!ErlaubteUebergaenge.TryGetValue(quellTyp, out var erlaubteZiele) || !erlaubteZiele.Contains(zielTyp))
             throw new InvalidOperationException($"Überleitung von {quellTyp} nach {zielTyp} wird nicht unterstützt.");
         if (quellTyp is BelegTyp.Lieferschein or BelegTyp.Wareneingang && quellBeleg.Status != BelegStatus.Gebucht)
@@ -200,7 +206,9 @@ public sealed class BelegUeberleitungService(
         var zielBeleg = NeueInstanz(zielTyp);
         zielBeleg.BelegNummer = zielTyp == BelegTyp.Rechnung
             ? string.Empty
-            : await numberRangeService.NaechsteNummerAsync(NummernkreisCode(zielTyp), ct);
+            // Context-Überladung: die Nummer wird in DIESER Transaktion gezogen und rollt mit zurück,
+            // wenn die Überleitung scheitert (z. B. „Keine offenen Positionen zum Überleiten vorhanden.").
+            : await NumberRangeService.NaechsteNummerAsync(db, NummernkreisCode(zielTyp), ct);
         zielBeleg.BelegDatum = DateOnly.FromDateTime(DateTime.Today);
         zielBeleg.KundeId = quellBeleg.KundeId;
         zielBeleg.LieferantId = quellBeleg.LieferantId;
@@ -273,6 +281,10 @@ public sealed class BelegUeberleitungService(
     {
         if (quellBelegIds.Count == 0)
             throw new InvalidOperationException("Mindestens ein Quellbeleg erforderlich.");
+        // Vor der Prüfung „alle Ids gefunden?" abfangen: sonst schlüge eine doppelt übergebene Id dort als
+        // NotFoundException auf, was den Fehler falsch benennt.
+        if (quellBelegIds.Distinct().Count() != quellBelegIds.Count)
+            throw new InvalidOperationException("Ein Quellbeleg wurde mehrfach übergeben.");
 
         // Sammel-Eingangsrechnung aus mehreren Wareneingängen ist explizit out of scope (Phase-4-Plan) — die
         // Methode wurde nur für den Verkaufs-Fall (mehrere Lieferscheine -> eine Sammelrechnung) gebaut und
@@ -292,14 +304,15 @@ public sealed class BelegUeberleitungService(
         if (quellBelege.Count != quellBelegIds.Count)
             throw new NotFoundException(nameof(Beleg), string.Join(",", quellBelegIds));
 
-        if (quellBelege.Any(b => TypVon(b).IstEinkaufsBeleg()))
+        if (quellBelege.Any(b => BelegTypErweiterung.TypVon(b).IstEinkaufsBeleg()))
             throw new InvalidOperationException("Sammel-Eingangsrechnung aus mehreren Wareneingängen wird nicht unterstützt.");
 
         var ersterBeleg = quellBelege[0];
         var ersteZahlungsbedingung = (ersterBeleg.ZahlungsbedingungZielTage, ersterBeleg.ZahlungsbedingungSkontoTage, ersterBeleg.ZahlungsbedingungSkontoProzent);
         foreach (var beleg in quellBelege)
         {
-            var typ = TypVon(beleg);
+            var typ = BelegTypErweiterung.TypVon(beleg);
+            PruefeUeberleitungsRecht(typ, zielTyp);
             if (!ErlaubteUebergaenge.TryGetValue(typ, out var erlaubteZiele) || !erlaubteZiele.Contains(zielTyp))
                 throw new InvalidOperationException($"Überleitung von {typ} nach {zielTyp} wird nicht unterstützt.");
             if (typ == BelegTyp.Lieferschein && beleg.Status != BelegStatus.Gebucht)
@@ -318,7 +331,9 @@ public sealed class BelegUeberleitungService(
         var zielBeleg = NeueInstanz(zielTyp);
         zielBeleg.BelegNummer = zielTyp == BelegTyp.Rechnung
             ? string.Empty
-            : await numberRangeService.NaechsteNummerAsync(NummernkreisCode(zielTyp), ct);
+            // Context-Überladung: die Nummer wird in DIESER Transaktion gezogen und rollt mit zurück,
+            // wenn die Überleitung scheitert (z. B. „Keine offenen Positionen zum Überleiten vorhanden.").
+            : await NumberRangeService.NaechsteNummerAsync(db, NummernkreisCode(zielTyp), ct);
         zielBeleg.BelegDatum = DateOnly.FromDateTime(DateTime.Today);
         zielBeleg.KundeId = ersterBeleg.KundeId;
         zielBeleg.RechnungsadresseSnapshot = ersterBeleg.RechnungsadresseSnapshot.Kopie();
@@ -326,21 +341,29 @@ public sealed class BelegUeberleitungService(
         zielBeleg.ZahlungsbedingungZielTage = ersterBeleg.ZahlungsbedingungZielTage;
         zielBeleg.ZahlungsbedingungSkontoTage = ersterBeleg.ZahlungsbedingungSkontoTage;
         zielBeleg.ZahlungsbedingungSkontoProzent = ersterBeleg.ZahlungsbedingungSkontoProzent;
+        // Wie in den beiden anderen Überleitungsmethoden; bei mehreren Quellbelegen zwangsläufig der des
+        // ersten (nach Belegdatum sortiert wird erst unten, für die Positionsreihenfolge).
+        zielBeleg.Kopftext = ersterBeleg.Kopftext;
+        zielBeleg.Fusstext = ersterBeleg.Fusstext;
+
+        // Text- und Zwischensummenzeilen werden nur bei genau einem Quellbeleg mitgenommen: bei einer
+        // Sammelrechnung über drei Lieferscheine stünde derselbe Textblock sonst dreimal im Zielbeleg.
+        var textPositionenUebernehmen = quellBelege.Count == 1;
 
         var positionsNr = 1;
         foreach (var quellBeleg in quellBelege.OrderBy(b => b.BelegDatum).ThenBy(b => b.Id))
         {
-            var quellVollstaendigUebernommen = true;
             foreach (var quellPosition in quellBeleg.Positionen.OrderBy(p => p.PositionsNr))
             {
+                if (quellPosition.PositionsTyp != PositionsTyp.Artikel && !textPositionenUebernehmen)
+                    continue;
+
                 var menge = quellPosition.PositionsTyp == PositionsTyp.Artikel
                     ? BelegPosition.OffeneMenge(quellPosition, folgepositionen)
                     : quellPosition.Menge;
 
                 if (quellPosition.PositionsTyp == PositionsTyp.Artikel && menge <= 0)
                     continue;
-                if (quellPosition.PositionsTyp == PositionsTyp.Artikel && menge < quellPosition.Menge)
-                    quellVollstaendigUebernommen = false;
 
                 zielBeleg.Positionen.Add(new BelegPosition
                 {
@@ -360,7 +383,9 @@ public sealed class BelegUeberleitungService(
                 });
             }
 
-            if (quellVollstaendigUebernommen && quellBeleg.Status is BelegStatus.Entwurf or BelegStatus.Gebucht)
+            // Wie in UeberleitenAsync: je Quellbeleg wird die volle offene Menge übernommen, danach ist
+            // nichts mehr offen (der frühere Vergleich lief gegen die Gesamtmenge statt die offene Menge).
+            if (quellBeleg.Status is BelegStatus.Entwurf or BelegStatus.Gebucht)
                 quellBeleg.Status = BelegStatus.Erledigt;
         }
 

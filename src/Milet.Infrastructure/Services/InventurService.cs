@@ -38,6 +38,12 @@ public sealed class InventurService(
         var lagerort = await db.Lagerorte.FirstOrDefaultAsync(l => l.Id == lagerortId, ct)
             ?? throw new NotFoundException(nameof(Lagerort), lagerortId);
 
+        // Zwei gleichzeitig offene Inventuren desselben Lagerorts würden nacheinander gegen denselben
+        // eingefrorenen Sollstand korrigieren und den Bestand doppelt verschieben.
+        if (await db.Inventuren.AnyAsync(i => i.LagerortId == lagerortId && i.Status == InventurStatus.Offen, ct))
+            throw new InvalidOperationException(
+                $"Für Lagerort '{lagerort.Code}' läuft bereits eine Inventur — sie muss erst abgeschlossen werden.");
+
         var bestaende = await db.ArtikelBestaende.AsNoTracking().Where(b => b.LagerortId == lagerortId).ToListAsync(ct);
         // Seriennummern-Artikel sind hier ausgeschlossen: ihr Bestand wird über die Seriennummernliste geführt
         // (siehe SeriennummernService), nicht über bulk Ist-Mengen — sonst desynchronisiert eine Inventur-Korrektur
@@ -64,6 +70,9 @@ public sealed class InventurService(
     public async Task ErfasseIstMengeAsync(int inventurPositionId, decimal istMenge, CancellationToken ct = default)
     {
         berechtigung.PruefeRecht(RechtCodes.Lager);
+        if (istMenge < 0)
+            throw new InvalidOperationException("Die gezählte Menge kann nicht negativ sein.");
+
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         var position = await db.InventurPositionen.Include(p => p.Inventur)
             .FirstOrDefaultAsync(p => p.Id == inventurPositionId, ct)
@@ -87,7 +96,27 @@ public sealed class InventurService(
         if (inventur.Status != InventurStatus.Offen)
             throw new InvalidOperationException("Inventur ist bereits abgeschlossen.");
 
-        foreach (var position in inventur.Positionen.Where(p => p.IstMenge.HasValue && p.IstMenge != p.SollMenge))
+        // Der Abschluss bucht delta = Ist − Soll ADDITIV auf den aktuellen Bestand. Das ist nur richtig,
+        // solange der aktuelle Bestand noch dem eingefrorenen Sollstand entspricht: wurde während der
+        // Zählung etwa ein Lieferschein über 5 Stück gebucht, ist der Bestand bereits um 5 reduziert — die
+        // physisch gezählte Ist-Menge spiegelt den Abgang aber ebenfalls schon wider, der Abgang würde also
+        // ein zweites Mal abgezogen. Da es keine Sperre des Lagerorts für die Dauer der Zählung gibt, wird
+        // die Abweichung hier erkannt und eine Neuaufnahme verlangt, statt still falsch zu buchen.
+        var aktuelleBestaende = await db.ArtikelBestaende.AsNoTracking()
+            .Where(b => b.LagerortId == inventur.LagerortId)
+            .ToDictionaryAsync(b => b.ArtikelId, b => b.Menge, ct);
+
+        var zuBuchen = inventur.Positionen.Where(p => p.IstMenge.HasValue && p.IstMenge != p.SollMenge).ToList();
+        var veraendert = zuBuchen
+            .Where(p => (aktuelleBestaende.TryGetValue(p.ArtikelId, out var menge) ? menge : 0m) != p.SollMenge)
+            .Select(p => p.ArtikelId)
+            .ToList();
+        if (veraendert.Count > 0)
+            throw new InvalidOperationException(
+                $"Der Bestand hat sich seit Beginn der Inventur bei {veraendert.Count} Artikel(n) verändert "
+                + $"(Artikel-Id {string.Join(", ", veraendert.Take(5))}). Die Inventur muss neu aufgenommen werden.");
+
+        foreach (var position in zuBuchen)
         {
             var delta = position.IstMenge!.Value - position.SollMenge;
             await BestandService.BucheBewegungAsync(db, position.ArtikelId, inventur.LagerortId, delta, LagerbewegungTyp.InventurKorrektur, null, ct);

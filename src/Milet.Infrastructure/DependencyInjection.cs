@@ -38,50 +38,54 @@ public static class DependencyInjection
                     sp.GetRequiredService<AuditSaveChangesInterceptor>(),
                     sp.GetRequiredService<BelegImmutabilityInterceptor>()));
 
-        services.AddScoped<INumberRangeService, NumberRangeService>();
+        // Transient statt Scoped: die Services sind zustandslos und ziehen je Aufruf einen eigenen DbContext
+        // aus der Factory. Die WinUI-App löst sie über App.Host.Services (Root-Scope) auf — als "Scoped"
+        // registriert lebten sie faktisch bis zum App-Ende und die Registrierung versprach eine
+        // Lebensdauerbegrenzung, die es nicht gab.
+        services.AddTransient<INumberRangeService, NumberRangeService>();
 
-        services.AddScoped<IKundenService, KundenService>();
-        services.AddScoped<ILieferantenService, LieferantenService>();
-        services.AddScoped<IArtikelService, ArtikelService>();
-        services.AddScoped<IStammdatenLookupService, StammdatenLookupService>();
+        services.AddTransient<IKundenService, KundenService>();
+        services.AddTransient<ILieferantenService, LieferantenService>();
+        services.AddTransient<IArtikelService, ArtikelService>();
+        services.AddTransient<IStammdatenLookupService, StammdatenLookupService>();
 
-        services.AddScoped<IEinheitenService, EinheitenService>();
-        services.AddScoped<IMwStSaetzeService, MwStSaetzeService>();
-        services.AddScoped<IZahlungsbedingungenService, ZahlungsbedingungenService>();
-        services.AddScoped<IVersandartenService, VersandartenService>();
-        services.AddScoped<IPreislistenService, PreislistenService>();
-        services.AddScoped<IArtikelPreiseService, ArtikelPreiseService>();
+        services.AddTransient<IEinheitenService, EinheitenService>();
+        services.AddTransient<IMwStSaetzeService, MwStSaetzeService>();
+        services.AddTransient<IZahlungsbedingungenService, ZahlungsbedingungenService>();
+        services.AddTransient<IVersandartenService, VersandartenService>();
+        services.AddTransient<IPreislistenService, PreislistenService>();
+        services.AddTransient<IArtikelPreiseService, ArtikelPreiseService>();
 
-        services.AddScoped<IBelegService, BelegService>();
-        services.AddScoped<IVerkaufLookupService, VerkaufLookupService>();
-        services.AddScoped<IFirmenstammService, FirmenstammService>();
-        services.AddScoped<IBelegUeberleitungService, BelegUeberleitungService>();
-        services.AddScoped<IRechnungBuchenService, RechnungBuchenService>();
-        services.AddScoped<IPdfService, Pdf.PdfService>();
-        services.AddScoped<IBestandService, BestandService>();
-        services.AddScoped<ILagerortService, LagerortService>();
-        services.AddScoped<ISeriennummernService, SeriennummernService>();
-        services.AddScoped<ILieferscheinBuchenService, LieferscheinBuchenService>();
-        services.AddScoped<IInventurService, InventurService>();
+        services.AddTransient<IBelegService, BelegService>();
+        services.AddTransient<IVerkaufLookupService, VerkaufLookupService>();
+        services.AddTransient<IFirmenstammService, FirmenstammService>();
+        services.AddTransient<IBelegUeberleitungService, BelegUeberleitungService>();
+        services.AddTransient<IRechnungBuchenService, RechnungBuchenService>();
+        services.AddTransient<IPdfService, Pdf.PdfService>();
+        services.AddTransient<IBestandService, BestandService>();
+        services.AddTransient<ILagerortService, LagerortService>();
+        services.AddTransient<ISeriennummernService, SeriennummernService>();
+        services.AddTransient<ILieferscheinBuchenService, LieferscheinBuchenService>();
+        services.AddTransient<IInventurService, InventurService>();
 
-        services.AddScoped<IEinkaufLookupService, EinkaufLookupService>();
-        services.AddScoped<IBestellVorschlagService, BestellVorschlagService>();
-        services.AddScoped<IWareneingangBuchenService, WareneingangBuchenService>();
-        services.AddScoped<IEingangsrechnungBuchenService, EingangsrechnungBuchenService>();
+        services.AddTransient<IEinkaufLookupService, EinkaufLookupService>();
+        services.AddTransient<IBestellVorschlagService, BestellVorschlagService>();
+        services.AddTransient<IWareneingangBuchenService, WareneingangBuchenService>();
+        services.AddTransient<IEingangsrechnungBuchenService, EingangsrechnungBuchenService>();
 
-        services.AddScoped<IOffenePostenService, OffenePostenService>();
-        services.AddScoped<IZahlungService, ZahlungService>();
-        services.AddScoped<IMahnwesenService, MahnwesenService>();
+        services.AddTransient<IOffenePostenService, OffenePostenService>();
+        services.AddTransient<IZahlungService, ZahlungService>();
+        services.AddTransient<IMahnwesenService, MahnwesenService>();
 
-        services.AddScoped<IFibuKonfigurationService, FibuKonfigurationService>();
-        services.AddScoped<IDatevExportService, DatevExportService>();
-        services.AddScoped<IReportingService, ReportingService>();
+        services.AddTransient<IFibuKonfigurationService, FibuKonfigurationService>();
+        services.AddTransient<IDatevExportService, DatevExportService>();
+        services.AddTransient<IReportingService, ReportingService>();
 
-        services.AddScoped<IAuthService, AuthService>();
-        services.AddScoped<IBenutzerverwaltungService, BenutzerverwaltungService>();
-        services.AddScoped<IRollenverwaltungService, RollenverwaltungService>();
-        services.AddScoped<IAuditLogService, AuditLogService>();
-        services.AddScoped<ISchemaVersionService, SchemaVersionService>();
+        services.AddTransient<IAuthService, AuthService>();
+        services.AddTransient<IBenutzerverwaltungService, BenutzerverwaltungService>();
+        services.AddTransient<IRollenverwaltungService, RollenverwaltungService>();
+        services.AddTransient<IAuditLogService, AuditLogService>();
+        services.AddTransient<ISchemaVersionService, SchemaVersionService>();
 
         // E-Mail-Versand: nur registriert, wenn appsettings.json eine vollständige "Graph"-Sektion trägt —
         // sonst NichtKonfigurierterEmailService (wirft beim Versandversuch eine sprechende Exception,
@@ -98,14 +102,14 @@ public static class DependencyInjection
                 .WithRedirectUri(graphSettings.RedirectUri)
                 .WithBroker(new BrokerOptions(BrokerOptions.OperatingSystems.Windows))
                 .Build());
-            services.AddScoped<IEmailService, GraphEmailService>();
+            services.AddTransient<IEmailService, GraphEmailService>();
         }
         else
         {
-            services.AddScoped<IEmailService, NichtKonfigurierterEmailService>();
+            services.AddTransient<IEmailService, NichtKonfigurierterEmailService>();
         }
 
-        services.AddScoped<IEmailVersandService, EmailVersandService>();
+        services.AddTransient<IEmailVersandService, EmailVersandService>();
 
         return services;
     }

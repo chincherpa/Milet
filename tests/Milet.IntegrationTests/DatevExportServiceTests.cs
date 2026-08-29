@@ -92,7 +92,7 @@ public sealed class DatevExportServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ExportierenAsync_MarkiertBelegUndSchliesstZweitenExportImSelbenZeitraumAus()
+    public async Task ExportierenAsync_MarkiertErstMitMarkiereAlsExportiert()
     {
         var ct = TestContext.Current.CancellationToken;
         var heute = DateOnly.FromDateTime(DateTime.Today);
@@ -104,10 +104,25 @@ public sealed class DatevExportServiceTests : IAsyncLifetime
         Assert.Equal(1, ergebnis.AnzahlBuchungszeilen);
         Assert.NotEmpty(ergebnis.CsvBytes);
         Assert.Contains("EXTF", System.Text.Encoding.GetEncoding(1252).GetString(ergebnis.CsvBytes));
+        Assert.Equal(rechnungId, Assert.Single(ergebnis.BelegIds));
 
-        await using var db = new MiletDbContext(_options);
-        var rechnung = await db.Rechnungen.FirstAsync(r => r.Id == rechnungId, ct);
-        Assert.NotNull(rechnung.ExportiertAm);
+        // Erzeugen allein markiert nichts: scheitert das Schreiben der Datei beim Aufrufer, muss der Beleg
+        // im nächsten Lauf wieder auftauchen.
+        await using (var db = new MiletDbContext(_options))
+        {
+            var rechnung = await db.Rechnungen.AsNoTracking().FirstAsync(r => r.Id == rechnungId, ct);
+            Assert.Null(rechnung.ExportiertAm);
+        }
+        var vorschauVorMarkierung = await service.VorschauAsync(heute.AddDays(-1), heute.AddDays(1), ct);
+        Assert.Equal(1, vorschauVorMarkierung.AnzahlBuchungszeilen);
+
+        await service.MarkiereAlsExportiertAsync(ergebnis.BelegIds, ergebnis.ZahlungIds, ct);
+
+        await using (var db = new MiletDbContext(_options))
+        {
+            var rechnung = await db.Rechnungen.AsNoTracking().FirstAsync(r => r.Id == rechnungId, ct);
+            Assert.NotNull(rechnung.ExportiertAm);
+        }
 
         var zweiteVorschau = await service.VorschauAsync(heute.AddDays(-1), heute.AddDays(1), ct);
         Assert.Equal(0, zweiteVorschau.AnzahlBuchungszeilen);
@@ -124,6 +139,7 @@ public sealed class DatevExportServiceTests : IAsyncLifetime
         var ergebnis = await service.ExportierenAsync(heute.AddDays(-1), heute.AddDays(1), ct);
 
         Assert.Equal(0, ergebnis.AnzahlBuchungszeilen);
+        Assert.Empty(ergebnis.BelegIds);
 
         await using var db = new MiletDbContext(_options);
         var rechnung = await db.Rechnungen.FirstAsync(r => r.Id == rechnungId, ct);

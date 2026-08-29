@@ -48,13 +48,28 @@ public sealed class ZahlungService(
             Zahlungsdatum = dto.Zahlungsdatum,
             Zahlungsart = dto.Zahlungsart,
             Referenz = dto.Referenz,
-            Gesamtbetrag = dto.Zuordnungen.Sum(z => z.Betrag + z.SkontoBetrag),
+            // Nur die tatsächlich geflossenen Beträge — das gewährte/erhaltene Skonto gehört NICHT dazu.
+            // Der Wert wird im DATEV-Export gegen das Bankkonto gebucht und muss deshalb dem Kontoauszug
+            // entsprechen (100 € Rechnung, 2 € Skonto, 98 € Eingang → Gesamtbetrag 98). Das Skonto wird dort
+            // als eigene Zeile aufs Skontokonto gebucht.
+            Gesamtbetrag = dto.Zuordnungen.Sum(z => z.Betrag),
         };
 
         foreach (var zuordnungDto in dto.Zuordnungen)
         {
             var op = await db.OffenePosten.FirstOrDefaultAsync(o => o.Id == zuordnungDto.OffenerPostenId, ct)
                 ?? throw new NotFoundException(nameof(OffenerPosten), zuordnungDto.OffenerPostenId);
+
+            // Ohne diese Prüfung könnte eine Zahlung von Kunde A den offenen Posten von Kunde B ausgleichen
+            // (oder gar eine Kreditorverbindlichkeit): im DATEV-Export liefe die Zahlung gegen A's
+            // Personenkonto, während B's OP als ausgeglichen gilt — beide Konten wären dauerhaft falsch,
+            // ohne dass es irgendwo auffiele.
+            if (op.Typ != zahlung.Typ)
+                throw new InvalidOperationException(
+                    $"Offener Posten '{op.Id}' ist vom Typ {op.Typ} und passt nicht zu einer {zahlung.Typ}-Zahlung.");
+            if (op.KundeId != zahlung.KundeId || op.LieferantId != zahlung.LieferantId)
+                throw new InvalidOperationException(
+                    $"Offener Posten '{op.Id}' gehört zu einem anderen Geschäftspartner als die Zahlung.");
 
             db.Entry(op).Property(o => o.RowVersion).OriginalValue = zuordnungDto.RowVersion;
 

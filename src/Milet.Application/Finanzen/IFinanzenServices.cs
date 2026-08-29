@@ -38,8 +38,15 @@ public interface IDatevExportService
     /// <summary>Zählt/summiert ohne zu markieren — beliebig oft wiederholbar.</summary>
     Task<DatevExportVorschauDto> VorschauAsync(DateOnly von, DateOnly bis, CancellationToken ct = default);
 
-    /// <summary>Erzeugt die CSV und markiert alle einbezogenen Belege/Zahlungen mit <c>ExportiertAm</c>
-    /// in derselben Transaktion — ein zweiter Aufruf für denselben Zeitraum liefert dann 0 Zeilen
-    /// (Doppelexport-Schutz).</summary>
+    /// <summary>Erzeugt die CSV, ohne etwas zu markieren. Die einbezogenen Vorgänge stehen als
+    /// <c>BelegIds</c>/<c>ZahlungIds</c> im Ergebnis und werden erst über
+    /// <see cref="MarkiereAlsExportiertAsync"/> festgeschrieben — Erzeugen und Markieren sind bewusst
+    /// getrennt, damit ein Fehler beim Speichern der Datei nicht Belege zurücklässt, die als exportiert
+    /// gelten, aber in keiner Datei stehen.</summary>
     Task<DatevExportErgebnisDto> ExportierenAsync(DateOnly von, DateOnly bis, CancellationToken ct = default);
+
+    /// <summary>Setzt <c>ExportiertAm</c> auf den übergebenen Vorgängen (nur dort, wo es noch nicht gesetzt
+    /// ist) — erst nach diesem Aufruf liefert ein erneuter Export für denselben Zeitraum 0 Zeilen
+    /// (Doppelexport-Schutz). Aufzurufen, sobald die Datei geschrieben ist.</summary>
+    Task MarkiereAlsExportiertAsync(IReadOnlyList<int> belegIds, IReadOnlyList<int> zahlungIds, CancellationToken ct = default);
 }

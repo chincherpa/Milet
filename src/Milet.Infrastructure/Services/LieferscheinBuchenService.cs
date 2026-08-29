@@ -30,12 +30,22 @@ public sealed class LieferscheinBuchenService(
         if (lieferschein.Positionen.Count == 0)
             throw new InvalidOperationException("Lieferschein ohne Positionen kann nicht gebucht werden.");
 
+        // Artikel einmal vorab laden statt je Position eine Abfrage — gebraucht wird nur HatSeriennummern.
+        var artikelIds = lieferschein.Positionen
+            .Where(p => p.PositionsTyp == PositionsTyp.Artikel && p.ArtikelId != null)
+            .Select(p => p.ArtikelId!.Value)
+            .Distinct()
+            .ToList();
+        var artikelJeId = await db.Artikel.AsNoTracking()
+            .Where(a => artikelIds.Contains(a.Id))
+            .ToDictionaryAsync(a => a.Id, ct);
+
         foreach (var position in lieferschein.Positionen.Where(p => p.PositionsTyp == PositionsTyp.Artikel))
         {
             if (position.ArtikelId is not { } artikelId || position.LagerortId is not { } lagerortId)
                 throw new InvalidOperationException($"Position {position.PositionsNr}: Artikel oder Lagerort fehlt.");
 
-            var artikel = await db.Artikel.AsNoTracking().FirstAsync(a => a.Id == artikelId, ct);
+            var artikel = artikelJeId[artikelId];
 
             // Bestand VOR der Seriennummern-Prüfung abbuchen: eine einzige atomare Buchung entscheidet über Verfügbarkeit
             // (kein separater Read-Modify-Write-Check davor, siehe BestandService.BucheBewegungAsync).
@@ -43,8 +53,16 @@ public sealed class LieferscheinBuchenService(
 
             if (artikel.HatSeriennummern)
             {
-                if (!seriennummernJePosition.TryGetValue(position.Id, out var gewaehlt) || gewaehlt.Count != position.Menge)
-                    throw new InvalidOperationException($"Position {position.PositionsNr}: es müssen genau {position.Menge} Seriennummer(n) ausgewählt werden.");
+                // Menge hat Präzision (18,3): ohne diese Prüfung wäre die Bedingung darunter für eine
+                // gebrochene Menge nie erfüllbar und die Meldung („genau 2,500 Seriennummer(n)") nicht
+                // handlungsleitend.
+                if (position.Menge != decimal.Truncate(position.Menge))
+                    throw new InvalidOperationException(
+                        $"Position {position.PositionsNr}: seriennummernpflichtige Artikel können nur in ganzen Mengen geliefert werden (Menge {position.Menge:0.###}).");
+
+                var benoetigt = (int)position.Menge;
+                if (!seriennummernJePosition.TryGetValue(position.Id, out var gewaehlt) || gewaehlt.Count != benoetigt)
+                    throw new InvalidOperationException($"Position {position.PositionsNr}: es müssen genau {benoetigt} Seriennummer(n) ausgewählt werden.");
 
                 var seriennummern = await db.Seriennummern
                     .Where(s => gewaehlt.Contains(s.Id) && s.ArtikelId == artikelId && s.Status == SeriennummerStatus.AufLager)

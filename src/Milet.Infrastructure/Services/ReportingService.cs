@@ -88,7 +88,10 @@ public sealed class ReportingService(IDbContextFactory<MiletDbContext> dbContext
         var auftraege = await db.Auftraege.AsNoTracking()
             .Include(a => a.Positionen)
             .Include(a => a.Kunde)
-            .Where(a => a.Status == BelegStatus.Gebucht)
+            // Entwurf gehört dazu: es gibt keinen Codepfad, der einen Auftrag auf Gebucht setzt (Aufträge
+            // entstehen als Entwurf und gehen über die Überleitung direkt auf Erledigt). Ein Filter allein
+            // auf Gebucht lieferte deshalb unter allen Umständen eine leere Liste.
+            .Where(a => a.Status == BelegStatus.Entwurf || a.Status == BelegStatus.Gebucht)
             .ToListAsync(ct);
 
         if (auftraege.Count == 0) return [];

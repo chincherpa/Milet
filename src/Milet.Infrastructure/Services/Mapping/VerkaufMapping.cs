@@ -26,17 +26,7 @@ internal static class VerkaufMapping
 
     public static BelegDto ToDto(this Beleg b, bool mitPositionen)
     {
-        var typ = b switch
-        {
-            Angebot => BelegTyp.Angebot,
-            Auftrag => BelegTyp.Auftrag,
-            Rechnung => BelegTyp.Rechnung,
-            Lieferschein => BelegTyp.Lieferschein,
-            Bestellung => BelegTyp.Bestellung,
-            Wareneingang => BelegTyp.Wareneingang,
-            Eingangsrechnung => BelegTyp.Eingangsrechnung,
-            _ => throw new InvalidOperationException($"Unbekannter Beleg-Subtyp {b.GetType().Name}."),
-        };
+        var typ = BelegTypErweiterung.TypVon(b);
 
         return new BelegDto
         {

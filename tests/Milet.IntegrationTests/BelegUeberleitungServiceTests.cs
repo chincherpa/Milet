@@ -71,7 +71,7 @@ public sealed class BelegUeberleitungServiceTests : IAsyncLifetime
         var ls1 = await NeuerGebuchterLieferscheinAsync(3, ct);
         var ls2 = await NeuerGebuchterLieferscheinAsync(5, ct);
 
-        var service = new BelegUeberleitungService(_factory, new NumberRangeService(_factory));
+        var service = new BelegUeberleitungService(_factory, AllesErlaubtBerechtigungsService.Instanz);
         var rechnung = await service.UeberleitenMehrereAsync([ls1, ls2], BelegTyp.Rechnung, ct);
 
         Assert.Equal(2, rechnung.Positionen.Count);
@@ -101,7 +101,7 @@ public sealed class BelegUeberleitungServiceTests : IAsyncLifetime
         db.Add(lieferschein);
         await db.SaveChangesAsync(ct);
 
-        var service = new BelegUeberleitungService(_factory, new NumberRangeService(_factory));
+        var service = new BelegUeberleitungService(_factory, AllesErlaubtBerechtigungsService.Instanz);
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.UeberleitenMehrereAsync([lieferschein.Id], BelegTyp.Rechnung, ct));
     }

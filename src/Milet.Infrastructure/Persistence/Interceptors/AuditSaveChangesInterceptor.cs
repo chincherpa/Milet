@@ -24,6 +24,21 @@ public sealed class AuditSaveChangesInterceptor(ICurrentUserService currentUser)
 {
     private sealed record PendingAudit(EntityEntry Entry, string EntityName, string Aktion, string? EntityId, Dictionary<string, object?> Werte);
 
+    /// <summary>
+    /// Properties, die nie in den Audit-Log geschrieben werden. <c>PasswortHash</c>: der AuditLog wird aus
+    /// GoBD-Gründen nie gelöscht und ist für jeden Benutzer mit Administration-Recht lesbar — die vollständige
+    /// Hash-Historie jedes Benutzers dort abzulegen, vergrößert die Angriffsfläche fürs Offline-Cracking ohne
+    /// jeden Nachweisgewinn (dass das Passwort geändert wurde, steht als Aktion ohnehin im Eintrag).
+    /// <c>RowVersion</c>: reines Base64-Rauschen aus der Concurrency-Spalte.
+    /// Abgleich über den Namen (nicht Typ + Name), damit eine gleichnamige Property auf einer künftigen
+    /// Entität nicht versehentlich doch protokolliert wird.
+    /// </summary>
+    private static readonly HashSet<string> NichtProtokollierteProperties =
+    [
+        nameof(Benutzer.PasswortHash),
+        nameof(Domain.Common.IHasRowVersion.RowVersion),
+    ];
+
     private static readonly ConditionalWeakTable<DbContext, List<PendingAudit>> Pending = new();
 
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
@@ -41,7 +56,16 @@ public sealed class AuditSaveChangesInterceptor(ICurrentUserService currentUser)
 
     public override int SavedChanges(SaveChangesCompletedEventData eventData, int result)
     {
-        AuditSchreibenAsync(eventData.Context, default).GetAwaiter().GetResult();
+        // Eigener synchroner Pfad statt .GetAwaiter().GetResult() auf der async-Variante: Sync-over-Async
+        // kann in einem UI-Kontext blockieren. Genutzt wird durchgängig der async-Pfad, aber der synchrone
+        // darf keine Falle sein.
+        var logs = BaueLogs(eventData.Context);
+        if (logs is not null)
+        {
+            eventData.Context!.Set<AuditLog>().AddRange(logs);
+            eventData.Context.SaveChanges();
+        }
+
         return base.SavedChanges(eventData, result);
     }
 
@@ -113,6 +137,11 @@ public sealed class AuditSaveChangesInterceptor(ICurrentUserService currentUser)
                 continue;
             }
 
+            if (NichtProtokollierteProperties.Contains(prop.Metadata.Name))
+            {
+                continue;
+            }
+
             werte[prop.Metadata.Name] = entry.State == EntityState.Deleted ? prop.OriginalValue : prop.CurrentValue;
         }
 
@@ -129,16 +158,30 @@ public sealed class AuditSaveChangesInterceptor(ICurrentUserService currentUser)
 
     private async Task AuditSchreibenAsync(DbContext? context, CancellationToken ct)
     {
-        if (context is null || !Pending.TryGetValue(context, out var audits))
+        var logs = BaueLogs(context);
+        if (logs is null)
         {
             return;
+        }
+
+        context!.Set<AuditLog>().AddRange(logs);
+        await context.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Baut die AuditLog-Zeilen aus dem Zwischenstand des Speichervorgangs; null, wenn nichts
+    /// zu protokollieren ist.</summary>
+    private List<AuditLog>? BaueLogs(DbContext? context)
+    {
+        if (context is null || !Pending.TryGetValue(context, out var audits))
+        {
+            return null;
         }
 
         Pending.Remove(context);
 
         if (audits.Count == 0)
         {
-            return;
+            return null;
         }
 
         var jetzt = DateTime.UtcNow;
@@ -164,7 +207,6 @@ public sealed class AuditSaveChangesInterceptor(ICurrentUserService currentUser)
             };
         }).ToList();
 
-        context.Set<AuditLog>().AddRange(logs);
-        await context.SaveChangesAsync(ct);
+        return logs;
     }
 }

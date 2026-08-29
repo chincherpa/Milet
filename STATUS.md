@@ -228,6 +228,94 @@ Umgesetzt nach `PLAN.md`-Zeile „7 Admin+Härtung": Benutzer/Rollen/Rechte-UI+L
 5. **Phase 6 (DATEV+Reporting) — Windows-Build + manueller UI-Smoke-Test ausstehend:** Implementiert nach Plan (`docs/superpowers/plans/2026-08-27-phase6-datev-reporting.md`, 15 Tasks) — Backend-Build/-Tests/Integrationstests/Migration diesmal **real gegen einen containerisierten SQL Server verifiziert** (s. Phase-6-Abschnitt oben, stärkste Linux-Verifikation bisher), aber `Milet.App` wurde weiterhin **kein einziges Mal** gebaut (kein Windows in dieser Session verfügbar). Vor Abnahme zwingend: (1) `dotnet build src/Milet.App/Milet.App.csproj -p:Platform=x64` auf Windows; (2) manueller UI-Smoke-Test (FibuKonten-Tab, MwSt-Konten, DATEV-Export inkl. Doppelexport-Schutz, alle sechs Reporting-Tabs).
 6. **Phase 7 (Admin+Härtung) — Windows-Build + manueller UI-Smoke-Test ausstehend:** Implementiert nach `PLAN.md` (RBAC-Login, Benutzer-/Rollenverwaltung, AuditLog-Viewer, Firmenstamm-UI, Deployment-Story) — Backend-Build/-Tests/Integrationstests/Migration real gegen einen containerisierten SQL Server verifiziert (s. Phase-7-Abschnitt oben, inkl. der AuditLog-Interceptor-Zweistufigkeit — das bisher am ehesten "überraschungsträchtige" neue Stück Infrastruktur-Code in dieser Phase, real beobachtet statt nur angenommen), aber `Milet.App` wurde weiterhin **kein einziges Mal** gebaut (kein Windows in dieser Session verfügbar). Vor Abnahme zwingend: (1) `dotnet build src/Milet.App/Milet.App.csproj -p:Platform=x64` auf Windows; (2) manueller UI-Smoke-Test (Login-Fehlerpfade, Benutzer-/Rollen-CRUD inkl. Rechte-Checkboxen, AuditLog-Filter, Firmenstamm-Tab, UI-Sichtbarkeit je Rolle); (3) Erstpasswort `admin`/`Milet!Admin1` (s. `docs/deployment.md`) sofort ändern, sobald produktiv verwendet. Phase 1+2 sind komplett abgenommen.
 
+### Review-Fixes 2026-08-29 ⚠️ (rein statisch geschrieben — kein SDK in dieser Session, nichts gebaut, nichts getestet) (Branch `claude/review-2026-08-29-fixes-nsbfs8`)
+
+Umsetzung der Befunde aus `REVIEW_2026-08-29.md` (30 Befunde; die Tabelle „Umsetzungsstand" dort führt
+jeden einzelnen mit Stand). Wie schon in der Review-Session war **kein .NET SDK verfügbar** (`dotnet`
+nicht vorhanden, der Download ist über den Egress-Proxy gesperrt): die Änderungen sind geschrieben und
+gelesen, aber **weder kompiliert noch ausgeführt**. Das ist der wichtigste Vorbehalt zu diesem Stand — vor
+allem, weil zwei Konstruktor-Signaturen und ein Service-Interface geändert wurden.
+
+**Kritisch/Hoch:**
+- **Jahreswechsel (Befund 1):** `StammdatenSeed` gleicht Nummernkreise jetzt über `(Code, Jahr)` ab statt
+  nur über den Code — passend zum Unique-Index. Zusätzlich legt `NumberRangeService` einen fehlenden
+  Jahreskreis beim ersten Zugriff selbst an (`INSERT ... WHERE NOT EXISTS`, Format vom jüngsten
+  Vorjahreskreis, Unique-Verletzung eines parallelen Aufrufers wird geschluckt und die Vergabe wiederholt).
+  Damit steht das System am 01.01. auch dann nicht still, wenn niemand den Migrator startet.
+- **Nummernvergabe in der Buchungstransaktion (Befund 5):** `NumberRangeService.NaechsteNummerAsync` gibt
+  es jetzt zusätzlich als statische Überladung mit explizitem `MiletDbContext` (Muster wie
+  `BestandService.BucheBewegungAsync`). `RechnungBuchenService`, `BelegService` und
+  `BelegUeberleitungService` nutzen sie — die Nummer rollt bei einem Fehlschlag mit zurück.
+  `BelegService.SpeichereAsync` und `LoescheAsync` laufen dafür neu in einer expliziten Transaktion.
+  **Konstruktoränderung:** `BelegService`, `RechnungBuchenService` und `BelegUeberleitungService` bekommen
+  `INumberRangeService` nicht mehr injiziert (Integrationstests entsprechend angepasst).
+- **RBAC-Löcher (Befunde 2, 3, 18):** `BelegUeberleitungService` prüft Quell- **und** Zieltyp
+  (**Konstruktoränderung:** neu mit `IBerechtigungsService`), alle sechs Kleinstamm-Services prüfen
+  `Stammdaten`, `SeriennummernService.ErfasseAsync` prüft `Lager`, `EmailVersandService` prüft das Recht
+  des versendeten Belegs bzw. `Finanzen`. Die Ableitung Belegtyp → Recht liegt jetzt einmal in
+  `RechtCodes.FuerBelegTyp` statt je Service.
+- **Immutability-Backstop (Befunde 4, 22):** Der Interceptor prüft zusätzlich `BelegPosition` und
+  `BelegSteuerSumme` (Added/Modified/Deleted) sowie `EntityState.Deleted` auf dem Beleg selbst; die
+  Fehlermeldung nennt den tatsächlichen Status statt immer „gebucht".
+- **DATEV (Befunde 6, 7, 19):** `ExportierenAsync` markiert nichts mehr — die Ids stehen im Ergebnis, das
+  Festschreiben ist ein eigener Aufruf `MarkiereAlsExportiertAsync`, den das ViewModel erst **nach** dem
+  erfolgreichen Schreiben der Datei macht (**Interface-/DTO-Änderung** an `IDatevExportService` und
+  `DatevExportErgebnisDto`). `Zahlung.Gesamtbetrag` ist jetzt der tatsächlich geflossene Betrag, das
+  Skonto wird als eigene Zeile je Steuerschlüssel gegengebucht (neuer reiner Domain-Helper
+  `SkontoAufteilung` mit 6 Unit-Tests). Der Wirtschaftsjahresbeginn rechnet das Jahr bei abweichendem
+  Wirtschaftsjahr zurück.
+- **Zahlungszuordnung (Befund 8):** Typ und Geschäftspartner des offenen Postens müssen zur Zahlung passen.
+- **Inventur (Befund 9):** Guard gegen eine zweite offene Inventur je Lagerort, Abbruch beim Abschluss,
+  wenn sich der Bestand seit der Momentaufnahme verändert hat (Neuaufnahme statt still falscher Buchung),
+  keine negativen Ist-Mengen.
+- **AuditLog (Befunde 10, 23):** `PasswortHash` und `RowVersion` werden nicht mehr protokolliert; der
+  synchrone Pfad nutzt kein `.GetAwaiter().GetResult()` mehr.
+- **Letzter Administrator (Befund 17):** Benutzer- und Rollenverwaltung lehnen eine Änderung ab, die den
+  letzten aktiven Administrator entfernen würde (greift nicht, wenn es ohnehin schon keinen gibt).
+
+**Zusätzlich beim Umsetzen gefunden (nicht im Review):** Der **Migrator konnte seit Phase 7 auf einer
+leeren Datenbank nicht durchlaufen.** `DummyDatenSeed` ruft bewusst die echten Application-Services auf —
+die prüfen seit Phase 7 RBAC, während der Migrator gar keine Anmeldung hat: der erste Lauf wäre mit
+`KeinZugriffException('Stammdaten')` abgebrochen. `Program.cs` öffnet jetzt vor dem Seed eine technische
+Sitzung mit allen Rechten. (Passt zur Phase-7-Notiz „`Milet.App` wurde kein einziges Mal gebaut" — auch
+der Migrator wurde seit Phase 7 offensichtlich nie auf einer frischen DB gestartet.)
+
+**Bewusst nicht umgesetzt (jeweils eine Schemaänderung, die ohne SDK weder migriert noch verifiziert
+werden kann — Migration + Snapshot von Hand zu schreiben wäre hier das größere Risiko):**
+1. **Skontokonten in der `FibuKonfiguration`** (Befund 7). Der Export bucht das Skonto derzeit auf die
+   Standard-Sammelkonten des jeweiligen Kontenrahmens (SKR03 8736/3736, SKR04 4736/5736), fest im Code in
+   `DatevExportService.SkontoKonto`. Ein ausgeglichener Stapel mit umschlüsselbarem Standardkonto ist
+   besser als ein unausgeglichener — die Konten gehören aber neben `BankkontoNr` in die Konfiguration.
+2. **Fehlversuchszähler/Lockout am Login** (Befund 13). Das Timing-Leck ist geschlossen, eine Sperre nach
+   n Fehlversuchen braucht Spalten auf `Benutzer`.
+3. **Erzwungener Wechsel des Initialpassworts** (Befund 30). Als Zwischenschritt warnt der Migrator jetzt
+   bei jedem Lauf sichtbar, solange `admin` noch das dokumentierte Passwort hat.
+
+**Weiterhin offen (fachliche Entscheidung, wie im Review empfohlen):**
+- **Storno und Gutschrift existieren nicht** (Befund 15). `BelegStatus.Storniert` wird nirgends zugewiesen,
+  es gibt keinen Storno-Service und keine Klasse `Gutschrift : Beleg` — der geseedete `GS`-Nummernkreis
+  ist unbenutzt. Eine falsch gebuchte Rechnung ist damit **in der Anwendung nicht korrigierbar**.
+  `CLAUDE.md` wurde entsprechend berichtigt (sprach von acht Belegarten und von Gegenbuchungen als
+  vorhandenem Korrekturweg).
+- **`BelegPosition.OffeneMenge` kennt den Status des Folgebelegs nicht** (Befund 16) — latent, solange es
+  kein Storno gibt, aber vor dem Storno-Bau zu erledigen.
+- **AuditLog-Reihenfolge** (Befund 23): die Audit-Zeilen entstehen weiterhin in `SavedChanges`. In den
+  Belegpfaden liegen sie jetzt durch die neue Transaktion in derselben Transaktion wie der fachliche Save;
+  generell gilt die Einschränkung weiter.
+- **Testabdeckung** (Befund 29): neu sind 6 Unit-Tests zu `SkontoAufteilung` und 2 Integrationstests zum
+  Jahreswechsel der Nummernkreise. `BelegImmutabilityInterceptor`, `AuditSaveChangesInterceptor`,
+  `ZahlungService` und `MahnwesenService` haben weiterhin keine eigenen Tests.
+
+**Vor der Abnahme dieses Branches zwingend (nichts davon war hier möglich):**
+1. `dotnet build` aller Projekte — es wurden Konstruktoren, ein Service-Interface und ein DTO geändert.
+2. `dotnet test` je Testprojekt; die Integrationstests **mit Docker**, sonst überspringen genau die neuen
+   Nummernkreis-Tests.
+3. `Milet.Tools.Migrator` gegen eine **frische** Datenbank (prüft in einem Lauf den Seed-Fix, den
+   RBAC-Sitzungs-Fix und die Passwortwarnung) und gegen eine **bestehende** (prüft die Idempotenz des
+   `(Code, Jahr)`-Abgleichs).
+4. Manueller Smoke-Test des DATEV-Exports (Abbruch im Speichern-Dialog darf jetzt **nichts** markieren)
+   und einer Zahlung mit Skonto (Bankzeile = Zahlbetrag, zusätzliche Skontozeile).
+
 ## Gefixt während UI-Test (2026-08-25)
 - LocalDB-Datenbank hieß nach Projekt-Rename noch "Nexus" (Connection String erwartet "Milet") → "Fehler beim Laden" beim Öffnen der Kunden-Liste. Per `ALTER DATABASE ... MODIFY NAME` umbenannt (Seed-Daten erhalten), App neu gestartet — Kunden-Liste lädt jetzt.
 - Listenpreis-Präzision 4→2 Nachkommastellen (s. oben, Phase-1-Abnahme).
@@ -239,7 +327,7 @@ Umgesetzt nach `PLAN.md`-Zeile „7 Admin+Härtung": Benutzer/Rollen/Rechte-UI+L
 - **[Umgesetzt in Phase 5, funktional unverifiziert]** Graph-Auth: `GraphEmailService` (MSAL/WAM-Broker) ist implementiert und baut gegen die echten NuGet-Pakete, aber ohne eigene Entra-App-Registrierung + Windows nicht testbar — `NichtKonfigurierterEmailService`-Fallback stellt sicher, dass die App ohne Graph-Konfiguration voll funktionsfähig bleibt. DATEV-Format — noch nicht relevant, erst ab Phase 6. QuestPDF-Lizenz (Community, <1M USD Umsatz) bereits gesetzt (`PdfService`-statischer Konstruktor).
 - Lieferadresse ist in Phase 2 nicht im Belegeditor editierbar (immer 1:1 aus Kundenstamm übernommen) — bewusste Vereinfachung, relevant erst mit Lieferschein (Phase 3).
 - **Offene-Mengen-Prüfung in `BelegUeberleitungService` (inkl. `UeberleitenMitAuswahlAsync`/`UeberleitenMehrereAsync`) schützt trotz gegenteiligem Kommentar im Code vermutlich nicht gegen parallele Überleitungen**: der In-Transaktion-Re-Check liest unter SQL Servers Default-Isolationslevel READ COMMITTED ohne Sperre — zwei gleichzeitige Transaktionen können beide „nichts geliefert" sehen und beide committen. Folgenlos bei Angebot→Auftrag (1:1, keine Teilmengen), aber ein echter potenzieller Bestandsfehler bei paralleler Teillieferung/Sammelrechnung. Noch nicht verifiziert (Docker hier nicht verfügbar) oder behoben — möglicher Fix: `UPDLOCK` auf dem/den Quellbeleg(en) beim Lesen. Fund stammt aus einem parallel entstandenen, nicht umgesetzten Planungsentwurf (`docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md`).
-- **[Behoben in Phase 4]** `StammdatenSeed` legt Nummernkreise nur an, wenn die `Nummernkreise`-Tabelle komplett leer ist, nicht „je fehlendem Code" — eine bereits migrierte Datenbank bekommt einen später neu hinzugefügten Nummernkreis-Code nie automatisch nachgetragen. Bisher folgenlos (alle bislang genutzten Codes existierten schon vor der ersten Migration), wird aber relevant, sobald eine spätere Phase einen neuen Code auf einer bestehenden DB einführt. Genau dieser Fall trat mit Phase 4 ein (neue Codes `WE`/`ER`) und wurde in Task 5 des Phase-4-Plans behoben — der Seed wurde auf „je fehlendem Code ergänzen" umgestellt statt „nur wenn Tabelle leer"; per `sqlcmd` verifiziert, dass `BE`/`WE`/`ER` alle mit `NaechsteNummer=1` existieren (s. Phase-4-Abschnitt oben).
+- **[Behoben in Phase 4, nachgebessert 2026-08-29]** `StammdatenSeed` legt Nummernkreise nur an, wenn die `Nummernkreise`-Tabelle komplett leer ist, nicht „je fehlendem Code" — eine bereits migrierte Datenbank bekommt einen später neu hinzugefügten Nummernkreis-Code nie automatisch nachgetragen. Bisher folgenlos (alle bislang genutzten Codes existierten schon vor der ersten Migration), wird aber relevant, sobald eine spätere Phase einen neuen Code auf einer bestehenden DB einführt. Genau dieser Fall trat mit Phase 4 ein (neue Codes `WE`/`ER`) und wurde in Task 5 des Phase-4-Plans behoben — der Seed wurde auf „je fehlendem Code ergänzen" umgestellt statt „nur wenn Tabelle leer"; per `sqlcmd` verifiziert, dass `BE`/`WE`/`ER` alle mit `NaechsteNummer=1` existieren (s. Phase-4-Abschnitt oben). Der Fix griff allerdings nicht für den Jahreswechsel: der Abgleich lief nur über den Code, während `NumberRangeService` strikt nach dem laufenden Jahr sucht — ab dem 01.01. hätte das System keine Belegnummer mehr vergeben können (Befund 1 des Reviews vom 2026-08-29). Seither Abgleich über `(Code, Jahr)` plus Lazy-Anlage des Jahreskreises im `NumberRangeService` (s. Abschnitt Review-Fixes 2026-08-29).
 
 ## Phasenübersicht
 

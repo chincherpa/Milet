@@ -68,11 +68,15 @@ public sealed partial class DatevExportViewModel : ObservableObject
             var datei = await picker.PickSaveFileAsync();
             if (datei is null)
             {
-                Erfolgsmeldung = $"Export abgebrochen — {ergebnis.AnzahlBuchungszeilen} Belege/Zahlungen wurden bereits als exportiert markiert (nicht rückgängig zu machen, s. GoBD-Grundsatz keine nachträgliche Änderung gebuchter Vorgänge). Bei Bedarf erneut exportieren, um die Datei zu speichern.";
+                Erfolgsmeldung = "Export abgebrochen — es wurde nichts als exportiert markiert, der Zeitraum lässt sich unverändert erneut exportieren.";
                 return;
             }
 
+            // Reihenfolge ist der eigentliche Punkt: erst schreiben, dann markieren. Scheitert das Schreiben
+            // (volle Platte, Netzlaufwerk weg, Datei gesperrt), landet das im catch unten — und die Belege
+            // gelten weiterhin als nicht exportiert, tauchen also im nächsten Lauf wieder auf.
             await Windows.Storage.FileIO.WriteBytesAsync(datei, ergebnis.CsvBytes);
+            await _datevExportService.MarkiereAlsExportiertAsync(ergebnis.BelegIds, ergebnis.ZahlungIds);
             Erfolgsmeldung = $"{ergebnis.AnzahlBuchungszeilen} Buchungszeilen exportiert und gespeichert.";
             await VorschauLadenAsync();
         }
