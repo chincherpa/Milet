@@ -116,6 +116,7 @@ Ein generischer `BelegUeberleitungService.Ueberleiten(sourceBelegId, targetTyp, 
 | **5 Finanzen+E-Mail** | OP-Liste (Aging), Zahlungsdialog+Skonto, Mahnwesen (Config, Lauf, PDF), Graph-Mail (MSAL/WAM, Entra-App, Versand-Log je Beleg) | Teilzahlung→TeilBezahlt; Mahnlauf-Selektion getestet; Mail mit PDF kommt an |
 | **6 DATEV+Reporting** | FibuKonten-UI, EXTF-CSV-Export (Golden-File-Tests), Auswertungen (Umsatz je Kunde/Artikel/Monat, Artikelbewegungen, Top-Artikel, offene Aufträge) + CSV-Export | DATEV-CSV byte-exakt gegen Referenz; Import beim Steuerberater validiert |
 | **7 Admin+Härtung** | Benutzer/Rollen/Rechte-UI+Login, Service-Guards, Systemkonfig (Firmenstamm/Briefkopf), AuditLog-Viewer, Deployment-Story | Rechte-Block greift (Test+UI); Regressionspass Phase 1–6 |
+| **8 Gärtnerei/Kultur** (geplant) | Kulturstufen als konfigurierbare Stammdaten, Feld (=Lagerort mit Geometrie) + Sektion, Bestand je Artikel×Feld×Sektion×Kulturstufe, Kulturbuchungen (Zugang/Stufenwechsel/Umsetzen/Ausfall), Grundriss-Editor, Pflanzenübersicht mit Highlighting, Verfügbarkeitsanzeige im Auftrag — Detailplan: `docs/superpowers/plans/2026-08-30-phase8-gaertnerei-kultur.md` | Stufenwechsel verschiebt Menge atomar über zwei Ledger-Zeilen; Pflanzenübersicht highlightet die richtigen Sektionen je Stufe; Auftragsampel unterscheidet verkaufsfähig/in Anzucht |
 
 ## Verifikation
 

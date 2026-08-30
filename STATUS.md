@@ -342,3 +342,4 @@ werden kann — Migration + Snapshot von Hand zu schreiben wäre hier das größ
 **5 Finanzen+E-Mail**      Done (WinUI-Build + manueller UI-Smoke-Test + Migration-auf-DB ausstehend — kein Windows in dieser Session)
 **6 DATEV+Reporting**      Done (Backend real gegen SQL Server verifiziert; WinUI-Build + manueller UI-Smoke-Test ausstehend — kein Windows in dieser Session)
 **7 Admin+Härtung**        Done (Backend real gegen SQL Server verifiziert; WinUI-Build + manueller UI-Smoke-Test ausstehend — kein Windows in dieser Session)
+**8 Gärtnerei/Kultur**     Geplant (Detailplan `docs/superpowers/plans/2026-08-30-phase8-gaertnerei-kultur.md`, noch nichts implementiert)
