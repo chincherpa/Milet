@@ -69,7 +69,8 @@ public sealed record ArtikelVerkaufLookupDto(
     decimal MwStSatzWert,
     int? SteuerSchluessel,
     string? EinheitKuerzel,
-    bool HatSeriennummern);
+    bool HatSeriennummern,
+    bool IstKulturpflanze = false);
 
 public sealed record KundeVerkaufLookupDto(
     int Id,

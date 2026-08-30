@@ -20,8 +20,8 @@ public sealed partial class AuftragEditViewModel : BelegEditViewModelBase
     public AuftragEditViewModel(
         IBelegService belegService, IVerkaufLookupService lookupService, IBelegUeberleitungService ueberleitungService,
         IPdfService pdfService, INavigationService navigation, IDialogService dialogService, ILagerortService lagerortService,
-        IKulturBestandService kulturBestandService, IKulturstufenService kulturstufenService)
-        : base(BelegTyp.Auftrag, belegService, lookupService, ueberleitungService, buchenService: null, pdfService, navigation, dialogService)
+        IKulturBestandService kulturBestandService, IKulturstufenService kulturstufenService, IVerfuegbarkeitService verfuegbarkeitService)
+        : base(BelegTyp.Auftrag, belegService, lookupService, ueberleitungService, buchenService: null, pdfService, navigation, dialogService, verfuegbarkeitService)
     {
         _lagerortService = lagerortService;
         _kulturBestandService = kulturBestandService;

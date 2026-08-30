@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Navigation;
 using Milet.App.Services;
 using Milet.Application.Abstractions;
 using Milet.Application.Common;
+using Milet.Application.Gaertnerei;
 using Milet.Application.Verkauf;
 using Milet.Domain.Entities.Verkauf;
 
@@ -22,6 +23,10 @@ public abstract partial class BelegEditViewModelBase : ObservableObject, INaviga
     protected readonly INavigationService Navigation;
     protected readonly IDialogService DialogService;
 
+    /// <summary>Optional, damit Einkaufs-/Rechnungs-Pfad und bestehende Tests unverändert bleiben, wenn keine
+    /// Implementierung übergeben wird — das Panel zeigt sich dann einfach nie (E8, Phase 8).</summary>
+    private readonly IVerfuegbarkeitService? _verfuegbarkeitService;
+
     protected int Id;
     private byte[] _rowVersion = [];
     private int _naechstePositionsNr = 1;
@@ -34,7 +39,8 @@ public abstract partial class BelegEditViewModelBase : ObservableObject, INaviga
         IRechnungBuchenService? buchenService,
         IPdfService pdfService,
         INavigationService navigation,
-        IDialogService dialogService)
+        IDialogService dialogService,
+        IVerfuegbarkeitService? verfuegbarkeitService = null)
     {
         _typ = typ;
         _belegService = belegService;
@@ -44,6 +50,7 @@ public abstract partial class BelegEditViewModelBase : ObservableObject, INaviga
         _pdfService = pdfService;
         Navigation = navigation;
         DialogService = dialogService;
+        _verfuegbarkeitService = verfuegbarkeitService;
     }
 
     [ObservableProperty] public partial string BelegNummer { get; set; } = "(automatisch)";
@@ -59,6 +66,38 @@ public abstract partial class BelegEditViewModelBase : ObservableObject, INaviga
     [ObservableProperty] public partial decimal PositionMenge { get; set; } = 1;
     [ObservableProperty] public partial decimal PositionEinzelpreis { get; set; }
     [ObservableProperty] public partial decimal PositionRabattProzent { get; set; }
+
+    // ---- Verfügbarkeitspanel (Phase 8, E8) — nur bei Kulturpflanzen und nur wenn ein Verfügbarkeitsservice übergeben wurde ----
+    [ObservableProperty] public partial VerfuegbarkeitDto? PositionVerfuegbarkeit { get; set; }
+
+    public Microsoft.UI.Xaml.Visibility ZeigtVerfuegbarkeitPanel =>
+        _verfuegbarkeitService is not null && PositionArtikelId is { } id && ArtikelLookups.FirstOrDefault(a => a.Id == id)?.IstKulturpflanze == true
+            ? Microsoft.UI.Xaml.Visibility.Visible
+            : Microsoft.UI.Xaml.Visibility.Collapsed;
+
+    /// <summary>Zusammengefasste Zeile "zusätzlich in Anzucht: 500 Teenagerpflanze, 3.000 Jungpflanze" — die
+    /// vom Nutzer explizit gewünschte Information beim Auftragseingang.</summary>
+    public string PositionAnzuchtText => PositionVerfuegbarkeit is { NichtVerkaufsfaehig.Count: > 0 } v
+        ? "Zusätzlich in Anzucht: " + string.Join(", ", v.NichtVerkaufsfaehig.Select(m => $"{m.Menge:0.###} {m.StufeBezeichnung}"))
+        : string.Empty;
+
+    partial void OnPositionArtikelIdChanged(int? value) => _ = VerfuegbarkeitLadenAsync();
+    partial void OnPositionMengeChanged(decimal value) => _ = VerfuegbarkeitLadenAsync();
+
+    private async Task VerfuegbarkeitLadenAsync()
+    {
+        OnPropertyChanged(nameof(ZeigtVerfuegbarkeitPanel));
+        if (_verfuegbarkeitService is null || PositionArtikelId is not { } artikelId
+            || ArtikelLookups.FirstOrDefault(a => a.Id == artikelId)?.IstKulturpflanze != true)
+        {
+            PositionVerfuegbarkeit = null;
+            return;
+        }
+
+        var menge = PositionMenge <= 0 ? 1 : PositionMenge;
+        PositionVerfuegbarkeit = await _verfuegbarkeitService.LadeAsync(artikelId, menge);
+        OnPropertyChanged(nameof(PositionAnzuchtText));
+    }
 
     [ObservableProperty] public partial decimal SummeNetto { get; set; }
     [ObservableProperty] public partial decimal SummeMwSt { get; set; }

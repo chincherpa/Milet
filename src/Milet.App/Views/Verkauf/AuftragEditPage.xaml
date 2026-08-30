@@ -83,6 +83,34 @@
             </Grid>
             <Button Content="Position entfernen" Command="{x:Bind ViewModel.PositionEntfernenCommand}" />
 
+            <Border Padding="12" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                    Visibility="{x:Bind ViewModel.ZeigtVerfuegbarkeitPanel, Mode=OneWay}">
+                <StackPanel Spacing="6">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Ellipse Width="14" Height="14" Fill="{x:Bind ViewModel.PositionVerfuegbarkeit.Ampel, Mode=OneWay, Converter={StaticResource AmpelToColorConverter}}" />
+                        <TextBlock Text="Verkaufsfähig frei:" FontWeight="SemiBold" />
+                        <TextBlock Text="{x:Bind ViewModel.PositionVerfuegbarkeit.Frei, Mode=OneWay}" />
+                        <TextBlock Text="Stück" Opacity="0.7" />
+                    </StackPanel>
+                    <TextBlock Text="{x:Bind ViewModel.PositionAnzuchtText, Mode=OneWay}" Opacity="0.8" FontSize="12" TextWrapping="Wrap" />
+                    <ItemsControl ItemsSource="{x:Bind ViewModel.PositionVerfuegbarkeit.Fundstellen, Mode=OneWay}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock FontSize="12" Opacity="0.8">
+                                    <Run Text="{Binding FeldBezeichnung}" />
+                                    <Run Text=" / " />
+                                    <Run Text="{Binding SektionBezeichnung}" />
+                                    <Run Text=" — " />
+                                    <Run Text="{Binding StufeBezeichnung}" />
+                                    <Run Text=": " />
+                                    <Run Text="{Binding Menge}" />
+                                </TextBlock>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <Grid ColumnSpacing="16">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" /><ColumnDefinition Width="*" />
