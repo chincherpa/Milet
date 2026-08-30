@@ -19,7 +19,11 @@ public sealed record ArtikelBestandDto(
     int LagerortId,
     string LagerortBezeichnung,
     decimal Menge,
-    decimal? Mindestbestand);
+    decimal? Mindestbestand,
+    int? SektionId = null,
+    string? SektionBezeichnung = null,
+    int? KulturstufeId = null,
+    string? KulturstufeBezeichnung = null);
 
 public sealed record BestandskorrekturDto
 {

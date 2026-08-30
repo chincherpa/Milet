@@ -69,6 +69,26 @@ public sealed class ArtikelService(
         var artikel = await db.Artikel.FirstOrDefaultAsync(a => a.Id == dto.Id, ct)
             ?? throw new NotFoundException(nameof(Artikel), dto.Id);
 
+        // Ein Artikel kann nicht "halb" auf Kultur umgestellt werden (siehe Datenmodell → Zentrale
+        // Dimensionsregeln, Regel 1/2 in KulturRegeln): würde man IstKulturpflanze umschalten, während noch
+        // Bestand mit der jeweils falschen Dimensionierung existiert, verletzt jede folgende Bestandsbuchung
+        // sofort die Regel in BestandService.BucheBewegungAsync. Deshalb hier vorab blockieren, mit einer
+        // Meldung, die den Ausweg nennt (Kulturzugangsbuchung), statt den kryptischen Fehler aus BestandService
+        // erst bei der nächsten Buchung auflaufen zu lassen.
+        if (dto.IstKulturpflanze != artikel.IstKulturpflanze)
+        {
+            var mengeMitFalscherDimension = dto.IstKulturpflanze
+                ? await db.ArtikelBestaende.Where(b => b.ArtikelId == artikel.Id && b.KulturstufeId == null).SumAsync(b => b.Menge, ct)
+                : await db.ArtikelBestaende.Where(b => b.ArtikelId == artikel.Id && b.KulturstufeId != null).SumAsync(b => b.Menge, ct);
+
+            if (mengeMitFalscherDimension != 0)
+            {
+                throw new InvalidOperationException(dto.IstKulturpflanze
+                    ? $"Artikel hat {mengeMitFalscherDimension} Stück Bestand ohne Kulturstufe; bitte zuerst über eine Kulturzugangsbuchung auf eine Stufe umbuchen."
+                    : $"Artikel hat {mengeMitFalscherDimension} Stück Bestand mit Kulturstufe; bitte zuerst per Kulturbuchung auf Handelsware ohne Stufe umstellen.");
+            }
+        }
+
         db.Entry(artikel).Property(a => a.RowVersion).OriginalValue = dto.RowVersion;
 
         dto.ApplyTo(artikel);
