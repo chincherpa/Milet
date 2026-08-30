@@ -56,6 +56,9 @@ public sealed class MiletDbContext(DbContextOptions<MiletDbContext> options) : D
     public DbSet<Rolle> Rollen => Set<Rolle>();
     public DbSet<Benutzer> Benutzer => Set<Benutzer>();
     public DbSet<AuditLog> AuditLog => Set<AuditLog>();
+    public DbSet<Milet.Domain.Entities.Gaertnerei.Kulturstufe> Kulturstufen => Set<Milet.Domain.Entities.Gaertnerei.Kulturstufe>();
+    public DbSet<Milet.Domain.Entities.Gaertnerei.Gaertnereiplan> Gaertnereiplaene => Set<Milet.Domain.Entities.Gaertnerei.Gaertnereiplan>();
+    public DbSet<Milet.Domain.Entities.Gaertnerei.Sektion> Sektionen => Set<Milet.Domain.Entities.Gaertnerei.Sektion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

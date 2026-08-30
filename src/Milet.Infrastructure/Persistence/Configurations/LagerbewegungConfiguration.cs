@@ -14,9 +14,11 @@ public sealed class LagerbewegungConfiguration : IEntityTypeConfiguration<Lagerb
 
         b.HasOne(x => x.Artikel).WithMany().HasForeignKey(x => x.ArtikelId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne(x => x.Lagerort).WithMany().HasForeignKey(x => x.LagerortId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne(x => x.Sektion).WithMany().HasForeignKey(x => x.SektionId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne(x => x.Kulturstufe).WithMany().HasForeignKey(x => x.KulturstufeId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne(x => x.BelegPosition).WithMany().HasForeignKey(x => x.BelegPositionId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne(x => x.Seriennummer).WithMany().HasForeignKey(x => x.SeriennummerId).OnDelete(DeleteBehavior.Restrict);
 
-        b.HasIndex(x => new { x.ArtikelId, x.LagerortId });
+        b.HasIndex(x => new { x.ArtikelId, x.LagerortId, x.SektionId, x.KulturstufeId });
     }
 }
