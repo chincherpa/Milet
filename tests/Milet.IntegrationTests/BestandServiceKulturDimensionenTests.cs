@@ -163,6 +163,29 @@ public sealed class BestandServiceKulturDimensionenTests : IAsyncLifetime
         }
     }
 
+    [Fact]
+    public async Task SucheAsync_KulturartikelMitMehrerenDimensionen_LiefertEineZeileJeKombination()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await BuchenAsync(_kulturArtikelId, _feldId, 200m, _sektionAId, _stufeJpId, ct);
+        await BuchenAsync(_kulturArtikelId, _feldId, 30m, _sektionBId, _stufeTpId, ct);
+        await BuchenAsync(_handelswareArtikelId, _hauptlagerId, 15m, null, null, ct);
+
+        var service = new BestandService(new TestDbContextFactory(_options), AllesErlaubtBerechtigungsService.Instanz);
+        var ergebnis = await service.SucheAsync(null, ct);
+
+        var kulturZeilen = ergebnis.Where(b => b.ArtikelId == _kulturArtikelId && b.LagerortId == _feldId).ToList();
+        Assert.Equal(2, kulturZeilen.Count);
+        Assert.Contains(kulturZeilen, z => z.SektionId == _sektionAId && z.KulturstufeId == _stufeJpId && z.Menge == 200m && z.IstKulturpflanze);
+        Assert.Contains(kulturZeilen, z => z.SektionId == _sektionBId && z.KulturstufeId == _stufeTpId && z.Menge == 30m);
+
+        var handelswareZeile = Assert.Single(ergebnis, b => b.ArtikelId == _handelswareArtikelId && b.LagerortId == _hauptlagerId);
+        Assert.Null(handelswareZeile.SektionId);
+        Assert.Null(handelswareZeile.KulturstufeId);
+        Assert.False(handelswareZeile.IstKulturpflanze);
+        Assert.Equal(15m, handelswareZeile.Menge);
+    }
+
     private async Task BuchenAsync(int artikelId, int lagerortId, decimal delta, int? sektionId, int? kulturstufeId, CancellationToken ct)
     {
         await using var db = new MiletDbContext(_options);
@@ -186,5 +209,11 @@ public sealed class BestandServiceKulturDimensionenTests : IAsyncLifetime
         {
             return false;
         }
+    }
+
+    private sealed class TestDbContextFactory(DbContextOptions<MiletDbContext> options) : IDbContextFactory<MiletDbContext>
+    {
+        public MiletDbContext CreateDbContext() => new(options);
+        public Task<MiletDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) => Task.FromResult(CreateDbContext());
     }
 }

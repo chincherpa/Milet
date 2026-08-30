@@ -13,19 +13,32 @@
                   SelectedValue="{x:Bind AusgewaehlterLagerortId, Mode=TwoWay}"
                   SelectedValuePath="Id" DisplayMemberPath="Bezeichnung" />
         <TextBlock Text="Zu liefernde Mengen (0 = Position wird nicht mitgeliefert):" />
-        <ListView MaxHeight="300" ItemsSource="{x:Bind Zeilen}">
+        <ListView MaxHeight="360" ItemsSource="{x:Bind Zeilen}">
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="local:TeillieferungZeile">
-                    <Grid ColumnSpacing="12" Padding="4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" /><ColumnDefinition Width="100" />
-                            <ColumnDefinition Width="120" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{x:Bind Bezeichnung}" VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="1" Text="{x:Bind OffeneMenge}" VerticalAlignment="Center" />
-                        <NumberBox Grid.Column="2" Minimum="0" Maximum="{x:Bind OffeneMenge, Converter={StaticResource DecimalToDoubleConverter}}" SpinButtonPlacementMode="Compact"
-                                   Value="{x:Bind GewaehlteMenge, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" />
-                    </Grid>
+                    <StackPanel Padding="4" Spacing="4">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" /><ColumnDefinition Width="100" />
+                                <ColumnDefinition Width="120" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Bezeichnung}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="{x:Bind OffeneMenge}" VerticalAlignment="Center" />
+                            <NumberBox Grid.Column="2" Minimum="0" Maximum="{x:Bind OffeneMenge, Converter={StaticResource DecimalToDoubleConverter}}" SpinButtonPlacementMode="Compact"
+                                       Value="{x:Bind GewaehlteMenge, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" />
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Spacing="8" Visibility="{x:Bind IstKulturartikel, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <ComboBox Width="260" PlaceholderText="Sektion/Kulturstufe wählen..." ItemsSource="{x:Bind FundstellenOptionen}" SelectedItem="{x:Bind AusgewaehlteFundstelle, Mode=TwoWay}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding SektionBezeichnung}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock VerticalAlignment="Center" Opacity="0.7" FontSize="12" Text="{x:Bind AusgewaehlteFundstelle.StufeBezeichnung, Mode=OneWay}" />
+                            <TextBlock VerticalAlignment="Center" Opacity="0.7" FontSize="12" Text="{x:Bind AusgewaehlteFundstelle.Menge, Mode=OneWay}" />
+                        </StackPanel>
+                    </StackPanel>
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>

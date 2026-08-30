@@ -165,7 +165,7 @@ public sealed class BelegUeberleitungService(
 
         return quellBeleg.Positionen
             .Where(p => p.PositionsTyp == PositionsTyp.Artikel)
-            .Select(p => new OffenePositionDto(p.Id, p.Bezeichnung, p.EinheitKuerzel, BelegPosition.OffeneMenge(p, folgepositionen)))
+            .Select(p => new OffenePositionDto(p.Id, p.Bezeichnung, p.EinheitKuerzel, BelegPosition.OffeneMenge(p, folgepositionen), p.ArtikelId))
             .Where(p => p.OffeneMenge > 0)
             .ToList();
     }

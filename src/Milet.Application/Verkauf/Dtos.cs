@@ -85,5 +85,6 @@ public sealed record VerkaufLookups(
 
 public sealed record PreisErgebnisDto(decimal Einzelpreis, decimal RabattProzent);
 
-/// <summary>Offene (noch nicht überführte) Menge einer Quellposition — Grundlage für den Teillieferungs-Dialog.</summary>
-public sealed record OffenePositionDto(int PositionId, string Bezeichnung, string? EinheitKuerzel, decimal OffeneMenge);
+/// <summary>Offene (noch nicht überführte) Menge einer Quellposition — Grundlage für den Teillieferungs-Dialog.
+/// ArtikelId (Phase 8) bestimmt, ob eine Sektions-/Kulturstufenauswahl nötig ist (E9).</summary>
+public sealed record OffenePositionDto(int PositionId, string Bezeichnung, string? EinheitKuerzel, decimal OffeneMenge, int? ArtikelId = null);

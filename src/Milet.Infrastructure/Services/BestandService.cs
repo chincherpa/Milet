@@ -29,23 +29,38 @@ public sealed class BestandService(
 
         var artikel = await artikelQuery.ToListAsync(ct);
         var lagerorte = await db.Lagerorte.AsNoTracking().Where(l => l.Aktiv).ToListAsync(ct);
-        var bestaende = await db.ArtikelBestaende.AsNoTracking().ToListAsync(ct);
-        var bestaendeLookup = bestaende.ToDictionary(b => (b.ArtikelId, b.LagerortId), b => b.Menge);
+        var bestaende = await db.ArtikelBestaende.AsNoTracking()
+            .Include(b => b.Sektion).Include(b => b.Kulturstufe)
+            .ToListAsync(ct);
+        var bestaendeJeArtikelUndLagerort = bestaende.ToLookup(b => (b.ArtikelId, b.LagerortId));
 
         // Left-Join Artikel x Lagerorte gegen ArtikelBestaende (in-memory kombiniert, da nur kleine/mittlere Zeilenzahlen
         // erwartet werden): jede Kombination lagerfähiger Artikel x aktiver Lagerort erzeugt eine Zeile, auch ohne
         // existierenden ArtikelBestand-Datensatz (Menge = 0) — sonst ist der allererste Erstbestand über die UI nicht anlegbar.
+        // Ein Feld kann je Artikel MEHRERE Bestandszeilen haben (Sektion × Kulturstufe, Phase 8) — dann entsteht
+        // eine Zeile je tatsächlich existierender Kombination statt einer aggregierten Summe.
         var ergebnis = new List<ArtikelBestandDto>();
         foreach (var a in artikel)
         {
             foreach (var l in lagerorte)
             {
-                var menge = bestaendeLookup.GetValueOrDefault((a.Id, l.Id), 0m);
-                ergebnis.Add(new ArtikelBestandDto(a.Id, a.Artikelnummer, a.Bezeichnung, a.HatSeriennummern, l.Id, l.Bezeichnung, menge, a.Mindestbestand));
+                var zeilen = bestaendeJeArtikelUndLagerort[(a.Id, l.Id)].ToList();
+                if (zeilen.Count == 0)
+                {
+                    ergebnis.Add(new ArtikelBestandDto(a.Id, a.Artikelnummer, a.Bezeichnung, a.HatSeriennummern, l.Id, l.Bezeichnung, 0m, a.Mindestbestand, IstKulturpflanze: a.IstKulturpflanze));
+                    continue;
+                }
+
+                foreach (var b in zeilen)
+                {
+                    ergebnis.Add(new ArtikelBestandDto(
+                        a.Id, a.Artikelnummer, a.Bezeichnung, a.HatSeriennummern, l.Id, l.Bezeichnung, b.Menge, a.Mindestbestand,
+                        b.SektionId, b.Sektion?.Bezeichnung, b.KulturstufeId, b.Kulturstufe?.Bezeichnung, a.IstKulturpflanze));
+                }
             }
         }
 
-        return ergebnis.OrderBy(b => b.Artikelnummer).ThenBy(b => b.LagerortBezeichnung).ToList();
+        return ergebnis.OrderBy(b => b.Artikelnummer).ThenBy(b => b.LagerortBezeichnung).ThenBy(b => b.SektionBezeichnung).ToList();
     }
 
     public async Task KorrigiereAsync(BestandskorrekturDto dto, CancellationToken ct = default)
@@ -54,7 +69,7 @@ public sealed class BestandService(
         await Validator.ValidateAndThrowAsync(dto, ct);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
-        await BucheBewegungAsync(db, dto.ArtikelId, dto.LagerortId, dto.MengeDelta, LagerbewegungTyp.Korrektur, belegPositionId: null, ct);
+        await BucheBewegungAsync(db, dto.ArtikelId, dto.LagerortId, dto.MengeDelta, LagerbewegungTyp.Korrektur, belegPositionId: null, ct, dto.SektionId, dto.KulturstufeId);
         await transaction.CommitAsync(ct);
     }
 
