@@ -44,6 +44,19 @@ public sealed partial class PlanElementViewModel : ObservableObject
     [ObservableProperty]
     public partial double Zoom { get; set; } = 20;
 
+    // ---- Nur für die Pflanzenübersicht (Task 16) — vom Grundriss-Editor unbenutzt (Default: kein Highlight) ----
+
+    /// <summary>Farbe der Kulturstufe, in der die gewählte Pflanze in dieser Sektion steht — null = keine Fundstelle.</summary>
+    [ObservableProperty]
+    public partial string? HighlightFarbeHex { get; set; }
+
+    [ObservableProperty]
+    public partial decimal? HighlightMenge { get; set; }
+
+    /// <summary>True, sobald eine Pflanze gewählt ist und diese Sektion KEINE Fundstelle davon ist (Deckkraft ~0,25).</summary>
+    [ObservableProperty]
+    public partial bool IstAusgegraut { get; set; }
+
     public double PixelX => (double)(PosXMeter + FeldOffsetXMeter) * Zoom;
     public double PixelY => (double)(PosYMeter + FeldOffsetYMeter) * Zoom;
     public double PixelBreite => (double)BreiteMeter * Zoom;
