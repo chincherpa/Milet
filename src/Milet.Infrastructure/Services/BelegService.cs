@@ -201,6 +201,8 @@ public sealed class BelegService(
                 bestehend.MwStSatzWert = dtoPos.MwStSatzWert;
                 bestehend.SteuerSchluessel = dtoPos.SteuerSchluessel;
                 bestehend.LagerortId = dtoPos.LagerortId;
+                bestehend.SektionId = dtoPos.SektionId;
+                bestehend.KulturstufeId = dtoPos.KulturstufeId;
                 bestehend.GesamtNetto = gesamtNetto;
                 bestehend.UrsprungsPositionId = dtoPos.UrsprungsPositionId;
             }
@@ -220,6 +222,8 @@ public sealed class BelegService(
                     MwStSatzWert = dtoPos.MwStSatzWert,
                     SteuerSchluessel = dtoPos.SteuerSchluessel,
                     LagerortId = dtoPos.LagerortId,
+                    SektionId = dtoPos.SektionId,
+                    KulturstufeId = dtoPos.KulturstufeId,
                     GesamtNetto = gesamtNetto,
                     UrsprungsPositionId = dtoPos.UrsprungsPositionId,
                 });

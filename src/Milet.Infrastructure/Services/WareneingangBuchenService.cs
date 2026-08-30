@@ -52,7 +52,9 @@ public sealed class WareneingangBuchenService(
             // Positives Delta — BestandService.BucheBewegungAsync ist unverändert wiederverwendbar (siehe
             // Phase-3-Kommentar dort): die atomare UPDATE-Bedingung "Menge + delta >= 0" ist bei einem Zugang
             // immer erfüllt, und legt bei erstem Bestand am Lagerort die ArtikelBestand-Zeile automatisch an.
-            await BestandService.BucheBewegungAsync(db, artikelId, lagerortId, position.Menge, LagerbewegungTyp.Wareneingang, position.Id, ct);
+            await BestandService.BucheBewegungAsync(
+                db, artikelId, lagerortId, position.Menge, LagerbewegungTyp.Wareneingang, position.Id, ct,
+                position.SektionId, position.KulturstufeId);
 
             if (artikel.HatSeriennummern)
             {

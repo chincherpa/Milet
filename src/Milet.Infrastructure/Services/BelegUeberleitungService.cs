@@ -174,7 +174,8 @@ public sealed class BelegUeberleitungService(
     /// Bewusst als eigene Methode statt Parametrisierung von <see cref="UeberleitenAsync"/> — beide Pfade sind klar genug getrennt (voll vs. Auswahl),
     /// eine gemeinsame Abstraktion würde hier mehr Indirektion als Nutzen bringen.</summary>
     public async Task<BelegDto> UeberleitenMitAuswahlAsync(
-        int quellBelegId, BelegTyp zielTyp, IReadOnlyDictionary<int, decimal> mengenJePosition, int? lagerortId, CancellationToken ct = default)
+        int quellBelegId, BelegTyp zielTyp, IReadOnlyDictionary<int, decimal> mengenJePosition, int? lagerortId,
+        IReadOnlyDictionary<int, BelegPositionDimensionenDto>? dimensionenJePosition = null, CancellationToken ct = default)
     {
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
@@ -240,6 +241,11 @@ public sealed class BelegUeberleitungService(
 
             if (gewaehlteMenge < offeneMenge) quellVollstaendigUebernommen = false;
 
+            var istLagerZielTyp = zielTyp is BelegTyp.Lieferschein or BelegTyp.Wareneingang;
+            var dimensionen = istLagerZielTyp && dimensionenJePosition is not null && dimensionenJePosition.TryGetValue(quellPosition.Id, out var gefunden)
+                ? gefunden
+                : null;
+
             zielBeleg.Positionen.Add(new BelegPosition
             {
                 PositionsNr = positionsNr++,
@@ -255,7 +261,9 @@ public sealed class BelegUeberleitungService(
                 SteuerSchluessel = quellPosition.SteuerSchluessel,
                 GesamtNetto = SteuerRechner.BerechnePosition(gewaehlteMenge, quellPosition.Einzelpreis, quellPosition.RabattProzent),
                 UrsprungsPositionId = quellPosition.Id,
-                LagerortId = zielTyp is BelegTyp.Lieferschein or BelegTyp.Wareneingang ? lagerortId : null,
+                LagerortId = istLagerZielTyp ? lagerortId : null,
+                SektionId = dimensionen?.SektionId,
+                KulturstufeId = dimensionen?.KulturstufeId,
             });
         }
 

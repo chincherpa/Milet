@@ -18,9 +18,17 @@ public sealed record BelegPositionDto
     public decimal MwStSatzWert { get; init; }
     public int? SteuerSchluessel { get; init; }
     public int? LagerortId { get; init; }
+
+    /// <summary>Nur Lieferschein/Wareneingang — bestimmt, gegen welche Bestandszeile gebucht wird (Phase 8, E9).</summary>
+    public int? SektionId { get; init; }
+    public int? KulturstufeId { get; init; }
+
     public decimal GesamtNetto { get; init; }
     public int? UrsprungsPositionId { get; init; }
 }
+
+/// <summary>Sektion/Kulturstufe für eine einzelne Zielposition bei UeberleitenMitAuswahlAsync (Phase 8, E9).</summary>
+public sealed record BelegPositionDimensionenDto(int? SektionId, int? KulturstufeId);
 
 public sealed record BelegDto
 {

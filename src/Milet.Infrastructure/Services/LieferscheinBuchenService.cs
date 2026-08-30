@@ -40,6 +40,17 @@ public sealed class LieferscheinBuchenService(
             .Where(a => artikelIds.Contains(a.Id))
             .ToDictionaryAsync(a => a.Id, ct);
 
+        // Kulturstufen aller betroffenen Positionen vorab laden — Grundlage für die einzige harte
+        // Verkaufsregel der Phase 8 (E8): geliefert werden darf nur aus einer verkaufsfähigen Stufe.
+        var kulturstufeIds = lieferschein.Positionen
+            .Where(p => p.PositionsTyp == PositionsTyp.Artikel && p.KulturstufeId != null)
+            .Select(p => p.KulturstufeId!.Value)
+            .Distinct()
+            .ToList();
+        var kulturstufeJeId = await db.Kulturstufen.AsNoTracking()
+            .Where(k => kulturstufeIds.Contains(k.Id))
+            .ToDictionaryAsync(k => k.Id, ct);
+
         foreach (var position in lieferschein.Positionen.Where(p => p.PositionsTyp == PositionsTyp.Artikel))
         {
             if (position.ArtikelId is not { } artikelId || position.LagerortId is not { } lagerortId)
@@ -47,9 +58,22 @@ public sealed class LieferscheinBuchenService(
 
             var artikel = artikelJeId[artikelId];
 
+            // Klare Meldung vorab statt der generischen Regelverletzung aus BestandService.BucheBewegungAsync.
+            if (artikel.IstKulturpflanze && position.KulturstufeId is null)
+                throw new InvalidOperationException($"Position {position.PositionsNr}: Kulturstufe fehlt.");
+
+            if (position.KulturstufeId is { } kulturstufeId)
+            {
+                var stufe = kulturstufeJeId[kulturstufeId];
+                if (!stufe.IstVerkaufsfaehig)
+                    throw new InvalidOperationException($"Position {position.PositionsNr}: Stufe '{stufe.Bezeichnung}' ist nicht verkaufsfähig.");
+            }
+
             // Bestand VOR der Seriennummern-Prüfung abbuchen: eine einzige atomare Buchung entscheidet über Verfügbarkeit
             // (kein separater Read-Modify-Write-Check davor, siehe BestandService.BucheBewegungAsync).
-            await BestandService.BucheBewegungAsync(db, artikelId, lagerortId, -position.Menge, LagerbewegungTyp.Lieferung, position.Id, ct);
+            await BestandService.BucheBewegungAsync(
+                db, artikelId, lagerortId, -position.Menge, LagerbewegungTyp.Lieferung, position.Id, ct,
+                position.SektionId, position.KulturstufeId);
 
             if (artikel.HatSeriennummern)
             {
