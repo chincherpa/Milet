@@ -19,6 +19,13 @@
                     <NavigationViewItem Content="Einstellungen" Tag="einstellungen" Icon="Setting" />
                 </NavigationViewItem.MenuItems>
             </NavigationViewItem>
+            <NavigationViewItem Content="Gärtnerei" Tag="gaertnerei" Icon="Globe">
+                <NavigationViewItem.MenuItems>
+                    <NavigationViewItem Content="Pflanzenübersicht" Tag="pflanzenuebersicht" Icon="Bookmarks" />
+                    <NavigationViewItem Content="Grundriss" Tag="grundriss" Icon="Map" />
+                    <NavigationViewItem Content="Kulturbuchungen" Tag="kulturbuchungen" Icon="Edit" />
+                </NavigationViewItem.MenuItems>
+            </NavigationViewItem>
             <NavigationViewItem Content="Verkauf" Tag="verkauf" Icon="Shop">
                 <NavigationViewItem.MenuItems>
                     <NavigationViewItem Content="Angebote" Tag="angebote" Icon="Bookmarks" />

@@ -5,6 +5,7 @@ using Milet.App.ViewModels;
 using Milet.App.ViewModels.Admin;
 using Milet.App.ViewModels.Einkauf;
 using Milet.App.ViewModels.Finanzen;
+using Milet.App.ViewModels.Gaertnerei;
 using Milet.App.ViewModels.Lager;
 using Milet.App.ViewModels.Reporting;
 using Milet.App.ViewModels.Stammdaten;
@@ -13,6 +14,7 @@ using Milet.App.Views;
 using Milet.App.Views.Admin;
 using Milet.App.Views.Einkauf;
 using Milet.App.Views.Finanzen;
+using Milet.App.Views.Gaertnerei;
 using Milet.App.Views.Lager;
 using Milet.App.Views.Reporting;
 using Milet.App.Views.Stammdaten;
@@ -40,6 +42,10 @@ public sealed partial class ShellPage : Page
         _navigation.Register<ArtikelListViewModel, ArtikelListPage>();
         _navigation.Register<ArtikelEditViewModel, ArtikelEditPage>();
         _navigation.Register<KleinstammViewModel, KleinstammPage>();
+
+        _navigation.Register<PflanzenUebersichtViewModel, PflanzenUebersichtPage>();
+        _navigation.Register<GrundrissViewModel, GrundrissPage>();
+        _navigation.Register<KulturbuchungViewModel, KulturbuchungPage>();
 
         _navigation.Register<AngebotListViewModel, AngebotListPage>();
         _navigation.Register<AuftragListViewModel, AuftragListPage>();
@@ -82,6 +88,7 @@ public sealed partial class ShellPage : Page
         var session = App.Host.Services.GetRequiredService<ICurrentSessionService>();
 
         SetzeMenuePunktSichtbarkeit("stammdaten", RechtCodes.Stammdaten, session);
+        SetzeMenuePunktSichtbarkeit("gaertnerei", RechtCodes.Gaertnerei, session);
         SetzeMenuePunktSichtbarkeit("verkauf", RechtCodes.Verkauf, session);
         SetzeMenuePunktSichtbarkeit("einkauf", RechtCodes.Einkauf, session);
         SetzeMenuePunktSichtbarkeit("lager", RechtCodes.Lager, session);
@@ -124,6 +131,15 @@ public sealed partial class ShellPage : Page
                 break;
             case "einstellungen":
                 _navigation.Navigate<KleinstammViewModel>();
+                break;
+            case "pflanzenuebersicht":
+                _navigation.Navigate<PflanzenUebersichtViewModel>();
+                break;
+            case "grundriss":
+                _navigation.Navigate<GrundrissViewModel>();
+                break;
+            case "kulturbuchungen":
+                _navigation.Navigate<KulturbuchungViewModel>();
                 break;
             case "angebote":
                 _navigation.Navigate<AngebotListViewModel>();
