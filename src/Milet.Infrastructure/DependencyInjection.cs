@@ -70,6 +70,7 @@ public static class DependencyInjection
         services.AddTransient<IInventurService, InventurService>();
         services.AddTransient<IKulturstufenService, KulturstufenService>();
         services.AddTransient<IGaertnereiplanService, GaertnereiplanService>();
+        services.AddTransient<IKulturBuchungService, KulturBuchungService>();
 
         services.AddTransient<IEinkaufLookupService, EinkaufLookupService>();
         services.AddTransient<IBestellVorschlagService, BestellVorschlagService>();
