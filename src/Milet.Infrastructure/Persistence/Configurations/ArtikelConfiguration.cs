@@ -14,6 +14,7 @@ public sealed class ArtikelConfiguration : IEntityTypeConfiguration<Artikel>
         b.HasIndex(a => a.Artikelnummer).IsUnique();
         b.Property(a => a.Bezeichnung).HasMaxLength(200).IsRequired();
         b.Property(a => a.Ean).HasMaxLength(20);
+        b.Property(a => a.BotanischerName).HasMaxLength(150);
 
         b.Property(a => a.Einkaufspreis).HasPrecision(18, 4);
         b.Property(a => a.Listenpreis).HasPrecision(18, 2);

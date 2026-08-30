@@ -1,6 +1,6 @@
 # Milet — Projektstatus
 
-Stand: 2026-08-27. Architekturplan: `PLAN.md`. Phase-2-Implementierungsplan: `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md`. Phase-3-Implementierungsplan (umgesetzt): `docs/superpowers/plans/2026-08-25-phase3-lager-lieferschein.md`. Ein früherer, nicht umgesetzter Planungsentwurf liegt zusätzlich unter `docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md` — dessen technische Befunde (READ-COMMITTED-Race, Nummernkreis-Seed) sind unter „Bekannte Risiken" übernommen. Phase-4-Implementierungsplan (umgesetzt, manueller UI-Smoke-Test noch ausstehend): `docs/superpowers/plans/2026-08-26-phase4-einkauf.md`. Phase-5-Implementierungsplan (umgesetzt, Backend-Build/-Tests real grün, WinUI komplett unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-27-phase5-finanzen-mail.md`. Phase-6-Implementierungsplan (umgesetzt, Backend-Build/-Tests/Integrationstests/Migration real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-27-phase6-datev-reporting.md`. Phase 7 (Admin+Härtung, umgesetzt nach `PLAN.md` ohne separaten Implementierungsplan, Backend-Build/-Tests/Integrationstests/Migration ebenfalls real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert — kein Windows in der Umsetzungssession): Details im Phase-7-Abschnitt unten, Deployment-Story unter `docs/deployment.md`.
+Stand: 2026-08-30. Architekturplan: `PLAN.md`. Phase-2-Implementierungsplan: `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md`. Phase-3-Implementierungsplan (umgesetzt): `docs/superpowers/plans/2026-08-25-phase3-lager-lieferschein.md`. Ein früherer, nicht umgesetzter Planungsentwurf liegt zusätzlich unter `docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md` — dessen technische Befunde (READ-COMMITTED-Race, Nummernkreis-Seed) sind unter „Bekannte Risiken" übernommen. Phase-4-Implementierungsplan (umgesetzt, manueller UI-Smoke-Test noch ausstehend): `docs/superpowers/plans/2026-08-26-phase4-einkauf.md`. Phase-5-Implementierungsplan (umgesetzt, Backend-Build/-Tests real grün, WinUI komplett unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-27-phase5-finanzen-mail.md`. Phase-6-Implementierungsplan (umgesetzt, Backend-Build/-Tests/Integrationstests/Migration real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-27-phase6-datev-reporting.md`. Phase 7 (Admin+Härtung, umgesetzt nach `PLAN.md` ohne separaten Implementierungsplan, Backend-Build/-Tests/Integrationstests/Migration ebenfalls real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert — kein Windows in der Umsetzungssession): Details im Phase-7-Abschnitt unten, Deployment-Story unter `docs/deployment.md`. Phase-8-Implementierungsplan (Gärtnerei/Kulturführung, umgesetzt, Backend-Build/-Tests/Integrationstests/Migration real gegen containerisierten SQL Server verifiziert — inkl. Migration gegen eine Datenbank mit vor-Phase-8-Bestandsdaten —, WinUI unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-30-phase8-gaertnerei-kultur.md`.
 
 ## Erledigt
 
@@ -316,6 +316,136 @@ werden kann — Migration + Snapshot von Hand zu schreiben wäre hier das größ
 4. Manueller Smoke-Test des DATEV-Exports (Abbruch im Speichern-Dialog darf jetzt **nichts** markieren)
    und einer Zahlung mit Skonto (Bankzeile = Zahlbetrag, zusätzliche Skontozeile).
 
+### Phase 8 — Gärtnerei/Kulturführung ⚠️ (Backend real gegen SQL Server verifiziert inkl. Migration gegen Alt-Daten; WinUI unverifiziert) (2026-08-30, Branch `claude/phase8-gaertnerei-kultur-plan-rh8jr3`)
+Umsetzung des Detailplans `docs/superpowers/plans/2026-08-30-phase8-gaertnerei-kultur.md` (22 Tasks): das
+System trackt Pflanzen jetzt zusätzlich über Kulturstufen (Jungpflanze → Teenagerpflanze →
+Verkaufspflanze) und einen physischen Gärtnereiplan (Feld → Sektion), statt Kulturpflanzen wie beliebige
+Handelsware nur als Gesamtmenge je Lagerort zu führen. Wie Phase 6/7 lief diese Session headless auf
+**Linux ohne Windows-Toolchain** (`dotnet-sdk-10.0` per `apt` → 10.0.111, Builds/Tests aus Scratch-Kopie
+mit lokal abgesenktem `global.json`, echtes Repo-`global.json` unverändert bei `10.0.400`) — **mit echt
+nutzbarem Docker** (`TESTCONTAINERS_RYUK_DISABLED=true`, `mcr.microsoft.com/mssql/server:2022-latest`
+zieht über den Sessions-Proxy anstandslos).
+
+**Domain:** neue Entities `Kulturstufe` (konfigurierbare Stammdaten statt Enum — Reihenfolge, Farbe,
+`IstVerkaufsfaehig`, s. Plan-Entscheidung E5), `Gaertnereiplan`/`Sektion` (achsenparallele Rechtecke in
+Metern auf einem `Lagerort`, E11). `Lagerort` und `Artikel` um Geometrie- bzw. Kulturpflanzen-Felder
+erweitert (`IstFeld`/`BreiteMeter`/`HoeheMeter`, `IstKulturpflanze`/`BotanischerName`). `ArtikelBestand`,
+`Lagerbewegung`, `BelegPosition` und `InventurPosition` um die beiden neuen nullable Dimensionen
+`SektionId`/`KulturstufeId` erweitert — nullable, weil normale Handelsware (E1: Kulturstufe ist eine
+Bestandsdimension, kein eigener Artikel) weiterhin ohne sie auskommt. Zwei neue Bewegungstypen
+`Kulturzugang`/`Ausfall` (E7: Ausfall ist eine eigene Bewegung, keine negative Korrektur). Neuer reiner
+Domain-Service `KulturRegeln` (`PruefeDimensionen`, `NaechsteStufe`, `PruefeStufenwechsel`,
+`LiegtInnerhalb`, `Ueberlappt`) mit 17 neuen Unit-Tests (TDD, vor der Infrastruktur geschrieben).
+
+**Application:** neues Modul `Gaertnerei` (DTOs, `IKulturstufenService`/`IGaertnereiplanService`/
+`IKulturBuchungService`/`IKulturBestandService`/`IVerfuegbarkeitService`, Validatoren — 17 neue
+Validator-Tests). `RechtCodes` um `Gaertnerei` als achten Top-Level-Rechtecode erweitert (E12).
+`ArtikelDto`/`ArtikelBestandDto`/`BestandskorrekturDto`/`BelegPositionDto`/`OffenePositionDto`/
+`ArtikelVerkaufLookupDto` um die neuen Felder ergänzt, `IVerkaufServices.UeberleitenMitAuswahlAsync`
+um einen `dimensionenJePosition`-Parameter erweitert.
+
+**Infrastructure — kritischste Änderung der Phase, `BestandService.BucheBewegungAsync`:** die bisherige
+Signatur (Artikel/Lagerort/Delta) bekommt zwei optionale Parameter `sektionId`/`kulturstufeId` und prüft
+vor dem Buchen per `KulturRegeln.PruefeDimensionen`, ob eine Kulturpflanze in einem sektionierten Feld
+tatsächlich beide Dimensionen mitbekommt. Dabei fiel ein **echter Alt-Bug (E4) auf**: das bestehende
+atomare `UPDATE ... WHERE Menge + @delta >= 0`-Muster griff bei einer noch nicht existierenden
+Bestandszeile (`betroffeneZeilen == 0` bei positivem Zugang) nur über ein nachfolgendes, ungeschütztes
+`INSERT` — zwei parallele Erstbuchungen derselben neuen Artikel/Lagerort/Sektion/Kulturstufe-Kombination
+konnten beide das `UPDATE` mit 0 betroffenen Zeilen sehen und dann beide `INSERT`en, was entweder einen
+Unique-Constraint-Fehler oder (ohne den Unique-Index) zwei Zeilen statt einer erzeugt hätte. **Behoben**
+durch ein echtes SQL-Upsert mit `INSERT ... SELECT ... WHERE NOT EXISTS (... WITH (UPDLOCK, HOLDLOCK) ...)`
+gefolgt vom erneuten `UPDATE`, sodass parallele Erstbuchungen sich gegenseitig sperren statt zu kollidieren
+— **mit echtem Parallelitätstest gegen containerisierten SQL Server verifiziert** (s. u.), nicht nur
+angenommen wie der weiterhin offene READ-COMMITTED-Befund in `BelegUeberleitungService` (s. „Bekannte
+Risiken").
+
+EF-Configurations für `Kulturstufe`/`Gaertnereiplan`/`Sektion`; bei `ArtikelBestand` legte die
+EF-Core-SqlServer-Konvention beim eindeutigen Index über die vier Dimensionen automatisch einen
+**gefilterten** Index (`WHERE SektionId IS NOT NULL AND KulturstufeId IS NOT NULL`) an — das Gegenteil von
+SQL Servers nativer NULL-Behandlung in Unique-Indizes (NULL gilt dort als eindeutig gleich sich selbst)
+und hätte E3s Design unterlaufen; per explizitem `.HasFilter(null)` unterdrückt und **real auf SQL Server
+verifiziert** (`is_unique=1, has_filter=0`, s. u.). Migration `GaertnereiKultur` — Modellkonsistenz per
+zweitem `dotnet ef migrations add` verifiziert (leere Diff-Migration), **real gegen eine frische DB
+angewendet und zusätzlich gegen eine Datenbank mit vor-Phase-8-Bestandsdaten** (Checkout der
+Vor-Phase-8-Revision `8c950c1` in einem separaten Git-Worktree, dort Alt-Bestand angelegt, dann mit dem
+Phase-8-Code migriert) — Alt-Daten blieben unverändert (`NULL`-Dimensionen, identische Kunden-/Belegzahlen).
+`StammdatenSeed`/`DummyDatenSeed` um Kulturstufen, einen Beispiel-Gärtnereiplan und Gärtnerei-Demodaten
+erweitert (dabei ein Seed-Bug gefunden und behoben: Hosta/Astilbe-Kulturbestand wurde auf ein falsches
+Feld gebucht, s. Fehlerliste unten).
+
+Neue Services `KulturstufenService`/`GaertnereiplanService`/`KulturBuchungService` (Zugang/
+Stufenwechsel/Umsetzen/Ausfall — Stufenwechsel ist bewusst **immer** ein Abgang+Zugang als zwei
+Ledger-Zeilen, nie ein Update, E6)/`KulturBestandService` (Pflanzenliste, Fundstellen, Historie)/
+`VerfuegbarkeitService` (E8: rein beratend/nicht blockierend, Ampel Grün/Gelb/Rot, Reservierung wird aus
+offenen Auftragspositionen berechnet statt gespeichert). `LieferscheinBuchenService`/
+`WareneingangBuchenService`/`BelegUeberleitungService` reichen die Dimensionen durch und prüfen bei
+Kulturpflanzen hart, dass nur aus einer verkaufsfähigen Kulturstufe geliefert werden kann (E9).
+`InventurService` musste für den Feld-Zweig umgebaut werden (E10: eine Inventurzeile pro Bestandszeile auf
+einem Feld statt pro Artikel) — dabei ein EF-Core-Tracking-Bug gefunden: `QueryTrackingBehavior` gilt für
+eine **ganze** zusammengesetzte LINQ-Query, nicht pro `.Join()`-Quelle einzeln; das Mischen einer
+`AsNoTracking()`-Quelle mit einer getrackten in einem `Join` führte je nach Kombination entweder zu
+„cannot be tracked"-Identitätskonflikten oder zu einem `IDENTITY_INSERT`-Fehler beim Speichern. Behoben
+durch zwei getrennte Abfragen (eine `AsNoTracking()` für Bestandszeilen, eine echt getrackte für einen
+gemeinsamen `Artikel`-Instanz-Dictionary), kombiniert in einer C#-Schleife — passend zum bereits
+bestehenden, funktionierenden Nicht-Feld-Pfad. `BestandService.SucheAsync` liefert jetzt eine
+`ArtikelBestandDto`-Zeile je tatsächlicher Bestandszeile statt aggregiert.
+
+**App (WinUI, unverifiziert — kein Windows in dieser Session):** Kleinstamm-Tab „Kulturstufen" (Master-
+Detail wie die bestehenden Kleinstamm-Tabs), Artikel-Edit um Kulturpflanzen-Felder erweitert (Umschalten
+von „ist Kulturpflanze" wird beim Vorhandensein von Bestand blockiert). Neue Seiten `GrundrissPage`
+(Feld-/Sektions-Editor — sowohl per Maus-Ziehen als auch per Zahleneingabe, „Plan B" aus dem Plan: Rendern
+per Code-behind-Canvas statt `ItemContainerStyle`, weil `x:Bind` in einem Style keine Attached Properties
+setzen kann, E11), `PflanzenUebersichtPage` (Fundstellentabelle + Grundriss-Highlight je Kulturstufenfarbe),
+`KulturbuchungPage` (Zugang/Stufenwechsel/Umsetzen/Ausfall, Zielstufe wird per `KulturRegeln.NaechsteStufe`
+vorbelegt). `BestandUebersichtPage` um Feld/Sektion/Kulturstufe-Spalten und -Filter erweitert,
+`TeillieferungDialog` wählt bei Kulturpflanzen automatisch die verkaufsfähige Stufe mit der größten Menge
+vor (E9). `AngebotEditPage`/`AuftragEditPage` bekommen ein Verfügbarkeits-Panel (Ampel-Farbe über neuen
+`AmpelToColorConverter`). Neue Converter `HexColorToBrushConverter`/`BoolToVisibilityConverter`
+(mit optionalem `"invers"`-Parameter). `ShellPage`/`App.xaml.cs`: neuer Top-Level-Menüpunkt „Gärtnerei"
+mit den drei neuen Seiten, Sichtbarkeit über das neue Recht gesteuert. `ReportingPage` um drei Tabs
+Kulturbestand/Ausfallquote/Flächenbelegung samt CSV-Export erweitert. Alle neuen/geänderten XAML-Dateien
+als wohlgeformtes XML geprüft, alle neuen/geänderten C#-Dateien auf Klammerbalance geprüft — ersetzt wie
+in Phase 5–7 **keinen** echten Compile/XAML-Codegen-Durchlauf; die drei neu verwendeten `Symbol`-Icon-Namen
+(`Globe`/`Map`/`Edit`) sind nicht gegen einen echten WinUI-Compiler verifiziert.
+
+**Verifiziert (dieser Task, 2026-08-30):**
+- Build einzeln: `Milet.Domain`/`Milet.Application`/`Milet.Infrastructure`/`Milet.Tools.Migrator`/
+  `Milet.Domain.Tests`/`Milet.Application.Tests`/`Milet.IntegrationTests` → je 0 Fehler, 0 Warnungen.
+- Tests einzeln (MTP-Modus): Domain **72/72** (inkl. 17 neuer `KulturRegelnTests`), Application **66/66**
+  (inkl. 17 neuer `GaertnereiValidatorTests`).
+- **IntegrationTests: alle 78 Tests ECHT gegen containerisierten SQL Server gelaufen (nicht übersprungen)
+  — 78/78 bestanden**, u. a. `BestandServiceKulturDimensionenTests` (6 Tests, inkl. des Parallelitätstests
+  `ParalleleErstbuchungen_GleicheKombination_EineZeileMengeIstSumme`, der den E4-Race gezielt reproduziert
+  und den Upsert-Fix verifiziert), `KulturBuchungServiceTests` (7), `KulturBestandServiceTests` (4),
+  `LieferscheinBuchenServiceTests` (erweitert, +3), `InventurServiceTests` (4),
+  `VerfuegbarkeitServiceTests` (6), `GaertnereiReportingServiceTests` (4). Eine vorbestehende, phasenfremde
+  xUnit1051-Analyzer-Verletzung in `NumberRangeServiceTests.cs` (fehlender `CancellationToken`-Parameter,
+  blockierte unter `TreatWarningsAsErrors` den gesamten Testprojekt-Build) minimal gefixt.
+- Migration `GaertnereiKultur`: Modellkonsistenz per zweitem `dotnet ef migrations add` verifiziert (leere
+  Diff-Migration), real gegen eine frische SQL-Server-Datenbank angewendet (Migrator-Lauf inkl. Seeds,
+  per `sqlcmd` gegengeprüft) **und zusätzlich gegen eine mit der Vor-Phase-8-Codebasis (Commit `8c950c1`,
+  separater Git-Worktree) befüllte Datenbank** — Alt-Bestandszeilen mit `NULL`-Dimensionen sowie
+  Kunden-/Belegzahlen per `sqlcmd` vor/nach der Migration identisch bestätigt, Unique-Index auf
+  `ArtikelBestaende` mit `is_unique=1, has_filter=0` (der `.HasFilter(null)`-Fix hält auch real, nicht nur
+  im EF-Modell).
+
+**Nicht durchgeführt — Offen für Phase-8-Abnahme:**
+1. **`Milet.App` wurde in dieser Session kein einziges Mal gebaut** (kein Windows verfügbar) — vor Abnahme
+   zwingend: `dotnet build src/Milet.App/Milet.App.csproj -p:Platform=x64` auf Windows, danach der
+   14-Schritte-Ablauf in `docs/smoke-tests.md` (Kulturstufen umbenennen, Grundriss per Maus **und**
+   Zahleneingabe anlegen inkl. bewusst überlappender Sektionen, Kulturzugang/Stufenwechsel/Ausfall buchen,
+   Pflanzenübersicht-Highlight prüfen, Ampel Gelb→Grün im Auftrag, Lieferschein mit Auto-Vorauswahl der
+   verkaufsfähigen Stufe buchen und per `sqlcmd` gegenprüfen, Bestandsübersicht-Filter, Reporting-Tabs +
+   CSV-Export).
+2. Die drei neuen `Symbol`-Icon-Namen (`Globe`/`Map`/`Edit`) in `ShellPage.xaml` sind nicht gegen einen
+   echten WinUI-Compiler verifiziert — ein falscher Symbol-Name wäre ein XAML-Compile-Fehler, erst mit
+   Windows-Build (s. Punkt 1) feststellbar.
+3. Der weiterhin offene READ-COMMITTED-Race in `BelegUeberleitungService` (s. „Bekannte Risiken") ist durch
+   diese Phase **nicht** behoben — er betrifft jetzt zusätzlich die dimensionsbehaftete Teillieferung
+   (E9-Auswahl einer Sektion/Kulturstufe), wurde aber nicht gesondert untersucht.
+4. Kein automatisierter Test für den Grundriss-Canvas-Code-behind (`GrundrissPage.xaml.cs`, „Plan B" aus
+   E11) — reiner WinUI-Rendering-Code, nur per manuellem Smoke-Test (s. Punkt 1) verifizierbar.
+
 ## Gefixt während UI-Test (2026-08-25)
 - LocalDB-Datenbank hieß nach Projekt-Rename noch "Nexus" (Connection String erwartet "Milet") → "Fehler beim Laden" beim Öffnen der Kunden-Liste. Per `ALTER DATABASE ... MODIFY NAME` umbenannt (Seed-Daten erhalten), App neu gestartet — Kunden-Liste lädt jetzt.
 - Listenpreis-Präzision 4→2 Nachkommastellen (s. oben, Phase-1-Abnahme).
@@ -323,6 +453,14 @@ werden kann — Migration + Snapshot von Hand zu schreiben wäre hier das größ
 - Phase 2: Positions-Bezeichnung + IsEnabled-Scoping (s. oben, Phase-2-Abnahme).
 
 ## Bekannte Risiken (aus Plan, weiterhin relevant)
+- **[Behoben am 2026-08-30, Phase 8]** Race beim Erstanlegen einer `ArtikelBestand`-Zeile in
+  `BestandService.BucheBewegungAsync` (E4 aus dem Phase-8-Plan): das atomare `UPDATE`-Muster deckte nur den
+  Fall einer bereits existierenden Zeile ab; traf `UPDATE` auf 0 Zeilen (Erstbuchung), folgte ein
+  ungeschütztes `INSERT`, das bei zwei parallelen Erstbuchungen derselben Artikel/Lagerort/Sektion/
+  Kulturstufe-Kombination hätte kollidieren können. Behoben durch ein SQL-Upsert mit
+  `INSERT ... WHERE NOT EXISTS (... WITH (UPDLOCK, HOLDLOCK) ...)` vor dem erneuten `UPDATE`. Nachweis:
+  `BestandServiceKulturDimensionenTests.ParalleleErstbuchungen_GleicheKombination_EineZeileMengeIstSumme`,
+  real gegen containerisierten SQL Server gelaufen (s. Phase-8-Abschnitt oben).
 - Kein Docker auf dieser Maschine → Integrationstests mit Testcontainers laufen hier nur übersprungen, nicht tatsächlich ausgeführt. Das betrifft inzwischen konkret Phase 3: `BestandServiceTests` (Race-/Negativsperre-Test des atomaren `BucheBewegungAsync`-UPDATE) und `LieferscheinBuchenServiceTests` (paralleles Buchen) sind **nie gegen eine echte DB gelaufen**, nur compile-verifiziert + sauber übersprungen. Der manuelle UI-Smoke-Test (s. „Offen") würde die fachliche Kernlogik zumindest einmal seriell gegen LocalDB nachweisen, ersetzt aber nicht den Parallelitäts-Nachweis. Docker sollte vor Produktivsetzung verfügbar gemacht werden oder ein LocalDB-Fallback für diese Tests ergänzt werden.
 - **[Umgesetzt in Phase 5, funktional unverifiziert]** Graph-Auth: `GraphEmailService` (MSAL/WAM-Broker) ist implementiert und baut gegen die echten NuGet-Pakete, aber ohne eigene Entra-App-Registrierung + Windows nicht testbar — `NichtKonfigurierterEmailService`-Fallback stellt sicher, dass die App ohne Graph-Konfiguration voll funktionsfähig bleibt. DATEV-Format — noch nicht relevant, erst ab Phase 6. QuestPDF-Lizenz (Community, <1M USD Umsatz) bereits gesetzt (`PdfService`-statischer Konstruktor).
 - Lieferadresse ist in Phase 2 nicht im Belegeditor editierbar (immer 1:1 aus Kundenstamm übernommen) — bewusste Vereinfachung, relevant erst mit Lieferschein (Phase 3).
@@ -342,4 +480,4 @@ werden kann — Migration + Snapshot von Hand zu schreiben wäre hier das größ
 **5 Finanzen+E-Mail**      Done (WinUI-Build + manueller UI-Smoke-Test + Migration-auf-DB ausstehend — kein Windows in dieser Session)
 **6 DATEV+Reporting**      Done (Backend real gegen SQL Server verifiziert; WinUI-Build + manueller UI-Smoke-Test ausstehend — kein Windows in dieser Session)
 **7 Admin+Härtung**        Done (Backend real gegen SQL Server verifiziert; WinUI-Build + manueller UI-Smoke-Test ausstehend — kein Windows in dieser Session)
-**8 Gärtnerei/Kultur**     Geplant (Detailplan `docs/superpowers/plans/2026-08-30-phase8-gaertnerei-kultur.md`, noch nichts implementiert)
+**8 Gärtnerei/Kultur**     Done (Backend real gegen SQL Server verifiziert inkl. Migration gegen Alt-Daten; WinUI-Build + manueller UI-Smoke-Test ausstehend — kein Windows in dieser Session)

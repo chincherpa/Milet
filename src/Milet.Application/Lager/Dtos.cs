@@ -19,7 +19,12 @@ public sealed record ArtikelBestandDto(
     int LagerortId,
     string LagerortBezeichnung,
     decimal Menge,
-    decimal? Mindestbestand);
+    decimal? Mindestbestand,
+    int? SektionId = null,
+    string? SektionBezeichnung = null,
+    int? KulturstufeId = null,
+    string? KulturstufeBezeichnung = null,
+    bool IstKulturpflanze = false);
 
 public sealed record BestandskorrekturDto
 {
@@ -27,11 +32,24 @@ public sealed record BestandskorrekturDto
     public int LagerortId { get; init; }
     public decimal MengeDelta { get; init; }
     public string Grund { get; init; } = string.Empty;
+
+    /// <summary>Bei Kulturpflanzen Pflicht (E1) — die zentrale Regel prüft KulturRegeln.PruefeDimensionen
+    /// direkt in BestandService.BucheBewegungAsync, hier keine Duplizierung.</summary>
+    public int? SektionId { get; init; }
+    public int? KulturstufeId { get; init; }
 }
 
 public sealed record SeriennummerDto(int Id, int ArtikelId, string Nummer, SeriennummerStatus Status, int? LagerortId);
 
-public sealed record InventurPositionDto(int Id, int ArtikelId, string Artikelnummer, string ArtikelBezeichnung, decimal SollMenge, decimal? IstMenge);
+public sealed record InventurPositionDto(
+    int Id,
+    int ArtikelId,
+    string Artikelnummer,
+    string ArtikelBezeichnung,
+    decimal SollMenge,
+    decimal? IstMenge,
+    int? SektionId = null,
+    int? KulturstufeId = null);
 
 public sealed record InventurDto
 {

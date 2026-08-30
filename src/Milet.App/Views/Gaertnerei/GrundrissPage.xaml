@@ -1,0 +1,64 @@
+<Page
+    x:Class="Milet.App.Views.Gaertnerei.GrundrissPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Padding="24" ColumnSpacing="24" RowSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="320" />
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="16">
+            <TextBlock Text="Grundriss" Style="{StaticResource TitleTextBlockStyle}" VerticalAlignment="Center" />
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <TextBlock Text="Zoom" VerticalAlignment="Center" Opacity="0.7" />
+                <Slider Width="200" Minimum="5" Maximum="60" StepFrequency="1" Value="{x:Bind ViewModel.Zoom, Mode=TwoWay}" VerticalAlignment="Center" />
+            </StackPanel>
+            <Button Content="Feld anlegen" Command="{x:Bind ViewModel.FeldAnlegenCommand}" />
+            <Button Content="Sektion anlegen" Command="{x:Bind ViewModel.SektionAnlegenCommand}" />
+            <Button Content="Neu laden" Command="{x:Bind ViewModel.LadenCommand}" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" Grid.Column="0" ZoomMode="Disabled"
+                      HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollMode="Auto" VerticalScrollBarVisibility="Auto"
+                      Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                      BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+            <Canvas x:Name="PlanCanvas" Background="Transparent"
+                    Width="{x:Bind ViewModel.PlanPixelBreite, Mode=OneWay}"
+                    Height="{x:Bind ViewModel.PlanPixelHoehe, Mode=OneWay}"
+                    PointerPressed="PlanCanvas_PointerPressed" />
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="1" Grid.Column="1" Spacing="12" VerticalAlignment="Top">
+            <InfoBar IsOpen="{x:Bind ViewModel.Fehler, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.Fehler, Mode=OneWay}" />
+            <InfoBar IsOpen="{x:Bind ViewModel.UeberlappungsWarnung, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Warning" Title="Überlappung" Message="{x:Bind ViewModel.UeberlappungsWarnung, Mode=OneWay}" />
+
+            <TextBlock Text="Auswahl" Style="{StaticResource SubtitleTextBlockStyle}" Visibility="{x:Bind ViewModel.IstElementAusgewaehlt, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
+            <TextBlock Text="Kein Element ausgewählt — auf ein Feld/eine Sektion klicken oder oben anlegen." Opacity="0.7" TextWrapping="Wrap"
+                       Visibility="{x:Bind ViewModel.IstElementAusgewaehlt, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=invers}" />
+
+            <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.IstElementAusgewaehlt, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBox Header="Code *" Text="{x:Bind ViewModel.ElementCode, Mode=TwoWay}" MaxLength="10" />
+                <TextBox Header="Bezeichnung *" Text="{x:Bind ViewModel.ElementBezeichnung, Mode=TwoWay}" MaxLength="100" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <NumberBox Header="X (m)" Width="140" Value="{x:Bind ViewModel.ElementPosXMeter, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" SmallChange="0.5" />
+                    <NumberBox Header="Y (m)" Width="140" Value="{x:Bind ViewModel.ElementPosYMeter, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" SmallChange="0.5" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <NumberBox Header="Breite (m) *" Width="140" Value="{x:Bind ViewModel.ElementBreiteMeter, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" Minimum="0.5" SmallChange="0.5" />
+                    <NumberBox Header="Höhe (m) *" Width="140" Value="{x:Bind ViewModel.ElementHoeheMeter, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" Minimum="0.5" SmallChange="0.5" />
+                </StackPanel>
+                <TextBlock Text="{x:Bind ViewModel.ElementFlaecheQm, Mode=OneWay}" Opacity="0.7" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.SpeichernCommand}" />
+                    <Button Content="Löschen" Command="{x:Bind ViewModel.LoeschenCommand}" />
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Page>

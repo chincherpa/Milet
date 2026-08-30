@@ -116,7 +116,52 @@ Ein generischer `BelegUeberleitungService.Ueberleiten(sourceBelegId, targetTyp, 
 | **5 Finanzen+E-Mail** | OP-Liste (Aging), Zahlungsdialog+Skonto, Mahnwesen (Config, Lauf, PDF), Graph-Mail (MSAL/WAM, Entra-App, Versand-Log je Beleg) | Teilzahlung→TeilBezahlt; Mahnlauf-Selektion getestet; Mail mit PDF kommt an |
 | **6 DATEV+Reporting** | FibuKonten-UI, EXTF-CSV-Export (Golden-File-Tests), Auswertungen (Umsatz je Kunde/Artikel/Monat, Artikelbewegungen, Top-Artikel, offene Aufträge) + CSV-Export | DATEV-CSV byte-exakt gegen Referenz; Import beim Steuerberater validiert |
 | **7 Admin+Härtung** | Benutzer/Rollen/Rechte-UI+Login, Service-Guards, Systemkonfig (Firmenstamm/Briefkopf), AuditLog-Viewer, Deployment-Story | Rechte-Block greift (Test+UI); Regressionspass Phase 1–6 |
-| **8 Gärtnerei/Kultur** (geplant) | Kulturstufen als konfigurierbare Stammdaten, Feld (=Lagerort mit Geometrie) + Sektion, Bestand je Artikel×Feld×Sektion×Kulturstufe, Kulturbuchungen (Zugang/Stufenwechsel/Umsetzen/Ausfall), Grundriss-Editor, Pflanzenübersicht mit Highlighting, Verfügbarkeitsanzeige im Auftrag — Detailplan: `docs/superpowers/plans/2026-08-30-phase8-gaertnerei-kultur.md` | Stufenwechsel verschiebt Menge atomar über zwei Ledger-Zeilen; Pflanzenübersicht highlightet die richtigen Sektionen je Stufe; Auftragsampel unterscheidet verkaufsfähig/in Anzucht |
+| **8 Gärtnerei/Kultur** | Kulturstufen als konfigurierbare Stammdaten, Feld (=Lagerort mit Geometrie) + Sektion, Bestand je Artikel×Feld×Sektion×Kulturstufe, Kulturbuchungen (Zugang/Stufenwechsel/Umsetzen/Ausfall), Grundriss-Editor, Pflanzenübersicht mit Highlighting, Verfügbarkeitsanzeige im Auftrag — Detailplan: `docs/superpowers/plans/2026-08-30-phase8-gaertnerei-kultur.md` | Stufenwechsel verschiebt Menge atomar über zwei Ledger-Zeilen; Pflanzenübersicht highlightet die richtigen Sektionen je Stufe; Auftragsampel unterscheidet verkaufsfähig/in Anzucht |
+
+## Gärtnerei/Kulturführung (Phase 8)
+
+Milet ist ursprünglich ein branchenneutrales Handels-WWS (s. Phasen 0–7); Phase 8 erweitert es für
+eine **Staudengärtnerei**, die Pflanzen von der Jungpflanze über Zwischenstufen zur Verkaufspflanze
+hochzieht. Die Kulturführung ist **keine Parallelwelt neben dem Lager**, sondern zwei zusätzliche
+Dimensionen auf dem bestehenden Lagermodell:
+
+- **Kulturstufe** ist eine Bestandsdimension, kein eigener Artikel: dieselbe Sorte durchläuft mehrere
+  Reifegrade (Jungpflanze → Teenagerpflanze → Verkaufspflanze), Artikelnummer/Preis/Steuersatz bleiben
+  gleich. Kulturstufen sind konfigurierbare Stammdaten (Code, Reihenfolge, `IstVerkaufsfaehig`,
+  Highlight-Farbe) statt eines Enums, weil der Nutzer sie selbst benennt und erweitert.
+- **Feld = `Lagerort` mit Geometrie**, **Sektion** = die klassische Lagerplatz-Ebene darunter (neue
+  Entität). Ein `Gaertnereiplan` (Breite×Höhe in Metern) ist die Zeichenfläche für den Grundriss-Editor;
+  v1 zeigt genau einen Plan, mehrere Standorte sind ohne Schemabruch nachrüstbar.
+- `ArtikelBestand`/`Lagerbewegung`/`BelegPosition`/`InventurPosition` bekommen `SektionId`/
+  `KulturstufeId` — beide `NULL` bei Handelsware (exakt das Vor-Phase-8-Verhalten, keine
+  Datenmigration nötig). Der Unique-Index auf `ArtikelBestand` läuft auf allen vier Spalten und
+  bleibt bewusst ungefiltert: SQL Server behandelt NULL in einem Unique-Index nativ als gleich, das
+  hält die Ein-Zeile-pro-Artikel-und-Lagerort-Garantie für Handelsware ohne Sonderfall aufrecht (ein
+  von EF Cores Konvention automatisch angelegter gefilterter Index hätte das unterlaufen —
+  `.HasFilter(null)` erzwingt das ungefilterte Verhalten explizit).
+- `BestandService.BucheBewegungAsync` bleibt der **einzige Schreibpfad** auf Bestand, jetzt mit vier
+  statt zwei Dimensionen; die Erstanlage einer Bestandszeile ist ein echtes SQL-Upsert
+  (`INSERT … WHERE NOT EXISTS (… WITH (UPDLOCK, HOLDLOCK))`) statt eines rennanfälligen
+  `db.Add(...)` — ein latenter Race im Vor-Phase-8-Code, der durch die vielen neu entstehenden
+  Bestandszeilen (jeder Stufenwechsel in eine neue Sektion) erst praktisch relevant wurde.
+- Stufenwechsel/Umsetzen sind **zwei Ledger-Zeilen** (Abgang + Zugang) in einer Transaktion, nie ein
+  Update — der Ledger bleibt append-only. Ausfall ist ein eigener Bewegungstyp statt "Korrektur",
+  damit die Ausfallquote je Sorte/Stufe auswertbar ist.
+- Verfügbarkeit im Verkauf ist **beratend, nicht sperrend**: eine Ampel (grün/gelb/rot) zeigt, ob eine
+  Pflanze verkaufsfähig frei ist, in Anzucht steht, oder gar nicht vorhanden ist; die harte Sperre
+  bleibt beim Lieferschein-Buchen (bestehende Negativsperre). Reservierung wird aus den offenen
+  Auftragsmengen berechnet, nicht in einer eigenen Tabelle gespeichert.
+- Grundriss: achsenparallele Rechtecke in Metern (kein Polygon-Editor in v1), im WinUI-Code-Behind
+  direkt in einen `Canvas` gezeichnet (Plan B — ein `ItemContainerStyle` mit Attached-Property-Bindings
+  auf `Canvas.Left`/`Top` ist mit `x:Bind` nicht ausdrückbar).
+- Neues Top-Level-Recht `Gaertnerei`, abgegrenzt von `Lager`: Kulturbuchungen und Grundriss-Pflege
+  laufen darüber, Bestandskorrektur/Inventur/Lieferschein bleiben unter `Lager`.
+
+**Bewusst außerhalb von v1:** Kulturplanung/Prognose (Sollkulturzeiten, Terminplanung), automatisches
+Splitten einer Lieferposition über mehrere Sektionen, Polygone/Drehung/Luftbild als Zeichenvorlage,
+Topfgrößen als eigene Dimension, Verbrauchsmaterial-Stückliste beim Stufenwechsel, Etiketten-/
+Schilderdruck, mobile Felderfassung. Detaillierte Begründung je Entscheidung: Abschnitt
+"Architektur-Entscheidungen" in `docs/superpowers/plans/2026-08-30-phase8-gaertnerei-kultur.md`.
 
 ## Verifikation
 
@@ -143,4 +188,4 @@ Ein generischer `BelegUeberleitungService.Ueberleiten(sourceBelegId, targetTyp, 
 - `src/Milet.Infrastructure/Services/RechnungBuchenService.cs` — Buchungstransaktion (Nummer, Freeze, OP)
 - `src/Milet.App/App.xaml.cs` — Host-Builder, DI-Root, Navigations-Registry
 
-**Stand:** Phasen 0–2 sind implementiert und abgenommen. Phasen 3 (Lager+Lieferschein), 4 (Einkauf), 5 (Finanzen+E-Mail), 6 (DATEV+Reporting) und 7 (Admin+Härtung) sind implementiert (Backend Build/Tests grün; manueller UI-Smoke-Test steht bei allen fünfen noch aus; Phasen 5–7 zusätzlich mit dem Vorbehalt, dass `Milet.App` in der jeweiligen Umsetzungssession mangels Windows kein einziges Mal gebaut werden konnte — Details in `STATUS.md`; Phasen 6+7 haben Build/Tests/Migration real gegen einen containerisierten SQL Server statt nur übersprungener Integrationstests verifiziert, inkl. echter RBAC-Logins und AuditLog-Protokollierung in Phase 7). Alle 7 Plan-Phasen sind damit backend-seitig umgesetzt. **Nächster Schritt: die fünf offenen Windows-Verifikationen (Phase 3/4/5/6/7) sollten auf einer echten Windows-Maschine nachgeholt werden, danach ist Milet inhaltlich feature-komplett gemäß diesem Plan** — Deployment-Anleitung liegt vor in `docs/deployment.md`.
+**Stand:** Phasen 0–2 sind implementiert und abgenommen. Phasen 3 (Lager+Lieferschein), 4 (Einkauf), 5 (Finanzen+E-Mail), 6 (DATEV+Reporting), 7 (Admin+Härtung) und 8 (Gärtnerei/Kultur) sind implementiert (Backend Build/Tests grün; manueller UI-Smoke-Test steht bei allen sechs noch aus; Phasen 5–8 zusätzlich mit dem Vorbehalt, dass `Milet.App` in der jeweiligen Umsetzungssession mangels Windows kein einziges Mal gebaut werden konnte — Details in `STATUS.md`; Phasen 6, 7 und 8 haben Build/Tests/Migration real gegen einen containerisierten SQL Server statt nur übersprungener Integrationstests verifiziert, inkl. echter RBAC-Logins und AuditLog-Protokollierung in Phase 7 und einer real gegen eine Datenbank mit Vor-Phase-8-Bestandsdaten angewendeten Migration in Phase 8). Alle 8 Plan-Phasen sind damit backend-seitig umgesetzt. **Nächster Schritt: die sechs offenen Windows-Verifikationen (Phase 3/4/5/6/7/8) sollten auf einer echten Windows-Maschine nachgeholt werden, danach ist Milet inhaltlich feature-komplett gemäß diesem Plan** — Deployment-Anleitung liegt vor in `docs/deployment.md`, der Phase-8-Smoke-Test-Ablauf in `docs/smoke-tests.md`.

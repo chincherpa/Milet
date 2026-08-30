@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Milet.Domain.Entities.Gaertnerei;
 using Milet.Domain.Entities.Lager;
 using Milet.Domain.Entities.Stammdaten;
 using Milet.Domain.Entities.Verkauf;
@@ -19,6 +20,11 @@ public sealed class LieferscheinBuchenServiceTests : IAsyncLifetime
     private int _artikelId;
     private int _artikelSerialisiertId;
     private int _lagerortId;
+    private int _kulturArtikelId;
+    private int _feldId;
+    private int _sektionId;
+    private int _stufeVerkaufsfaehigId;
+    private int _stufeNichtVerkaufsfaehigId;
 
     public async ValueTask InitializeAsync()
     {
@@ -59,6 +65,47 @@ public sealed class LieferscheinBuchenServiceTests : IAsyncLifetime
         db.AddRange(s1, s2);
         await db.SaveChangesAsync();
         await BestandService.BucheBewegungAsync(db, _artikelSerialisiertId, _lagerortId, 2m, LagerbewegungTyp.Korrektur, null, CancellationToken.None);
+
+        var kulturArtikel = new Artikel { Artikelnummer = "ART-3", Bezeichnung = "Salvia", EinheitId = einheit.Id, MwStSatzId = mwst.Id, IstKulturpflanze = true };
+        var feld = new Lagerort { Code = "F1", Bezeichnung = "Feld Nord", IstFeld = true, BreiteMeter = 30, HoeheMeter = 20 };
+        db.AddRange(kulturArtikel, feld);
+        await db.SaveChangesAsync();
+        var sektion = new Sektion { LagerortId = feld.Id, Code = "A1", Bezeichnung = "Sektion A1", BreiteMeter = 5, HoeheMeter = 5 };
+        var stufeVerkaufsfaehig = new Kulturstufe { Code = "VP", Bezeichnung = "Verkaufspflanze", Reihenfolge = 3, IstVerkaufsfaehig = true, FarbeHex = "#2E7D32" };
+        var stufeNichtVerkaufsfaehig = new Kulturstufe { Code = "JP", Bezeichnung = "Jungpflanze", Reihenfolge = 1, IstVerkaufsfaehig = false, FarbeHex = "#8BC34A" };
+        db.AddRange(sektion, stufeVerkaufsfaehig, stufeNichtVerkaufsfaehig);
+        await db.SaveChangesAsync();
+
+        _kulturArtikelId = kulturArtikel.Id;
+        _feldId = feld.Id;
+        _sektionId = sektion.Id;
+        _stufeVerkaufsfaehigId = stufeVerkaufsfaehig.Id;
+        _stufeNichtVerkaufsfaehigId = stufeNichtVerkaufsfaehig.Id;
+
+        await BestandService.BucheBewegungAsync(db, _kulturArtikelId, _feldId, 100m, LagerbewegungTyp.Kulturzugang, null, CancellationToken.None, _sektionId, _stufeVerkaufsfaehigId);
+        await BestandService.BucheBewegungAsync(db, _kulturArtikelId, _feldId, 100m, LagerbewegungTyp.Kulturzugang, null, CancellationToken.None, _sektionId, _stufeNichtVerkaufsfaehigId);
+    }
+
+    private async Task<Lieferschein> NeuerKulturLieferscheinAsync(int? kulturstufeId, decimal menge, CancellationToken ct)
+    {
+        await using var db = new MiletDbContext(_options);
+        var kunde = await db.Kunden.FirstAsync(k => k.Id == _kundeId, ct);
+        var lieferschein = new Lieferschein
+        {
+            BelegNummer = $"LS-{Guid.NewGuid():N}"[..12],
+            BelegDatum = DateOnly.FromDateTime(DateTime.Today),
+            KundeId = kunde.Id,
+            RechnungsadresseSnapshot = kunde.Adresse.Kopie(),
+            LieferadresseSnapshot = kunde.Adresse.Kopie(),
+            Positionen = [new BelegPosition
+            {
+                PositionsNr = 1, Bezeichnung = "Salvia", Menge = menge, Einzelpreis = 5m, GesamtNetto = menge * 5m,
+                MwStSatzWert = 19m, ArtikelId = _kulturArtikelId, LagerortId = _feldId, SektionId = _sektionId, KulturstufeId = kulturstufeId,
+            }],
+        };
+        db.Add(lieferschein);
+        await db.SaveChangesAsync(ct);
+        return lieferschein;
     }
 
     public async ValueTask DisposeAsync()
@@ -163,6 +210,45 @@ public sealed class LieferscheinBuchenServiceTests : IAsyncLifetime
         await using var db = new MiletDbContext(_options);
         var bestand = await db.ArtikelBestaende.FirstAsync(b => b.ArtikelId == _artikelId && b.LagerortId == _lagerortId, ct);
         Assert.True(bestand.Menge >= 0);
+    }
+
+    [Fact]
+    public async Task BuchenAsync_KulturpflanzeOhneKulturstufe_WirftMitKlarerMeldung()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var lieferschein = await NeuerKulturLieferscheinAsync(null, 10, ct);
+        var service = new LieferscheinBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.BuchenAsync(lieferschein.Id, new Dictionary<int, IReadOnlyList<int>>(), ct));
+        Assert.Contains("Kulturstufe fehlt", ex.Message);
+    }
+
+    [Fact]
+    public async Task BuchenAsync_NichtVerkaufsfaehigeStufe_Wirft()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var lieferschein = await NeuerKulturLieferscheinAsync(_stufeNichtVerkaufsfaehigId, 10, ct);
+        var service = new LieferscheinBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.BuchenAsync(lieferschein.Id, new Dictionary<int, IReadOnlyList<int>>(), ct));
+        Assert.Contains("nicht verkaufsfähig", ex.Message);
+    }
+
+    [Fact]
+    public async Task BuchenAsync_VerkaufsfaehigeStufe_BuchtErfolgreichMitDimensionen()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var lieferschein = await NeuerKulturLieferscheinAsync(_stufeVerkaufsfaehigId, 10, ct);
+        var service = new LieferscheinBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+
+        var gebucht = await service.BuchenAsync(lieferschein.Id, new Dictionary<int, IReadOnlyList<int>>(), ct);
+
+        Assert.Equal(BelegStatus.Gebucht, gebucht.Status);
+        await using var db = new MiletDbContext(_options);
+        var bestand = await db.ArtikelBestaende.FirstAsync(b => b.SektionId == _sektionId && b.KulturstufeId == _stufeVerkaufsfaehigId, ct);
+        Assert.Equal(90m, bestand.Menge);
     }
 
     private static bool DockerVerfuegbar()

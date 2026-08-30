@@ -20,6 +20,8 @@ internal static class VerkaufMapping
         MwStSatzWert = p.MwStSatzWert,
         SteuerSchluessel = p.SteuerSchluessel,
         LagerortId = p.LagerortId,
+        SektionId = p.SektionId,
+        KulturstufeId = p.KulturstufeId,
         GesamtNetto = p.GesamtNetto,
         UrsprungsPositionId = p.UrsprungsPositionId,
     };

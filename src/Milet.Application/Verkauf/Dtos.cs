@@ -18,9 +18,17 @@ public sealed record BelegPositionDto
     public decimal MwStSatzWert { get; init; }
     public int? SteuerSchluessel { get; init; }
     public int? LagerortId { get; init; }
+
+    /// <summary>Nur Lieferschein/Wareneingang — bestimmt, gegen welche Bestandszeile gebucht wird (Phase 8, E9).</summary>
+    public int? SektionId { get; init; }
+    public int? KulturstufeId { get; init; }
+
     public decimal GesamtNetto { get; init; }
     public int? UrsprungsPositionId { get; init; }
 }
+
+/// <summary>Sektion/Kulturstufe für eine einzelne Zielposition bei UeberleitenMitAuswahlAsync (Phase 8, E9).</summary>
+public sealed record BelegPositionDimensionenDto(int? SektionId, int? KulturstufeId);
 
 public sealed record BelegDto
 {
@@ -61,7 +69,8 @@ public sealed record ArtikelVerkaufLookupDto(
     decimal MwStSatzWert,
     int? SteuerSchluessel,
     string? EinheitKuerzel,
-    bool HatSeriennummern);
+    bool HatSeriennummern,
+    bool IstKulturpflanze = false);
 
 public sealed record KundeVerkaufLookupDto(
     int Id,
@@ -77,5 +86,6 @@ public sealed record VerkaufLookups(
 
 public sealed record PreisErgebnisDto(decimal Einzelpreis, decimal RabattProzent);
 
-/// <summary>Offene (noch nicht überführte) Menge einer Quellposition — Grundlage für den Teillieferungs-Dialog.</summary>
-public sealed record OffenePositionDto(int PositionId, string Bezeichnung, string? EinheitKuerzel, decimal OffeneMenge);
+/// <summary>Offene (noch nicht überführte) Menge einer Quellposition — Grundlage für den Teillieferungs-Dialog.
+/// ArtikelId (Phase 8) bestimmt, ob eine Sektions-/Kulturstufenauswahl nötig ist (E9).</summary>
+public sealed record OffenePositionDto(int PositionId, string Bezeichnung, string? EinheitKuerzel, decimal OffeneMenge, int? ArtikelId = null);

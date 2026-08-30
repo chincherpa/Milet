@@ -22,22 +22,23 @@
         </StackPanel>
 
         <ListView Grid.Row="2"
-            ItemsSource="{x:Bind ViewModel.Belege, Mode=OneWay}"
+            ItemsSource="{x:Bind ViewModel.Zeilen, Mode=OneWay}"
             SelectedItem="{x:Bind ViewModel.Ausgewaehlt, Mode=TwoWay}"
             SelectionMode="Single">
             <ListView.HeaderTemplate>
                 <DataTemplate>
                     <Grid Padding="8,4">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="30" />
                             <ColumnDefinition Width="160" /><ColumnDefinition Width="110" />
                             <ColumnDefinition Width="260" /><ColumnDefinition Width="110" />
                             <ColumnDefinition Width="100" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Nummer" FontWeight="SemiBold" />
-                        <TextBlock Grid.Column="1" Text="Datum" FontWeight="SemiBold" />
-                        <TextBlock Grid.Column="2" Text="Kunde" FontWeight="SemiBold" />
-                        <TextBlock Grid.Column="3" Text="Brutto" FontWeight="SemiBold" />
-                        <TextBlock Grid.Column="4" Text="Status" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="1" Text="Nummer" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="2" Text="Datum" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="3" Text="Kunde" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="4" Text="Brutto" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="5" Text="Status" FontWeight="SemiBold" />
                     </Grid>
                 </DataTemplate>
             </ListView.HeaderTemplate>
@@ -45,15 +46,17 @@
                 <DataTemplate>
                     <Grid Padding="8,4">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="30" />
                             <ColumnDefinition Width="160" /><ColumnDefinition Width="110" />
                             <ColumnDefinition Width="260" /><ColumnDefinition Width="110" />
                             <ColumnDefinition Width="100" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{Binding BelegNummer}" />
-                        <TextBlock Grid.Column="1" Text="{Binding BelegDatum}" />
-                        <TextBlock Grid.Column="2" Text="{Binding KundeAnzeige}" />
-                        <TextBlock Grid.Column="3" Text="{Binding SummeBrutto}" />
-                        <TextBlock Grid.Column="4" Text="{Binding Status}" />
+                        <Ellipse Grid.Column="0" Width="12" Height="12" VerticalAlignment="Center" Fill="{Binding Ampel, Converter={StaticResource AmpelToColorConverter}}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Beleg.BelegNummer}" />
+                        <TextBlock Grid.Column="2" Text="{Binding Beleg.BelegDatum}" />
+                        <TextBlock Grid.Column="3" Text="{Binding Beleg.KundeAnzeige}" />
+                        <TextBlock Grid.Column="4" Text="{Binding Beleg.SummeBrutto}" />
+                        <TextBlock Grid.Column="5" Text="{Binding Beleg.Status}" />
                     </Grid>
                 </DataTemplate>
             </ListView.ItemTemplate>

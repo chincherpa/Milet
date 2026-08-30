@@ -31,7 +31,8 @@ public sealed class VerkaufLookupService(IDbContextFactory<MiletDbContext> dbCon
                 a.MwStSatz!.Satz,
                 a.MwStSatz.SteuerSchluessel,
                 a.Einheit!.Kuerzel,
-                a.HatSeriennummern))
+                a.HatSeriennummern,
+                a.IstKulturpflanze))
             .ToListAsync(ct);
 
         var zahlungsbedingungen = await db.Zahlungsbedingungen.AsNoTracking()

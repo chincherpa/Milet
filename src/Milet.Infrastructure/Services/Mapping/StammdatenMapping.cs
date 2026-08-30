@@ -105,6 +105,8 @@ internal static class StammdatenMapping
         HatSeriennummern = a.HatSeriennummern,
         Mindestbestand = a.Mindestbestand,
         Gesperrt = a.Gesperrt,
+        IstKulturpflanze = a.IstKulturpflanze,
+        BotanischerName = a.BotanischerName,
         RowVersion = a.RowVersion,
     };
 
@@ -122,5 +124,7 @@ internal static class StammdatenMapping
         entity.HatSeriennummern = dto.HatSeriennummern;
         entity.Mindestbestand = dto.Mindestbestand;
         entity.Gesperrt = dto.Gesperrt;
+        entity.IstKulturpflanze = dto.IstKulturpflanze;
+        entity.BotanischerName = dto.BotanischerName;
     }
 }

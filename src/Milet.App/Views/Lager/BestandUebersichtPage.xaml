@@ -18,28 +18,33 @@
             <TextBlock Grid.Row="0" Text="Bestandsübersicht" Style="{StaticResource TitleTextBlockStyle}" />
 
             <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
-                <TextBox Width="300" PlaceholderText="Suche (Artikel)…" Text="{x:Bind ViewModel.Suchtext, Mode=TwoWay}" />
+                <TextBox Width="260" PlaceholderText="Suche (Artikel)…" Text="{x:Bind ViewModel.Suchtext, Mode=TwoWay}" />
                 <Button Content="Suchen" Command="{x:Bind ViewModel.LadenCommand}" />
                 <ProgressRing IsActive="{x:Bind ViewModel.LaedtGerade, Mode=OneWay}" Width="24" Height="24" />
+                <ComboBox Header="Feld/Lagerort" Width="180" ItemsSource="{x:Bind ViewModel.Lagerorte, Mode=OneWay}" SelectedValue="{x:Bind ViewModel.FilterLagerortId, Mode=TwoWay}" SelectedValuePath="Id" DisplayMemberPath="Bezeichnung" PlaceholderText="Alle" />
+                <ComboBox Header="Kulturstufe" Width="180" ItemsSource="{x:Bind ViewModel.Kulturstufen, Mode=OneWay}" SelectedValue="{x:Bind ViewModel.FilterKulturstufeId, Mode=TwoWay}" SelectedValuePath="Id" DisplayMemberPath="Bezeichnung" PlaceholderText="Alle" />
             </StackPanel>
 
             <ListView Grid.Row="2"
-                ItemsSource="{x:Bind ViewModel.Bestaende, Mode=OneWay}"
+                ItemsSource="{x:Bind ViewModel.GefilterteBestaende, Mode=OneWay}"
                 SelectedItem="{x:Bind ViewModel.Ausgewaehlt, Mode=TwoWay}"
                 SelectionMode="Single">
                 <ListView.HeaderTemplate>
                     <DataTemplate>
                         <Grid Padding="8,4">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="120" /><ColumnDefinition Width="260" />
-                                <ColumnDefinition Width="160" /><ColumnDefinition Width="100" />
-                                <ColumnDefinition Width="100" />
+                                <ColumnDefinition Width="100" /><ColumnDefinition Width="200" />
+                                <ColumnDefinition Width="130" /><ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="130" /><ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="90" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="Artikelnr." FontWeight="SemiBold" />
                             <TextBlock Grid.Column="1" Text="Bezeichnung" FontWeight="SemiBold" />
-                            <TextBlock Grid.Column="2" Text="Lagerort" FontWeight="SemiBold" />
-                            <TextBlock Grid.Column="3" Text="Menge" FontWeight="SemiBold" />
-                            <TextBlock Grid.Column="4" Text="Mindest" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="2" Text="Feld/Lagerort" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="3" Text="Sektion" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="4" Text="Kulturstufe" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="5" Text="Menge" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="6" Text="Mindest" FontWeight="SemiBold" />
                         </Grid>
                     </DataTemplate>
                 </ListView.HeaderTemplate>
@@ -47,15 +52,18 @@
                     <DataTemplate>
                         <Grid Padding="8,4">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="120" /><ColumnDefinition Width="260" />
-                                <ColumnDefinition Width="160" /><ColumnDefinition Width="100" />
-                                <ColumnDefinition Width="100" />
+                                <ColumnDefinition Width="100" /><ColumnDefinition Width="200" />
+                                <ColumnDefinition Width="130" /><ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="130" /><ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="90" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="{Binding Artikelnummer}" />
                             <TextBlock Grid.Column="1" Text="{Binding ArtikelBezeichnung}" />
                             <TextBlock Grid.Column="2" Text="{Binding LagerortBezeichnung}" />
-                            <TextBlock Grid.Column="3" Text="{Binding Menge}" />
-                            <TextBlock Grid.Column="4" Text="{Binding Mindestbestand}" />
+                            <TextBlock Grid.Column="3" Text="{Binding SektionBezeichnung}" />
+                            <TextBlock Grid.Column="4" Text="{Binding KulturstufeBezeichnung}" />
+                            <TextBlock Grid.Column="5" Text="{Binding Menge}" />
+                            <TextBlock Grid.Column="6" Text="{Binding Mindestbestand}" />
                         </Grid>
                     </DataTemplate>
                 </ListView.ItemTemplate>
@@ -66,6 +74,10 @@
             <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.ZeigtKorrekturPanel, Mode=OneWay}">
                 <TextBlock Text="Bestandskorrektur" Style="{StaticResource SubtitleTextBlockStyle}" />
                 <InfoBar IsOpen="{x:Bind ViewModel.KorrekturFehler, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.KorrekturFehler, Mode=OneWay}" />
+                <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.ZeigtKulturDimensionen, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <ComboBox Header="Sektion *" HorizontalAlignment="Stretch" ItemsSource="{x:Bind ViewModel.KorrekturSektionen, Mode=OneWay}" SelectedValue="{x:Bind ViewModel.KorrekturSektionId, Mode=TwoWay}" SelectedValuePath="Id" DisplayMemberPath="Bezeichnung" />
+                    <ComboBox Header="Kulturstufe *" HorizontalAlignment="Stretch" ItemsSource="{x:Bind ViewModel.Kulturstufen, Mode=OneWay}" SelectedValue="{x:Bind ViewModel.KorrekturKulturstufeId, Mode=TwoWay}" SelectedValuePath="Id" DisplayMemberPath="Bezeichnung" />
+                </StackPanel>
                 <NumberBox Header="Mengenänderung (+ / -)" Value="{x:Bind ViewModel.KorrekturMengeDelta, Mode=TwoWay, Converter={StaticResource DecimalToDoubleConverter}}" SpinButtonPlacementMode="Compact" />
                 <TextBox Header="Grund *" Text="{x:Bind ViewModel.KorrekturGrund, Mode=TwoWay}" />
                 <Button Content="Buchen" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.KorrekturBuchenCommand}" />

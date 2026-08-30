@@ -4,6 +4,7 @@ using FluentValidation;
 using Milet.App.Services;
 using Milet.Application.Admin;
 using Milet.Application.Finanzen;
+using Milet.Application.Gaertnerei;
 using Milet.Application.Stammdaten;
 using Milet.Domain.Entities.Admin;
 
@@ -23,6 +24,7 @@ public sealed partial class KleinstammViewModel : ObservableObject
     private readonly IMahnwesenService _mahnwesenService;
     private readonly IFibuKonfigurationService _fibuKonfigurationService;
     private readonly IFirmenstammService _firmenstammService;
+    private readonly IKulturstufenService _kulturstufenService;
 
     public KleinstammViewModel(
         IEinheitenService einheitenService,
@@ -36,7 +38,8 @@ public sealed partial class KleinstammViewModel : ObservableObject
         Milet.Application.Lager.ILagerortService lagerortService,
         IMahnwesenService mahnwesenService,
         IFibuKonfigurationService fibuKonfigurationService,
-        IFirmenstammService firmenstammService)
+        IFirmenstammService firmenstammService,
+        IKulturstufenService kulturstufenService)
     {
         _einheitenService = einheitenService;
         _mwStSaetzeService = mwStSaetzeService;
@@ -50,6 +53,7 @@ public sealed partial class KleinstammViewModel : ObservableObject
         _mahnwesenService = mahnwesenService;
         _fibuKonfigurationService = fibuKonfigurationService;
         _firmenstammService = firmenstammService;
+        _kulturstufenService = kulturstufenService;
 
         _ = EinheitenLadenAsync();
         _ = MwStSaetzeLadenAsync();
@@ -61,6 +65,7 @@ public sealed partial class KleinstammViewModel : ObservableObject
         _ = MahnstufenLadenAsync();
         _ = FibuKonfigurationLadenAsync();
         _ = FirmenstammLadenAsync();
+        _ = KulturstufenLadenAsync();
     }
 
     // ---- Einheiten ----
@@ -955,6 +960,118 @@ public sealed partial class KleinstammViewModel : ObservableObject
         catch (Exception ex)
         {
             FirmenstammFehler = ex.Message;
+        }
+    }
+
+    // ---- Kulturstufen (Phase 8) ----
+
+    [ObservableProperty]
+    public partial IReadOnlyList<KulturstufeDto> KulturstufenListe { get; set; } = [];
+
+    [ObservableProperty]
+    public partial KulturstufeDto? KulturstufeAusgewaehlt { get; set; }
+
+    [ObservableProperty]
+    public partial string KulturstufeCode { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string KulturstufeBezeichnung { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial int KulturstufeReihenfolge { get; set; }
+
+    [ObservableProperty]
+    public partial bool KulturstufeIstVerkaufsfaehig { get; set; }
+
+    [ObservableProperty]
+    public partial string KulturstufeFarbeHex { get; set; } = "#4CAF50";
+
+    [ObservableProperty]
+    public partial bool KulturstufeAktiv { get; set; } = true;
+
+    [ObservableProperty]
+    public partial string? KulturstufeFehler { get; set; }
+
+    /// <summary>Ohne verkaufsfähige Stufe kann kein Lieferschein gebucht werden — Warnhinweis, kein Blocker (E5).</summary>
+    public bool KeineAktiveVerkaufsfaehigeStufe =>
+        KulturstufenListe.Count > 0 && !KulturstufenListe.Any(k => k.Aktiv && k.IstVerkaufsfaehig);
+
+    partial void OnKulturstufeAusgewaehltChanged(KulturstufeDto? value)
+    {
+        KulturstufeFehler = null;
+        KulturstufeCode = value?.Code ?? string.Empty;
+        KulturstufeBezeichnung = value?.Bezeichnung ?? string.Empty;
+        KulturstufeReihenfolge = value?.Reihenfolge ?? 0;
+        KulturstufeIstVerkaufsfaehig = value?.IstVerkaufsfaehig ?? false;
+        KulturstufeFarbeHex = value?.FarbeHex ?? "#4CAF50";
+        KulturstufeAktiv = value?.Aktiv ?? true;
+    }
+
+    [RelayCommand]
+    private async Task KulturstufenLadenAsync()
+    {
+        KulturstufenListe = await _kulturstufenService.ListeAsync();
+        OnPropertyChanged(nameof(KeineAktiveVerkaufsfaehigeStufe));
+    }
+
+    [RelayCommand]
+    private void KulturstufeNeu() => KulturstufeAusgewaehlt = null;
+
+    [RelayCommand]
+    private async Task KulturstufeSpeichernAsync()
+    {
+        KulturstufeFehler = null;
+        var dto = new KulturstufeDto
+        {
+            Id = KulturstufeAusgewaehlt?.Id ?? 0,
+            Code = KulturstufeCode,
+            Bezeichnung = KulturstufeBezeichnung,
+            Reihenfolge = KulturstufeReihenfolge,
+            IstVerkaufsfaehig = KulturstufeIstVerkaufsfaehig,
+            FarbeHex = KulturstufeFarbeHex,
+            Aktiv = KulturstufeAktiv,
+            RowVersion = KulturstufeAusgewaehlt?.RowVersion ?? [],
+        };
+
+        try
+        {
+            await _kulturstufenService.SpeichereAsync(dto);
+            await KulturstufenLadenAsync();
+            KulturstufeNeu();
+        }
+        catch (ValidationException ex)
+        {
+            KulturstufeFehler = string.Join(Environment.NewLine, ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (Exception ex)
+        {
+            KulturstufeFehler = ex.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task KulturstufeLoeschenAsync()
+    {
+        if (KulturstufeAusgewaehlt is not { } stufe)
+        {
+            return;
+        }
+
+        var bestaetigt = await _dialogService.BestaetigenAsync("Kulturstufe löschen", $"Kulturstufe '{stufe.Bezeichnung}' wirklich löschen?");
+        if (!bestaetigt)
+        {
+            return;
+        }
+
+        try
+        {
+            await _kulturstufenService.LoescheAsync(stufe.Id);
+            KulturstufeNeu();
+            await KulturstufenLadenAsync();
+        }
+        catch (Exception ex)
+        {
+            await _dialogService.ZeigeFehlerAsync("Fehler beim Löschen", ex.Message);
         }
     }
 }

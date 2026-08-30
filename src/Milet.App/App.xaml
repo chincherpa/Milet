@@ -12,6 +12,9 @@
             <conv:DecimalToDoubleConverter x:Key="DecimalToDoubleConverter" />
             <conv:DateOnlyToDateTimeOffsetConverter x:Key="DateOnlyToDateTimeOffsetConverter" />
             <conv:NullableInt32ToDoubleConverter x:Key="NullableInt32ToDoubleConverter" />
+            <conv:HexColorToBrushConverter x:Key="HexColorToBrushConverter" />
+            <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+            <conv:AmpelToColorConverter x:Key="AmpelToColorConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

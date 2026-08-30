@@ -608,6 +608,180 @@ namespace Milet.Infrastructure.Persistence.Migrations
                     b.ToTable("ZahlungZuordnungen", (string)null);
                 });
 
+            modelBuilder.Entity("Milet.Domain.Entities.Gaertnerei.Gaertnereiplan", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Aktiv")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Bezeichnung")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("BreiteMeter")
+                        .HasPrecision(9, 2)
+                        .HasColumnType("decimal(9,2)");
+
+                    b.Property<DateTime>("ErstelltAm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ErstelltVonId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("GeaendertAm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("GeaendertVonId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("HoeheMeter")
+                        .HasPrecision(9, 2)
+                        .HasColumnType("decimal(9,2)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Gaertnereiplaene", (string)null);
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Gaertnerei.Kulturstufe", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Aktiv")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Bezeichnung")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<DateTime>("ErstelltAm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ErstelltVonId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FarbeHex")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)");
+
+                    b.Property<DateTime?>("GeaendertAm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("GeaendertVonId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IstVerkaufsfaehig")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Reihenfolge")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("Reihenfolge")
+                        .IsUnique();
+
+                    b.ToTable("Kulturstufen", (string)null);
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Gaertnerei.Sektion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Aktiv")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Bezeichnung")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("BreiteMeter")
+                        .HasPrecision(9, 2)
+                        .HasColumnType("decimal(9,2)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<DateTime>("ErstelltAm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ErstelltVonId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("GeaendertAm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("GeaendertVonId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("HoeheMeter")
+                        .HasPrecision(9, 2)
+                        .HasColumnType("decimal(9,2)");
+
+                    b.Property<int>("LagerortId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("PosXMeter")
+                        .HasPrecision(9, 2)
+                        .HasColumnType("decimal(9,2)");
+
+                    b.Property<decimal>("PosYMeter")
+                        .HasPrecision(9, 2)
+                        .HasColumnType("decimal(9,2)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LagerortId", "Code")
+                        .IsUnique();
+
+                    b.ToTable("Sektionen", (string)null);
+                });
+
             modelBuilder.Entity("Milet.Domain.Entities.Lager.ArtikelBestand", b =>
                 {
                     b.Property<int>("Id")
@@ -617,6 +791,9 @@ namespace Milet.Infrastructure.Persistence.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("ArtikelId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("KulturstufeId")
                         .HasColumnType("int");
 
                     b.Property<int>("LagerortId")
@@ -632,11 +809,18 @@ namespace Milet.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<int?>("SektionId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("KulturstufeId");
 
                     b.HasIndex("LagerortId");
 
-                    b.HasIndex("ArtikelId", "LagerortId")
+                    b.HasIndex("SektionId");
+
+                    b.HasIndex("ArtikelId", "LagerortId", "SektionId", "KulturstufeId")
                         .IsUnique();
 
                     b.ToTable("ArtikelBestaende", (string)null);
@@ -726,6 +910,12 @@ namespace Milet.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 3)
                         .HasColumnType("decimal(18,3)");
 
+                    b.Property<int?>("KulturstufeId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SektionId")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("SollMenge")
                         .HasPrecision(18, 3)
                         .HasColumnType("decimal(18,3)");
@@ -735,6 +925,10 @@ namespace Milet.Infrastructure.Persistence.Migrations
                     b.HasIndex("ArtikelId");
 
                     b.HasIndex("InventurId");
+
+                    b.HasIndex("KulturstufeId");
+
+                    b.HasIndex("SektionId");
 
                     b.ToTable("InventurPositionen", (string)null);
                 });
@@ -756,12 +950,18 @@ namespace Milet.Infrastructure.Persistence.Migrations
                     b.Property<int?>("BenutzerId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("KulturstufeId")
+                        .HasColumnType("int");
+
                     b.Property<int>("LagerortId")
                         .HasColumnType("int");
 
                     b.Property<decimal>("Menge")
                         .HasPrecision(18, 3)
                         .HasColumnType("decimal(18,3)");
+
+                    b.Property<int?>("SektionId")
+                        .HasColumnType("int");
 
                     b.Property<int?>("SeriennummerId")
                         .HasColumnType("int");
@@ -776,11 +976,15 @@ namespace Milet.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("BelegPositionId");
 
+                    b.HasIndex("KulturstufeId");
+
                     b.HasIndex("LagerortId");
+
+                    b.HasIndex("SektionId");
 
                     b.HasIndex("SeriennummerId");
 
-                    b.HasIndex("ArtikelId", "LagerortId");
+                    b.HasIndex("ArtikelId", "LagerortId", "SektionId", "KulturstufeId");
 
                     b.ToTable("Lagerbewegungen", (string)null);
                 });
@@ -801,6 +1005,10 @@ namespace Milet.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<decimal?>("BreiteMeter")
+                        .HasPrecision(9, 2)
+                        .HasColumnType("decimal(9,2)");
+
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(10)
@@ -812,11 +1020,29 @@ namespace Milet.Infrastructure.Persistence.Migrations
                     b.Property<int?>("ErstelltVonId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("GaertnereiplanId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("GeaendertAm")
                         .HasColumnType("datetime2");
 
                     b.Property<int?>("GeaendertVonId")
                         .HasColumnType("int");
+
+                    b.Property<decimal?>("HoeheMeter")
+                        .HasPrecision(9, 2)
+                        .HasColumnType("decimal(9,2)");
+
+                    b.Property<bool>("IstFeld")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("PosXMeter")
+                        .HasPrecision(9, 2)
+                        .HasColumnType("decimal(9,2)");
+
+                    b.Property<decimal?>("PosYMeter")
+                        .HasPrecision(9, 2)
+                        .HasColumnType("decimal(9,2)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -828,6 +1054,8 @@ namespace Milet.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Code")
                         .IsUnique();
+
+                    b.HasIndex("GaertnereiplanId");
 
                     b.ToTable("Lagerorte", (string)null);
                 });
@@ -903,6 +1131,10 @@ namespace Milet.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("BotanischerName")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
                     b.Property<string>("Ean")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
@@ -934,6 +1166,9 @@ namespace Milet.Infrastructure.Persistence.Migrations
                         .HasColumnType("decimal(18,3)");
 
                     b.Property<bool>("HatSeriennummern")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IstKulturpflanze")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IstLagerartikel")
@@ -1422,6 +1657,9 @@ namespace Milet.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int?>("KulturstufeId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("LagerortId")
                         .HasColumnType("int");
 
@@ -1446,6 +1684,9 @@ namespace Milet.Infrastructure.Persistence.Migrations
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
 
+                    b.Property<int?>("SektionId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("SteuerSchluessel")
                         .HasColumnType("int");
 
@@ -1458,9 +1699,13 @@ namespace Milet.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("BelegId");
 
+                    b.HasIndex("KulturstufeId");
+
                     b.HasIndex("LagerortId");
 
                     b.HasIndex("MwStSatzId");
+
+                    b.HasIndex("SektionId");
 
                     b.HasIndex("UrsprungsPositionId");
 
@@ -1758,6 +2003,17 @@ namespace Milet.Infrastructure.Persistence.Migrations
                     b.Navigation("Zahlung");
                 });
 
+            modelBuilder.Entity("Milet.Domain.Entities.Gaertnerei.Sektion", b =>
+                {
+                    b.HasOne("Milet.Domain.Entities.Lager.Lagerort", "Lagerort")
+                        .WithMany()
+                        .HasForeignKey("LagerortId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Lagerort");
+                });
+
             modelBuilder.Entity("Milet.Domain.Entities.Lager.ArtikelBestand", b =>
                 {
                     b.HasOne("Milet.Domain.Entities.Stammdaten.Artikel", "Artikel")
@@ -1766,15 +2022,29 @@ namespace Milet.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Milet.Domain.Entities.Gaertnerei.Kulturstufe", "Kulturstufe")
+                        .WithMany()
+                        .HasForeignKey("KulturstufeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Milet.Domain.Entities.Lager.Lagerort", "Lagerort")
                         .WithMany()
                         .HasForeignKey("LagerortId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Milet.Domain.Entities.Gaertnerei.Sektion", "Sektion")
+                        .WithMany()
+                        .HasForeignKey("SektionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Artikel");
 
+                    b.Navigation("Kulturstufe");
+
                     b.Navigation("Lagerort");
+
+                    b.Navigation("Sektion");
                 });
 
             modelBuilder.Entity("Milet.Domain.Entities.Lager.BelegPositionSeriennummer", b =>
@@ -1821,9 +2091,23 @@ namespace Milet.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Milet.Domain.Entities.Gaertnerei.Kulturstufe", "Kulturstufe")
+                        .WithMany()
+                        .HasForeignKey("KulturstufeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Milet.Domain.Entities.Gaertnerei.Sektion", "Sektion")
+                        .WithMany()
+                        .HasForeignKey("SektionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Artikel");
 
                     b.Navigation("Inventur");
+
+                    b.Navigation("Kulturstufe");
+
+                    b.Navigation("Sektion");
                 });
 
             modelBuilder.Entity("Milet.Domain.Entities.Lager.Lagerbewegung", b =>
@@ -1839,11 +2123,21 @@ namespace Milet.Infrastructure.Persistence.Migrations
                         .HasForeignKey("BelegPositionId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Milet.Domain.Entities.Gaertnerei.Kulturstufe", "Kulturstufe")
+                        .WithMany()
+                        .HasForeignKey("KulturstufeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Milet.Domain.Entities.Lager.Lagerort", "Lagerort")
                         .WithMany()
                         .HasForeignKey("LagerortId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Milet.Domain.Entities.Gaertnerei.Sektion", "Sektion")
+                        .WithMany()
+                        .HasForeignKey("SektionId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Milet.Domain.Entities.Lager.Seriennummer", "Seriennummer")
                         .WithMany()
@@ -1854,9 +2148,23 @@ namespace Milet.Infrastructure.Persistence.Migrations
 
                     b.Navigation("BelegPosition");
 
+                    b.Navigation("Kulturstufe");
+
                     b.Navigation("Lagerort");
 
+                    b.Navigation("Sektion");
+
                     b.Navigation("Seriennummer");
+                });
+
+            modelBuilder.Entity("Milet.Domain.Entities.Lager.Lagerort", b =>
+                {
+                    b.HasOne("Milet.Domain.Entities.Gaertnerei.Gaertnereiplan", "Gaertnereiplan")
+                        .WithMany()
+                        .HasForeignKey("GaertnereiplanId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Gaertnereiplan");
                 });
 
             modelBuilder.Entity("Milet.Domain.Entities.Lager.Seriennummer", b =>
@@ -2176,6 +2484,11 @@ namespace Milet.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Milet.Domain.Entities.Gaertnerei.Kulturstufe", "Kulturstufe")
+                        .WithMany()
+                        .HasForeignKey("KulturstufeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Milet.Domain.Entities.Lager.Lagerort", "Lagerort")
                         .WithMany()
                         .HasForeignKey("LagerortId")
@@ -2184,6 +2497,11 @@ namespace Milet.Infrastructure.Persistence.Migrations
                     b.HasOne("Milet.Domain.Entities.Stammdaten.MwStSatz", null)
                         .WithMany()
                         .HasForeignKey("MwStSatzId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Milet.Domain.Entities.Gaertnerei.Sektion", "Sektion")
+                        .WithMany()
+                        .HasForeignKey("SektionId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Milet.Domain.Entities.Verkauf.BelegPosition", null)
@@ -2195,7 +2513,11 @@ namespace Milet.Infrastructure.Persistence.Migrations
 
                     b.Navigation("Beleg");
 
+                    b.Navigation("Kulturstufe");
+
                     b.Navigation("Lagerort");
+
+                    b.Navigation("Sektion");
                 });
 
             modelBuilder.Entity("Milet.Domain.Entities.Verkauf.BelegSteuerSumme", b =>

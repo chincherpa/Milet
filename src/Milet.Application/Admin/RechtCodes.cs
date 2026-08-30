@@ -16,6 +16,10 @@ public static class RechtCodes
     public const string Reporting = "Reporting";
     public const string Administration = "Administration";
 
+    /// <summary>Kulturbuchungen (Zugang/Stufenwechsel/Umsetzen/Ausfall) und Grundriss-Pflege — abgegrenzt
+    /// von <see cref="Lager"/>, damit eine Aushilfe umtopfen darf, ohne Lieferscheine buchen zu dürfen.</summary>
+    public const string Gaertnerei = "Gaertnerei";
+
     /// <summary>
     /// Recht, das ein Beleg dieses Typs verlangt. Einzige Quelle für alle Belegpfade (Anlegen/Ändern,
     /// Überleiten, Buchen) — die Zuordnung darf nicht je Service auseinanderlaufen.
@@ -29,6 +33,6 @@ public static class RechtCodes
 
     public static readonly IReadOnlyList<string> Alle =
     [
-        Stammdaten, Verkauf, Einkauf, Lager, Finanzen, Reporting, Administration,
+        Stammdaten, Verkauf, Einkauf, Lager, Finanzen, Reporting, Administration, Gaertnerei,
     ];
 }

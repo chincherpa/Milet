@@ -30,6 +30,12 @@ public class BelegPosition
     public int? LagerortId { get; set; }
     public Domain.Entities.Lager.Lagerort? Lagerort { get; set; }
 
+    /// <summary>Nur Lieferschein/Wareneingang — bestimmt, gegen welche Bestandszeile gebucht wird (Phase 8, E9).</summary>
+    public int? SektionId { get; set; }
+    public Domain.Entities.Gaertnerei.Sektion? Sektion { get; set; }
+    public int? KulturstufeId { get; set; }
+    public Domain.Entities.Gaertnerei.Kulturstufe? Kulturstufe { get; set; }
+
     public decimal GesamtNetto { get; set; }
 
     /// <summary>Trägt Teillieferung/Teilfakturierung/Sammelrechnung: offene Menge = Menge − Σ referenzierender Folgepositionen.</summary>

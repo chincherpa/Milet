@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Milet.Domain.Entities.Admin;
 using Milet.Domain.Entities.Finanzen;
+using Milet.Domain.Entities.Gaertnerei;
 using Milet.Domain.Entities.Stammdaten;
 using Milet.Domain.ValueObjects;
 
@@ -99,6 +100,30 @@ public static class StammdatenSeed
             {
                 db.Mahnstufen.Add(stufe);
             }
+        }
+
+        // Gleiches "je fehlendem Code ergänzen"-Muster wie bei den Nummernkreisen (s. o.) — Namen/Farben
+        // sind Startpunkte, jederzeit über den Kulturstufen-Tab in den Einstellungen änderbar (E5).
+        var benoetigteKulturstufen = new[]
+        {
+            new Kulturstufe { Code = "JP", Bezeichnung = "Jungpflanze", Reihenfolge = 1, IstVerkaufsfaehig = false, FarbeHex = "#8BC34A" },
+            new Kulturstufe { Code = "TP", Bezeichnung = "Teenagerpflanze", Reihenfolge = 2, IstVerkaufsfaehig = false, FarbeHex = "#4CAF50" },
+            new Kulturstufe { Code = "VP", Bezeichnung = "Verkaufspflanze", Reihenfolge = 3, IstVerkaufsfaehig = true, FarbeHex = "#2E7D32" },
+        };
+        var vorhandeneKulturstufen = await db.Kulturstufen.Select(k => k.Code).ToListAsync(ct);
+        foreach (var stufe in benoetigteKulturstufen)
+        {
+            if (!vorhandeneKulturstufen.Contains(stufe.Code))
+            {
+                db.Kulturstufen.Add(stufe);
+            }
+        }
+
+        // v1 zeigt genau einen Plan (E11) — als Tabelle vorbereitet, damit "mehrere Standorte" später ohne
+        // Schemabruch nachrüstbar ist. Das Hauptlager (HL) bleibt IstFeld=false und bekommt keine Geometrie.
+        if (!await db.Gaertnereiplaene.AnyAsync(ct))
+        {
+            db.Gaertnereiplaene.Add(new Gaertnereiplan { Bezeichnung = "Gärtnerei", BreiteMeter = 100m, HoeheMeter = 60m });
         }
 
         if (!await db.Firmenstamm.AnyAsync(ct))

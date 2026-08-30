@@ -7,6 +7,7 @@ using Milet.App.ViewModels;
 using Milet.App.ViewModels.Admin;
 using Milet.App.ViewModels.Einkauf;
 using Milet.App.ViewModels.Finanzen;
+using Milet.App.ViewModels.Gaertnerei;
 using Milet.App.ViewModels.Lager;
 using Milet.App.ViewModels.Reporting;
 using Milet.App.ViewModels.Stammdaten;
@@ -76,6 +77,10 @@ public partial class App : Microsoft.UI.Xaml.Application
         builder.Services.AddTransient<ArtikelListViewModel>();
         builder.Services.AddTransient<ArtikelEditViewModel>();
         builder.Services.AddTransient<KleinstammViewModel>();
+
+        builder.Services.AddTransient<PflanzenUebersichtViewModel>();
+        builder.Services.AddTransient<GrundrissViewModel>();
+        builder.Services.AddTransient<KulturbuchungViewModel>();
 
         builder.Services.AddTransient<AngebotListViewModel>();
         builder.Services.AddTransient<AuftragListViewModel>();

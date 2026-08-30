@@ -1,5 +1,6 @@
 using Milet.App.Services;
 using Milet.Application.Abstractions;
+using Milet.Application.Gaertnerei;
 using Milet.Application.Verkauf;
 using Milet.Domain.Entities.Verkauf;
 
@@ -13,8 +14,9 @@ public sealed class AngebotEditViewModel : BelegEditViewModelBase
         IBelegUeberleitungService ueberleitungService,
         IPdfService pdfService,
         INavigationService navigation,
-        IDialogService dialogService)
-        : base(BelegTyp.Angebot, belegService, lookupService, ueberleitungService, buchenService: null, pdfService, navigation, dialogService)
+        IDialogService dialogService,
+        IVerfuegbarkeitService verfuegbarkeitService)
+        : base(BelegTyp.Angebot, belegService, lookupService, ueberleitungService, buchenService: null, pdfService, navigation, dialogService, verfuegbarkeitService)
     {
     }
 

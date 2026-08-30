@@ -7,6 +7,7 @@ using Milet.Application.Abstractions;
 using Milet.Application.Admin;
 using Milet.Application.Einkauf;
 using Milet.Application.Finanzen;
+using Milet.Application.Gaertnerei;
 using Milet.Application.Lager;
 using Milet.Application.Reporting;
 using Milet.Application.Stammdaten;
@@ -67,6 +68,11 @@ public static class DependencyInjection
         services.AddTransient<ISeriennummernService, SeriennummernService>();
         services.AddTransient<ILieferscheinBuchenService, LieferscheinBuchenService>();
         services.AddTransient<IInventurService, InventurService>();
+        services.AddTransient<IKulturstufenService, KulturstufenService>();
+        services.AddTransient<IGaertnereiplanService, GaertnereiplanService>();
+        services.AddTransient<IKulturBuchungService, KulturBuchungService>();
+        services.AddTransient<IKulturBestandService, KulturBestandService>();
+        services.AddTransient<IVerfuegbarkeitService, VerfuegbarkeitService>();
 
         services.AddTransient<IEinkaufLookupService, EinkaufLookupService>();
         services.AddTransient<IBestellVorschlagService, BestellVorschlagService>();

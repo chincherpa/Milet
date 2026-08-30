@@ -70,6 +70,12 @@ public sealed partial class ArtikelEditViewModel : ObservableObject, INavigation
     public partial bool Gesperrt { get; set; }
 
     [ObservableProperty]
+    public partial bool IstKulturpflanze { get; set; }
+
+    [ObservableProperty]
+    public partial string? BotanischerName { get; set; }
+
+    [ObservableProperty]
     public partial string? Fehlermeldung { get; set; }
 
     public void OnNavigatedTo(NavigationEventArgs args)
@@ -99,6 +105,8 @@ public sealed partial class ArtikelEditViewModel : ObservableObject, INavigation
             IstLagerartikel = artikel.IstLagerartikel;
             Mindestbestand = artikel.Mindestbestand;
             Gesperrt = artikel.Gesperrt;
+            IstKulturpflanze = artikel.IstKulturpflanze;
+            BotanischerName = artikel.BotanischerName;
         }
         else if (Einheiten.Count > 0)
         {
@@ -126,6 +134,8 @@ public sealed partial class ArtikelEditViewModel : ObservableObject, INavigation
             IstLagerartikel = IstLagerartikel,
             Mindestbestand = Mindestbestand,
             Gesperrt = Gesperrt,
+            IstKulturpflanze = IstKulturpflanze,
+            BotanischerName = BotanischerName,
         };
 
         try

@@ -2,7 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Milet.Application.Stammdaten;
 using Milet.Application.Verkauf;
+using Milet.Domain.Entities.Lager;
 using Milet.Domain.Entities.Verkauf;
+using Milet.Infrastructure.Services;
 
 namespace Milet.Infrastructure.Persistence.Seed;
 
@@ -260,6 +262,109 @@ public static class DummyDatenSeed
             await PositionAsync(2, ordner, 5, kunde6),
             Freitext(3, "Lieferung & Versand", 9.90m),
         ]);
+
+        // --- Gärtnerei/Kulturführung (Phase 8) --------------------------------------
+        // Bewusst über den echten Schreibpfad BestandService.BucheBewegungAsync gebucht (nicht per
+        // direktem Insert) — der Seed durchläuft damit dieselben Regeln (KulturRegeln.PruefeDimensionen,
+        // Upsert-Race-Fix) wie jede spätere Buchung aus der UI, und Ledger/Snapshot bleiben konsistent.
+        await using (var db = await dbFactory.CreateDbContextAsync(ct))
+        {
+            var plan = await db.Gaertnereiplaene.FirstAsync(ct);
+
+            var felderDefs = new (string Code, string Bezeichnung, decimal X, decimal Y, decimal Breite, decimal Hoehe, string[] SektionsCodes)[]
+            {
+                ("F1", "Feld Nord", 5m, 5m, 30m, 20m, ["A1", "A2", "A3", "A4", "A5", "A6"]),
+                ("F2", "Feld Süd", 5m, 30m, 30m, 20m, ["B1", "B2", "B3", "B4", "B5"]),
+                ("F3", "Folientunnel", 45m, 5m, 20m, 10m, ["C1", "C2", "C3", "C4"]),
+            };
+
+            // Relative Rasterpositionen (Meter) für bis zu 6 Sektionen à 5x5m je Feld — bewusst großzügig
+            // beabstandet, damit sie in jedem der drei unterschiedlich großen Felder aus felderDefs passen.
+            var rasterPositionen = new (decimal X, decimal Y)[] { (0, 0), (6, 0), (12, 0), (0, 6), (6, 6), (12, 6) };
+
+            var sektionenJeCode = new Dictionary<string, int>();
+            var feldIdJeSektionsCode = new Dictionary<string, int>();
+            foreach (var f in felderDefs)
+            {
+                var feld = new Lagerort
+                {
+                    Code = f.Code,
+                    Bezeichnung = f.Bezeichnung,
+                    IstFeld = true,
+                    GaertnereiplanId = plan.Id,
+                    PosXMeter = f.X,
+                    PosYMeter = f.Y,
+                    BreiteMeter = f.Breite,
+                    HoeheMeter = f.Hoehe,
+                };
+                db.Lagerorte.Add(feld);
+                await db.SaveChangesAsync(ct);
+
+                for (var i = 0; i < f.SektionsCodes.Length; i++)
+                {
+                    var pos = rasterPositionen[i];
+                    var sektion = new Milet.Domain.Entities.Gaertnerei.Sektion
+                    {
+                        LagerortId = feld.Id,
+                        Code = f.SektionsCodes[i],
+                        Bezeichnung = $"Sektion {f.SektionsCodes[i]}",
+                        PosXMeter = pos.X,
+                        PosYMeter = pos.Y,
+                        BreiteMeter = 5m,
+                        HoeheMeter = 5m,
+                    };
+                    db.Sektionen.Add(sektion);
+                    await db.SaveChangesAsync(ct);
+                    sektionenJeCode[f.SektionsCodes[i]] = sektion.Id;
+                    // Jede Sektion gehört genau zu ihrem Feld — die Bestandsbuchung unten muss die LagerortId
+                    // aus DIESER Zuordnung nehmen, nicht aus einer festen Feldannahme, sonst entstünde eine
+                    // ArtikelBestand-Zeile mit LagerortId≠dem Feld der referenzierten Sektion.
+                    feldIdJeSektionsCode[f.SektionsCodes[i]] = feld.Id;
+                }
+            }
+
+            var stufeJpId = (await db.Kulturstufen.FirstAsync(k => k.Code == "JP", ct)).Id;
+            var stufeTpId = (await db.Kulturstufen.FirstAsync(k => k.Code == "TP", ct)).Id;
+            var stufeVpId = (await db.Kulturstufen.FirstAsync(k => k.Code == "VP", ct)).Id;
+
+            var kulturpflanzenDefs = new (string Bez, string BotanischerName, string JpSektion, string TpSektion, string VpSektion)[]
+            {
+                ("Salvia nemorosa 'Caradonna'", "Salvia nemorosa 'Caradonna'", "A1", "A4", "B1"),
+                ("Geranium 'Rozanne'", "Geranium 'Rozanne'", "A2", "A5", "B2"),
+                ("Echinacea purpurea", "Echinacea purpurea", "A3", "A6", "B3"),
+                ("Hosta 'Blue Angel'", "Hosta 'Blue Angel'", "C1", "C3", "B4"),
+                ("Astilbe arendsii", "Astilbe arendsii", "C2", "C4", "B5"),
+            };
+
+            var stkEinheitId = einheiten["Stk"];
+            foreach (var p in kulturpflanzenDefs)
+            {
+                var artikelDto = new ArtikelDto
+                {
+                    Bezeichnung = p.Bez,
+                    BotanischerName = p.BotanischerName,
+                    IstKulturpflanze = true,
+                    EinheitId = stkEinheitId,
+                    MwStSatzId = mwst19Id,
+                    Einkaufspreis = 0.80m,
+                    Listenpreis = 4.90m,
+                    IstLagerartikel = true,
+                };
+                var gespeichert = await artikelService.SpeichereAsync(artikelDto, ct);
+
+                await using var transaction = await db.Database.BeginTransactionAsync(ct);
+                await BestandService.BucheBewegungAsync(
+                    db, gespeichert.Id, feldIdJeSektionsCode[p.JpSektion], 500m, LagerbewegungTyp.Kulturzugang, null, ct,
+                    sektionenJeCode[p.JpSektion], stufeJpId);
+                await BestandService.BucheBewegungAsync(
+                    db, gespeichert.Id, feldIdJeSektionsCode[p.TpSektion], 200m, LagerbewegungTyp.Kulturzugang, null, ct,
+                    sektionenJeCode[p.TpSektion], stufeTpId);
+                await BestandService.BucheBewegungAsync(
+                    db, gespeichert.Id, feldIdJeSektionsCode[p.VpSektion], 100m, LagerbewegungTyp.Kulturzugang, null, ct,
+                    sektionenJeCode[p.VpSektion], stufeVpId);
+                await transaction.CommitAsync(ct);
+            }
+        }
 
         return true;
     }

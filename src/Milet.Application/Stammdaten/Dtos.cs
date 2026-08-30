@@ -65,6 +65,11 @@ public sealed record ArtikelDto
     public bool HatSeriennummern { get; init; }
     public decimal? Mindestbestand { get; init; }
     public bool Gesperrt { get; init; }
+
+    /// <summary>Kulturpflanze statt Handelsware (Phase 8, E1) — steuert, ob Bestandsbuchungen eine Kulturstufe verlangen.</summary>
+    public bool IstKulturpflanze { get; init; }
+    public string? BotanischerName { get; init; }
+
     public byte[] RowVersion { get; init; } = [];
 }
 
