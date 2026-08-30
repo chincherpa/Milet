@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Milet.App.Services;
 using Milet.Application.Common;
+using Milet.Application.Gaertnerei;
 using Milet.Application.Reporting;
 
 namespace Milet.App.ViewModels.Reporting;
@@ -10,14 +11,21 @@ public sealed partial class ReportingViewModel : ObservableObject
 {
     private readonly IReportingService _reportingService;
     private readonly IDialogService _dialogService;
+    private readonly IGaertnereiplanService _gaertnereiplanService;
+    private readonly IKulturstufenService _kulturstufenService;
 
-    public ReportingViewModel(IReportingService reportingService, IDialogService dialogService)
+    public ReportingViewModel(
+        IReportingService reportingService, IDialogService dialogService,
+        IGaertnereiplanService gaertnereiplanService, IKulturstufenService kulturstufenService)
     {
         _reportingService = reportingService;
         _dialogService = dialogService;
+        _gaertnereiplanService = gaertnereiplanService;
+        _kulturstufenService = kulturstufenService;
         Bis = DateOnly.FromDateTime(DateTime.Today);
         Von = Bis.AddMonths(-1);
         _ = OffeneAuftraegeLadenAsync();
+        _ = FelderUndKulturstufenLadenAsync();
     }
 
     [ObservableProperty] public partial DateOnly Von { get; set; }
@@ -30,6 +38,22 @@ public sealed partial class ReportingViewModel : ObservableObject
     [ObservableProperty] public partial IReadOnlyList<ArtikelbewegungDto> ArtikelbewegungenListe { get; set; } = [];
     [ObservableProperty] public partial IReadOnlyList<TopArtikelDto> TopArtikelListe { get; set; } = [];
     [ObservableProperty] public partial IReadOnlyList<OffenerAuftragDto> OffeneAuftraegeListe { get; set; } = [];
+
+    // ---- Gärtnerei-Auswertungen (Phase 8) ----
+    [ObservableProperty] public partial IReadOnlyList<FeldDto> Felder { get; set; } = [];
+    [ObservableProperty] public partial IReadOnlyList<KulturstufeDto> Kulturstufen { get; set; } = [];
+    [ObservableProperty] public partial int? KulturbestandFeldFilterId { get; set; }
+    [ObservableProperty] public partial int? KulturbestandStufeFilterId { get; set; }
+    [ObservableProperty] public partial IReadOnlyList<KulturbestandZeileDto> KulturbestandListe { get; set; } = [];
+    [ObservableProperty] public partial IReadOnlyList<AusfallquoteZeileDto> AusfallquoteListe { get; set; } = [];
+    [ObservableProperty] public partial IReadOnlyList<FlaechenbelegungZeileDto> FlaechenbelegungListe { get; set; } = [];
+
+    private async Task FelderUndKulturstufenLadenAsync()
+    {
+        var plan = await _gaertnereiplanService.LadePlanAsync();
+        Felder = plan?.Felder ?? [];
+        Kulturstufen = await _kulturstufenService.ListeAsync();
+    }
 
     private async Task<T> MitFehlerbehandlungAsync<T>(Func<Task<T>> aktion, T standardwert)
     {
@@ -98,6 +122,34 @@ public sealed partial class ReportingViewModel : ObservableObject
     private Task OffeneAuftraegeExportierenAsync() => ExportierenAsync("OffeneAuftraege.csv",
         ["Belegnummer", "Datum", "Kunde", "Brutto", "Offene Menge"],
         OffeneAuftraegeListe.Select(d => (IReadOnlyList<object?>)[d.BelegNummer, d.BelegDatum, d.KundeName, d.SummeBrutto, d.OffeneMenge]));
+
+    [RelayCommand]
+    private async Task KulturbestandLadenAsync() =>
+        KulturbestandListe = await MitFehlerbehandlungAsync(
+            () => _reportingService.KulturbestandAsync(KulturbestandFeldFilterId, KulturbestandStufeFilterId), (IReadOnlyList<KulturbestandZeileDto>)[]);
+
+    [RelayCommand]
+    private async Task AusfallquoteLadenAsync() =>
+        AusfallquoteListe = await MitFehlerbehandlungAsync(() => _reportingService.AusfallquoteAsync(Von, Bis), (IReadOnlyList<AusfallquoteZeileDto>)[]);
+
+    [RelayCommand]
+    private async Task FlaechenbelegungLadenAsync() =>
+        FlaechenbelegungListe = await MitFehlerbehandlungAsync(() => _reportingService.FlaechenbelegungAsync(), (IReadOnlyList<FlaechenbelegungZeileDto>)[]);
+
+    [RelayCommand]
+    private Task KulturbestandExportierenAsync() => ExportierenAsync("Kulturbestand.csv",
+        ["Artikelnummer", "Bezeichnung", "Botanischer Name", "Feld", "Sektion", "Kulturstufe", "Menge"],
+        KulturbestandListe.Select(d => (IReadOnlyList<object?>)[d.Artikelnummer, d.Bezeichnung, d.BotanischerName, d.FeldBezeichnung, d.SektionBezeichnung, d.KulturstufeBezeichnung, d.Menge]));
+
+    [RelayCommand]
+    private Task AusfallquoteExportierenAsync() => ExportierenAsync("Ausfallquote.csv",
+        ["Artikelnummer", "Bezeichnung", "Kulturstufe", "Zugänge", "Ausfall", "Quote %"],
+        AusfallquoteListe.Select(d => (IReadOnlyList<object?>)[d.Artikelnummer, d.Bezeichnung, d.KulturstufeBezeichnung, d.SummeZugaenge, d.SummeAusfall, d.AusfallquoteProzent]));
+
+    [RelayCommand]
+    private Task FlaechenbelegungExportierenAsync() => ExportierenAsync("Flaechenbelegung.csv",
+        ["Feld", "Gesamtfläche m²", "Belegte Fläche m²", "Belegung %"],
+        FlaechenbelegungListe.Select(d => (IReadOnlyList<object?>)[d.FeldBezeichnung, d.GesamtflaecheQm, d.BelegteFlaecheQm, d.BelegungsProzent]));
 
     private async Task ExportierenAsync(string dateiname, IReadOnlyList<string> spalten, IEnumerable<IReadOnlyList<object?>> zeilen)
     {

@@ -117,6 +117,88 @@ public sealed class ReportingService(IDbContextFactory<MiletDbContext> dbContext
         return ergebnis.OrderBy(a => a.BelegDatum).ToList();
     }
 
+    public async Task<IReadOnlyList<KulturbestandZeileDto>> KulturbestandAsync(int? feldId, int? kulturstufeId, CancellationToken ct = default)
+    {
+        await using var db = await dbContextFactory.CreateDbContextAsync(ct);
+
+        IQueryable<ArtikelBestand> query = db.ArtikelBestaende.AsNoTracking()
+            .Include(b => b.Artikel)
+            .Include(b => b.Lagerort)
+            .Include(b => b.Sektion)
+            .Include(b => b.Kulturstufe)
+            .Where(b => b.SektionId != null && b.KulturstufeId != null && b.Menge > 0);
+
+        if (feldId is { } fid) query = query.Where(b => b.LagerortId == fid);
+        if (kulturstufeId is { } kid) query = query.Where(b => b.KulturstufeId == kid);
+
+        var bestaende = await query.ToListAsync(ct);
+
+        return bestaende
+            .Select(b => new KulturbestandZeileDto(
+                b.ArtikelId, b.Artikel!.Artikelnummer, b.Artikel.Bezeichnung, b.Artikel.BotanischerName,
+                b.LagerortId, b.Lagerort!.Bezeichnung, b.SektionId!.Value, b.Sektion!.Bezeichnung,
+                b.KulturstufeId!.Value, b.Kulturstufe!.Bezeichnung, b.Menge))
+            .OrderBy(z => z.Bezeichnung).ThenBy(z => z.FeldBezeichnung).ThenBy(z => z.SektionBezeichnung)
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<AusfallquoteZeileDto>> AusfallquoteAsync(DateOnly von, DateOnly bis, CancellationToken ct = default)
+    {
+        await using var db = await dbContextFactory.CreateDbContextAsync(ct);
+        var vonZeitpunkt = von.ToDateTime(TimeOnly.MinValue);
+        var bisZeitpunkt = bis.ToDateTime(TimeOnly.MaxValue);
+
+        var bewegungen = await db.Lagerbewegungen.AsNoTracking()
+            .Include(l => l.Artikel)
+            .Include(l => l.Kulturstufe)
+            .Where(l => l.Zeitpunkt >= vonZeitpunkt && l.Zeitpunkt <= bisZeitpunkt && l.KulturstufeId != null
+                && (l.Typ == LagerbewegungTyp.Kulturzugang || l.Typ == LagerbewegungTyp.Ausfall))
+            .ToListAsync(ct);
+
+        return bewegungen
+            .GroupBy(l => (l.ArtikelId, KulturstufeId: l.KulturstufeId!.Value))
+            .Select(g =>
+            {
+                var zugaenge = g.Where(l => l.Typ == LagerbewegungTyp.Kulturzugang).Sum(l => l.Menge);
+                // Ausfall ist im Ledger negativ signiert (Abgang) — für die Quote als positive Menge betrachtet.
+                var ausfall = -g.Where(l => l.Typ == LagerbewegungTyp.Ausfall).Sum(l => l.Menge);
+                var quote = zugaenge > 0 ? Math.Round(ausfall / zugaenge * 100m, 2) : 0m;
+                var erste = g.First();
+                return new AusfallquoteZeileDto(
+                    erste.ArtikelId, erste.Artikel!.Artikelnummer, erste.Artikel.Bezeichnung,
+                    g.Key.KulturstufeId, erste.Kulturstufe!.Bezeichnung, zugaenge, ausfall, quote);
+            })
+            .OrderByDescending(z => z.AusfallquoteProzent)
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<FlaechenbelegungZeileDto>> FlaechenbelegungAsync(CancellationToken ct = default)
+    {
+        await using var db = await dbContextFactory.CreateDbContextAsync(ct);
+
+        var felder = await db.Lagerorte.AsNoTracking().Where(l => l.IstFeld).ToListAsync(ct);
+        var feldIds = felder.Select(f => f.Id).ToList();
+
+        var sektionIdsMitBestand = await db.ArtikelBestaende.AsNoTracking()
+            .Where(b => b.SektionId != null && feldIds.Contains(b.LagerortId) && b.Menge > 0)
+            .Select(b => b.SektionId!.Value)
+            .Distinct()
+            .ToListAsync(ct);
+
+        var sektionen = await db.Sektionen.AsNoTracking()
+            .Where(s => sektionIdsMitBestand.Contains(s.Id))
+            .ToListAsync(ct);
+        var sektionenJeFeld = sektionen.ToLookup(s => s.LagerortId);
+
+        return felder.Select(f =>
+        {
+            var gesamtQm = (f.BreiteMeter ?? 0) * (f.HoeheMeter ?? 0);
+            var belegteQm = sektionenJeFeld[f.Id].Sum(s => s.BreiteMeter * s.HoeheMeter);
+            var prozent = gesamtQm > 0 ? Math.Round(belegteQm / gesamtQm * 100m, 2) : 0m;
+            return new FlaechenbelegungZeileDto(f.Id, f.Bezeichnung, gesamtQm, belegteQm, prozent);
+        }).OrderBy(z => z.FeldBezeichnung).ToList();
+    }
+
     private static async Task<List<Rechnung>> LadeGebuchteRechnungenAsync(MiletDbContext db, DateOnly von, DateOnly bis, CancellationToken ct) =>
         await db.Rechnungen.AsNoTracking()
             .Include(r => r.Kunde)

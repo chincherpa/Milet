@@ -269,6 +269,134 @@
                 </Grid>
             </PivotItem>
 
+            <PivotItem Header="Kulturbestand">
+                <Grid RowSpacing="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" /><RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
+                        <ComboBox Header="Feld" Width="180" ItemsSource="{x:Bind ViewModel.Felder, Mode=OneWay}" SelectedValue="{x:Bind ViewModel.KulturbestandFeldFilterId, Mode=TwoWay}" SelectedValuePath="Id" DisplayMemberPath="Bezeichnung" PlaceholderText="Alle" />
+                        <ComboBox Header="Kulturstufe" Width="180" ItemsSource="{x:Bind ViewModel.Kulturstufen, Mode=OneWay}" SelectedValue="{x:Bind ViewModel.KulturbestandStufeFilterId, Mode=TwoWay}" SelectedValuePath="Id" DisplayMemberPath="Bezeichnung" PlaceholderText="Alle" />
+                        <Button Content="Laden" VerticalAlignment="Bottom" Command="{x:Bind ViewModel.KulturbestandLadenCommand}" />
+                        <Button Content="CSV-Export" VerticalAlignment="Bottom" Command="{x:Bind ViewModel.KulturbestandExportierenCommand}" />
+                    </StackPanel>
+                    <ListView Grid.Row="1" ItemsSource="{x:Bind ViewModel.KulturbestandListe, Mode=OneWay}">
+                        <ListView.HeaderTemplate>
+                            <DataTemplate>
+                                <Grid Padding="8,4" ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="200" /><ColumnDefinition Width="150" /><ColumnDefinition Width="150" /><ColumnDefinition Width="150" /><ColumnDefinition Width="100" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Bezeichnung" FontWeight="SemiBold" />
+                                    <TextBlock Grid.Column="1" Text="Feld" FontWeight="SemiBold" />
+                                    <TextBlock Grid.Column="2" Text="Sektion" FontWeight="SemiBold" />
+                                    <TextBlock Grid.Column="3" Text="Kulturstufe" FontWeight="SemiBold" />
+                                    <TextBlock Grid.Column="4" Text="Menge" FontWeight="SemiBold" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.HeaderTemplate>
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Padding="8,4" ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="200" /><ColumnDefinition Width="150" /><ColumnDefinition Width="150" /><ColumnDefinition Width="150" /><ColumnDefinition Width="100" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding Bezeichnung}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding FeldBezeichnung}" />
+                                    <TextBlock Grid.Column="2" Text="{Binding SektionBezeichnung}" />
+                                    <TextBlock Grid.Column="3" Text="{Binding KulturstufeBezeichnung}" />
+                                    <TextBlock Grid.Column="4" Text="{Binding Menge}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Grid>
+            </PivotItem>
+
+            <PivotItem Header="Ausfallquote">
+                <Grid RowSpacing="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" /><RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
+                        <Button Content="Laden" Command="{x:Bind ViewModel.AusfallquoteLadenCommand}" />
+                        <Button Content="CSV-Export" Command="{x:Bind ViewModel.AusfallquoteExportierenCommand}" />
+                    </StackPanel>
+                    <ListView Grid.Row="1" ItemsSource="{x:Bind ViewModel.AusfallquoteListe, Mode=OneWay}">
+                        <ListView.HeaderTemplate>
+                            <DataTemplate>
+                                <Grid Padding="8,4" ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="120" /><ColumnDefinition Width="200" /><ColumnDefinition Width="140" /><ColumnDefinition Width="100" /><ColumnDefinition Width="100" /><ColumnDefinition Width="100" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Artikelnr." FontWeight="SemiBold" />
+                                    <TextBlock Grid.Column="1" Text="Bezeichnung" FontWeight="SemiBold" />
+                                    <TextBlock Grid.Column="2" Text="Kulturstufe" FontWeight="SemiBold" />
+                                    <TextBlock Grid.Column="3" Text="Zugänge" FontWeight="SemiBold" />
+                                    <TextBlock Grid.Column="4" Text="Ausfall" FontWeight="SemiBold" />
+                                    <TextBlock Grid.Column="5" Text="Quote %" FontWeight="SemiBold" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.HeaderTemplate>
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Padding="8,4" ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="120" /><ColumnDefinition Width="200" /><ColumnDefinition Width="140" /><ColumnDefinition Width="100" /><ColumnDefinition Width="100" /><ColumnDefinition Width="100" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding Artikelnummer}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Bezeichnung}" />
+                                    <TextBlock Grid.Column="2" Text="{Binding KulturstufeBezeichnung}" />
+                                    <TextBlock Grid.Column="3" Text="{Binding SummeZugaenge}" />
+                                    <TextBlock Grid.Column="4" Text="{Binding SummeAusfall}" />
+                                    <TextBlock Grid.Column="5" Text="{Binding AusfallquoteProzent}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Grid>
+            </PivotItem>
+
+            <PivotItem Header="Flächenbelegung">
+                <Grid RowSpacing="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" /><RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
+                        <Button Content="Laden" Command="{x:Bind ViewModel.FlaechenbelegungLadenCommand}" />
+                        <Button Content="CSV-Export" Command="{x:Bind ViewModel.FlaechenbelegungExportierenCommand}" />
+                    </StackPanel>
+                    <ListView Grid.Row="1" ItemsSource="{x:Bind ViewModel.FlaechenbelegungListe, Mode=OneWay}">
+                        <ListView.HeaderTemplate>
+                            <DataTemplate>
+                                <Grid Padding="8,4" ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="200" /><ColumnDefinition Width="140" /><ColumnDefinition Width="140" /><ColumnDefinition Width="100" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Feld" FontWeight="SemiBold" />
+                                    <TextBlock Grid.Column="1" Text="Gesamtfläche m²" FontWeight="SemiBold" />
+                                    <TextBlock Grid.Column="2" Text="Belegte Fläche m²" FontWeight="SemiBold" />
+                                    <TextBlock Grid.Column="3" Text="Belegung %" FontWeight="SemiBold" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.HeaderTemplate>
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Padding="8,4" ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="200" /><ColumnDefinition Width="140" /><ColumnDefinition Width="140" /><ColumnDefinition Width="100" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding FeldBezeichnung}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding GesamtflaecheQm}" />
+                                    <TextBlock Grid.Column="2" Text="{Binding BelegteFlaecheQm}" />
+                                    <TextBlock Grid.Column="3" Text="{Binding BelegungsProzent}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Grid>
+            </PivotItem>
+
         </Pivot>
     </Grid>
 </Page>
