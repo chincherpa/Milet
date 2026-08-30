@@ -35,5 +35,9 @@ public class Artikel : AuditableEntity, IHasRowVersion
 
     public bool Gesperrt { get; set; }
 
+    /// <summary>Kulturpflanze statt Handelsware — steuert, ob eine Bestandszeile eine `KulturstufeId` braucht (E1).</summary>
+    public bool IstKulturpflanze { get; set; }
+    public string? BotanischerName { get; set; }
+
     public byte[] RowVersion { get; set; } = [];
 }
