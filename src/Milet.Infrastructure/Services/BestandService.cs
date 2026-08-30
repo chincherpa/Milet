@@ -4,6 +4,7 @@ using Milet.Application.Abstractions;
 using Milet.Application.Admin;
 using Milet.Application.Lager;
 using Milet.Domain.Entities.Lager;
+using Milet.Domain.Services;
 using Milet.Infrastructure.Persistence;
 using Milet.Infrastructure.Services.Mapping;
 
@@ -58,29 +59,65 @@ public sealed class BestandService(
     }
 
     /// <summary>Einziger Schreibpfad auf Bestand — ein atomares UPDATE (kein Read-Modify-Write), Negativbestand ist hart gesperrt.
-    /// Läuft innerhalb der Transaktion des Aufrufers (Aufrufer öffnet/committet); wiederverwendbar von Bestandskorrektur, Lieferschein-Buchen, Inventur-Abschluss.</summary>
+    /// Läuft innerhalb der Transaktion des Aufrufers (Aufrufer öffnet/committet); wiederverwendbar von Bestandskorrektur,
+    /// Lieferschein-Buchen, Inventur-Abschluss, Kulturbuchungen (Phase 8). sektionId/kulturstufeId bleiben bei Default (null)
+    /// für jeden Aufrufer, der die beiden Dimensionen nicht kennt — Handelsware verhält sich exakt wie vor Phase 8.</summary>
     internal static async Task BucheBewegungAsync(
         MiletDbContext db, int artikelId, int lagerortId, decimal mengeDelta,
-        LagerbewegungTyp typ, int? belegPositionId, CancellationToken ct)
+        LagerbewegungTyp typ, int? belegPositionId, CancellationToken ct,
+        int? sektionId = null, int? kulturstufeId = null)
     {
-        var betroffeneZeilen = await db.Database.ExecuteSqlInterpolatedAsync(
-            $"""
-             UPDATE ArtikelBestaende SET Menge = Menge + {mengeDelta}
-             WHERE ArtikelId = {artikelId} AND LagerortId = {lagerortId} AND Menge + {mengeDelta} >= 0
-             """, ct);
+        // Eine vorgelagerte Abfrage (per Subquery-Projektion ein einziger Round-Trip) lädt Artikel.IstKulturpflanze
+        // und ob der Lagerort aktive Sektionen hat — Grundlage für die zentralen Dimensionsregeln (KulturRegeln).
+        // Das macht die Regeln unumgehbar: es gibt keinen zweiten Schreibpfad auf ArtikelBestaende.
+        var kontext = await db.Artikel
+            .Where(a => a.Id == artikelId)
+            .Select(a => new
+            {
+                a.IstKulturpflanze,
+                LagerortHatSektionen = db.Sektionen.Any(s => s.LagerortId == lagerortId && s.Aktiv),
+            })
+            .FirstOrDefaultAsync(ct)
+            ?? throw new InvalidOperationException($"Artikel {artikelId} nicht gefunden.");
+
+        KulturRegeln.PruefeDimensionen(kontext.IstKulturpflanze, kontext.LagerortHatSektionen, sektionId, kulturstufeId);
+
+        var betroffeneZeilen = await AusfuehrenUpdateAsync(db, artikelId, lagerortId, sektionId, kulturstufeId, mengeDelta, ct);
 
         if (betroffeneZeilen == 0)
         {
             if (mengeDelta < 0)
                 throw new InvalidOperationException("Nicht genügend Bestand vorhanden — Buchung würde negativen Bestand erzeugen.");
 
-            db.ArtikelBestaende.Add(new ArtikelBestand { ArtikelId = artikelId, LagerortId = lagerortId, Menge = mengeDelta });
+            // E4: Standard-Upsert-Muster statt db.ArtikelBestaende.Add(...) — zwei parallele Erstbuchungen auf
+            // dieselbe Kombination sähen sonst beide 0 betroffene Zeilen, fügten beide ein, und die zweite
+            // Transaktion stürbe am Unique-Index (unverständliche DbUpdateException für den Nutzer). UPDLOCK,
+            // HOLDLOCK erzeugt eine Key-Range-Sperre auf dem Unique-Index und verhindert das Phantom-Insert der
+            // Konkurrenztransaktion — der Unique-Index aus E3/Task 4 (HasFilter(null)) ist Voraussetzung dafür,
+            // dass die Range-Sperre wirklich über NULL-Dimensionen greift.
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"""
+                 INSERT INTO ArtikelBestaende (ArtikelId, LagerortId, SektionId, KulturstufeId, Menge)
+                 SELECT {artikelId}, {lagerortId}, {sektionId}, {kulturstufeId}, 0
+                 WHERE NOT EXISTS (
+                     SELECT 1 FROM ArtikelBestaende WITH (UPDLOCK, HOLDLOCK)
+                     WHERE ArtikelId = {artikelId} AND LagerortId = {lagerortId}
+                       AND ((SektionId IS NULL AND {sektionId} IS NULL) OR SektionId = {sektionId})
+                       AND ((KulturstufeId IS NULL AND {kulturstufeId} IS NULL) OR KulturstufeId = {kulturstufeId}))
+                 """, ct);
+
+            betroffeneZeilen = await AusfuehrenUpdateAsync(db, artikelId, lagerortId, sektionId, kulturstufeId, mengeDelta, ct);
+
+            if (betroffeneZeilen == 0)
+                throw new InvalidOperationException("Nicht genügend Bestand vorhanden — Buchung würde negativen Bestand erzeugen.");
         }
 
         db.Lagerbewegungen.Add(new Lagerbewegung
         {
             ArtikelId = artikelId,
             LagerortId = lagerortId,
+            SektionId = sektionId,
+            KulturstufeId = kulturstufeId,
             Typ = typ,
             Menge = mengeDelta,
             BelegPositionId = belegPositionId,
@@ -89,4 +126,18 @@ public sealed class BestandService(
 
         await db.SaveChangesAsync(ct);
     }
+
+    /// <summary>Der atomare UPDATE aus E4 — NULL-sicher in beiden Dimensionen, damit eine dimensionslose
+    /// Handelsware-Buchung (sektionId/kulturstufeId beide null) exakt die eine bestehende NULL/NULL-Zeile
+    /// trifft statt stillschweigend eine neue anzulegen.</summary>
+    private static Task<int> AusfuehrenUpdateAsync(
+        MiletDbContext db, int artikelId, int lagerortId, int? sektionId, int? kulturstufeId, decimal mengeDelta, CancellationToken ct)
+        => db.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+             UPDATE ArtikelBestaende SET Menge = Menge + {mengeDelta}
+             WHERE ArtikelId = {artikelId} AND LagerortId = {lagerortId}
+               AND ((SektionId IS NULL AND {sektionId} IS NULL) OR SektionId = {sektionId})
+               AND ((KulturstufeId IS NULL AND {kulturstufeId} IS NULL) OR KulturstufeId = {kulturstufeId})
+               AND Menge + {mengeDelta} >= 0
+             """, ct);
 }

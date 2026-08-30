@@ -111,6 +111,7 @@ public sealed class NumberRangeServiceTests : IAsyncLifetime
     [Fact]
     public async Task ParalleleVergabeUeberDenJahreswechsel_LegtDenKreisNurEinmalAn()
     {
+        var ct = TestContext.Current.CancellationToken;
         var service = new NumberRangeService(new TestDbContextFactory(_options));
 
         // Zweiter jahresbezogener Code, damit dieser Test unabhängig vom Test oben läuft (xUnit führt
@@ -124,7 +125,7 @@ public sealed class NumberRangeServiceTests : IAsyncLifetime
                 NaechsteNummer = 1,
                 Format = "TESTPAR-{1}-{0:0000}",
             });
-            await vorbereitung.SaveChangesAsync();
+            await vorbereitung.SaveChangesAsync(ct);
         }
 
         var nummern = await Task.WhenAll(Enumerable.Range(0, 10).Select(_ => service.NaechsteNummerAsync("TESTPAR")));
