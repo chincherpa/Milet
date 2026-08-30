@@ -27,7 +27,7 @@ internal static class LagerMapping
     public static SeriennummerDto ToDto(this Seriennummer s) => new(s.Id, s.ArtikelId, s.Nummer, s.Status, s.LagerortId);
 
     public static InventurPositionDto ToDto(this InventurPosition p) =>
-        new(p.Id, p.ArtikelId, p.Artikel!.Artikelnummer, p.Artikel.Bezeichnung, p.SollMenge, p.IstMenge);
+        new(p.Id, p.ArtikelId, p.Artikel!.Artikelnummer, p.Artikel.Bezeichnung, p.SollMenge, p.IstMenge, p.SektionId, p.KulturstufeId);
 
     public static InventurDto ToDto(this Inventur i, bool mitPositionen) => new()
     {

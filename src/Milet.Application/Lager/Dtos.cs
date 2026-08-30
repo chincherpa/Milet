@@ -35,7 +35,15 @@ public sealed record BestandskorrekturDto
 
 public sealed record SeriennummerDto(int Id, int ArtikelId, string Nummer, SeriennummerStatus Status, int? LagerortId);
 
-public sealed record InventurPositionDto(int Id, int ArtikelId, string Artikelnummer, string ArtikelBezeichnung, decimal SollMenge, decimal? IstMenge);
+public sealed record InventurPositionDto(
+    int Id,
+    int ArtikelId,
+    string Artikelnummer,
+    string ArtikelBezeichnung,
+    decimal SollMenge,
+    decimal? IstMenge,
+    int? SektionId = null,
+    int? KulturstufeId = null);
 
 public sealed record InventurDto
 {
