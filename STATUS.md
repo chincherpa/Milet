@@ -1,6 +1,9 @@
 # Milet — Projektstatus
 
-Stand: 2026-08-30. Architekturplan: `PLAN.md`. Phase-2-Implementierungsplan: `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md`. Phase-3-Implementierungsplan (umgesetzt): `docs/superpowers/plans/2026-08-25-phase3-lager-lieferschein.md`. Ein früherer, nicht umgesetzter Planungsentwurf liegt zusätzlich unter `docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md` — dessen technische Befunde (READ-COMMITTED-Race, Nummernkreis-Seed) sind unter „Bekannte Risiken" übernommen. Phase-4-Implementierungsplan (umgesetzt, manueller UI-Smoke-Test noch ausstehend): `docs/superpowers/plans/2026-08-26-phase4-einkauf.md`. Phase-5-Implementierungsplan (umgesetzt, Backend-Build/-Tests real grün, WinUI komplett unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-27-phase5-finanzen-mail.md`. Phase-6-Implementierungsplan (umgesetzt, Backend-Build/-Tests/Integrationstests/Migration real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-27-phase6-datev-reporting.md`. Phase 7 (Admin+Härtung, umgesetzt nach `PLAN.md` ohne separaten Implementierungsplan, Backend-Build/-Tests/Integrationstests/Migration ebenfalls real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert — kein Windows in der Umsetzungssession): Details im Phase-7-Abschnitt unten, Deployment-Story unter `docs/deployment.md`. Phase-8-Implementierungsplan (Gärtnerei/Kulturführung, umgesetzt, Backend-Build/-Tests/Integrationstests/Migration real gegen containerisierten SQL Server verifiziert — inkl. Migration gegen eine Datenbank mit vor-Phase-8-Bestandsdaten —, WinUI unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-30-phase8-gaertnerei-kultur.md`.
+Stand: 2026-08-31. Architekturplan: `PLAN.md`. Phase-9-Implementierungsplan (Lückenschluss — Storno/
+Gutschrift, Ledger-Nachvollziehbarkeit, Finanz-/Admin-Härtung, Parallelitäts-Race; Block 9a
+Build-/Testnachweis abgeschlossen, Rest offen): `docs/superpowers/plans/2026-08-31-luecken-schliessen.md`.
+Phase-2-Implementierungsplan: `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md`. Phase-3-Implementierungsplan (umgesetzt): `docs/superpowers/plans/2026-08-25-phase3-lager-lieferschein.md`. Ein früherer, nicht umgesetzter Planungsentwurf liegt zusätzlich unter `docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md` — dessen technische Befunde (READ-COMMITTED-Race, Nummernkreis-Seed) sind unter „Bekannte Risiken" übernommen. Phase-4-Implementierungsplan (umgesetzt, manueller UI-Smoke-Test noch ausstehend): `docs/superpowers/plans/2026-08-26-phase4-einkauf.md`. Phase-5-Implementierungsplan (umgesetzt, Backend-Build/-Tests real grün, WinUI komplett unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-27-phase5-finanzen-mail.md`. Phase-6-Implementierungsplan (umgesetzt, Backend-Build/-Tests/Integrationstests/Migration real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-27-phase6-datev-reporting.md`. Phase 7 (Admin+Härtung, umgesetzt nach `PLAN.md` ohne separaten Implementierungsplan, Backend-Build/-Tests/Integrationstests/Migration ebenfalls real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert — kein Windows in der Umsetzungssession): Details im Phase-7-Abschnitt unten, Deployment-Story unter `docs/deployment.md`. Phase-8-Implementierungsplan (Gärtnerei/Kulturführung, umgesetzt, Backend-Build/-Tests/Integrationstests/Migration real gegen containerisierten SQL Server verifiziert — inkl. Migration gegen eine Datenbank mit vor-Phase-8-Bestandsdaten —, WinUI unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-30-phase8-gaertnerei-kultur.md`.
 
 ## Erledigt
 
@@ -467,6 +470,57 @@ in Phase 5–7 **keinen** echten Compile/XAML-Codegen-Durchlauf; die drei neu ve
 - **Offene-Mengen-Prüfung in `BelegUeberleitungService` (inkl. `UeberleitenMitAuswahlAsync`/`UeberleitenMehrereAsync`) schützt trotz gegenteiligem Kommentar im Code vermutlich nicht gegen parallele Überleitungen**: der In-Transaktion-Re-Check liest unter SQL Servers Default-Isolationslevel READ COMMITTED ohne Sperre — zwei gleichzeitige Transaktionen können beide „nichts geliefert" sehen und beide committen. Folgenlos bei Angebot→Auftrag (1:1, keine Teilmengen), aber ein echter potenzieller Bestandsfehler bei paralleler Teillieferung/Sammelrechnung. Noch nicht verifiziert (Docker hier nicht verfügbar) oder behoben — möglicher Fix: `UPDLOCK` auf dem/den Quellbeleg(en) beim Lesen. Fund stammt aus einem parallel entstandenen, nicht umgesetzten Planungsentwurf (`docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md`).
 - **[Behoben in Phase 4, nachgebessert 2026-08-29]** `StammdatenSeed` legt Nummernkreise nur an, wenn die `Nummernkreise`-Tabelle komplett leer ist, nicht „je fehlendem Code" — eine bereits migrierte Datenbank bekommt einen später neu hinzugefügten Nummernkreis-Code nie automatisch nachgetragen. Bisher folgenlos (alle bislang genutzten Codes existierten schon vor der ersten Migration), wird aber relevant, sobald eine spätere Phase einen neuen Code auf einer bestehenden DB einführt. Genau dieser Fall trat mit Phase 4 ein (neue Codes `WE`/`ER`) und wurde in Task 5 des Phase-4-Plans behoben — der Seed wurde auf „je fehlendem Code ergänzen" umgestellt statt „nur wenn Tabelle leer"; per `sqlcmd` verifiziert, dass `BE`/`WE`/`ER` alle mit `NaechsteNummer=1` existieren (s. Phase-4-Abschnitt oben). Der Fix griff allerdings nicht für den Jahreswechsel: der Abgleich lief nur über den Code, während `NumberRangeService` strikt nach dem laufenden Jahr sucht — ab dem 01.01. hätte das System keine Belegnummer mehr vergeben können (Befund 1 des Reviews vom 2026-08-29). Seither Abgleich über `(Code, Jahr)` plus Lazy-Anlage des Jahreskreises im `NumberRangeService` (s. Abschnitt Review-Fixes 2026-08-29).
 
+### Phase 9 — Lückenschluss ⏳ (Block 9a abgeschlossen, Rest offen) (2026-08-31)
+
+Umsetzung von `docs/superpowers/plans/2026-08-31-luecken-schliessen.md`. Diese Session lief headless auf
+**Linux ohne Windows-Toolchain** (`dotnet-sdk-10.0` per `apt` → 10.0.111, Builds/Tests aus einer
+**Scratch-Kopie** mit lokal abgesenktem `global.json` — das echte, committete `global.json` bleibt
+unverändert bei `10.0.400`) — wie in Phase 6–8, mit echt nutzbarem Docker
+(`TESTCONTAINERS_RYUK_DISABLED=true`, `mcr.microsoft.com/mssql/server:2022-latest` zieht über den
+Sessions-Proxy anstandslos, `dockerd` manuell gestartet).
+
+**Block 9a — Fundament: den aktuellen Stand überhaupt erst nachweisen (Task 1–2) ✅**
+
+Ausgangslage: `Milet.App` wurde seit Phase 5 kein einziges Mal gebaut, und die Review-Fixes vom
+2026-08-29 (Konstruktoränderungen an `BelegService`/`RechnungBuchenService`/`BelegUeberleitungService`,
+Interface-Änderung an `IDatevExportService`, DTO-Änderung an `DatevExportErgebnisDto`) liefen ebenfalls
+nie durch einen Compiler. Vor jedem neuen Feature musste deshalb erst geklärt werden, ob der bestehende
+Code überhaupt übersetzt.
+
+- **Build einzeln, real:** `Milet.Domain`/`Milet.Application`/`Milet.Infrastructure`/
+  `Milet.Tools.Migrator` sowie alle drei Testprojekte → **je 0 Fehler, 0 Warnungen**. Die
+  Konstruktor-/Interface-/DTO-Änderungen aus den Review-Fixes kompilieren wie vorgesehen — kein
+  Rückstand aus der SDK-losen Review-Session.
+- **Tests einzeln (MTP-Modus):** Domain **72/72**, Application **66/66**.
+- **IntegrationTests: alle 78 Tests ECHT gegen containerisierten SQL Server gelaufen (nicht
+  übersprungen) — 78/78 bestanden, 0 fehlgeschlagen** — exakt der in diesem Dokument nach Phase 8
+  erwartete Stand, keine Regression durch die Review-Fixes.
+- **Migrator gegen frische DB** (separater `mcr.microsoft.com/mssql/server:2022-latest`-Container,
+  nicht der Testcontainers-verwaltete): erster Lauf wendet alle 9 Migrationen an (bis
+  `GaertnereiKultur`), RBAC-Seed legt Rechte/Administrator-Rolle/Erstbenutzer an, `DummyDatenSeed`
+  läuft durch, die dokumentierte Initialpasswort-Warnung erscheint. Per `sqlcmd` gegengeprüft:
+  `__EFMigrationsHistory` 9 Zeilen (neueste `GaertnereiKultur`), `Benutzer` 1 Zeile, `Rechte` 8 Zeilen
+  (7 Module + Gärtnerei), `Nummernkreise` 11 Zeilen, `Kulturstufen` 3 Zeilen.
+- **Zweiter Migrator-Lauf (Idempotenz):** meldet „Datenbank ist aktuell — keine ausstehenden
+  Migrationen", RBAC-Grunddaten „geprüft/angelegt" ohne zweiten `admin`-Benutzer (weiterhin 1 Zeile in
+  `Benutzer` nach dem zweiten Lauf).
+- **Modellkonsistenz:** zweite `dotnet ef migrations add` auf dem seither unveränderten Modell liefert
+  eine leere Diff-Migration (kein `migrationBuilder.*`-Aufruf in `Up`/`Down`) — kein Drift zwischen
+  EF-Modell und tatsächlichem SQL-Server-Schema. Testmigration danach wieder entfernt.
+
+**Ergebnis von Block 9a:** Der Stand nach den Review-Fixes vom 2026-08-29 ist damit erstmals real
+gebaut und getestet — vorher war das reine Behauptung einer SDK-losen Session. Kein einziger Fund; alle
+nachfolgenden Blöcke (9b–9f, s. Plan) bauen auf einem tatsächlich verifizierten Fundament.
+
+**Nicht durchgeführt — weiterhin offen:**
+1. **`Milet.App` wurde in dieser Session weiterhin kein einziges Mal gebaut** (kein Windows
+   verfügbar) — unverändert gegenüber Phase 5–8.
+2. Block 9b (Storno/Gutschrift), 9c (Ledger-Grund/Benutzer), 9d (Skontokonten/Login-Lockout/
+   Passwortwechsel/Lagerort-Regression), 9e (Parallelitäts-Race der Überleitung) und 9f
+   (Testlücken/Lieferadresse) aus `docs/superpowers/plans/2026-08-31-luecken-schliessen.md` sind
+   **noch nicht begonnen** — insbesondere ist der in „Bekannte Risiken" seit Phase 3 geführte
+   READ-COMMITTED-Verdacht in `BelegUeberleitungService` durch Block 9a **nicht** berührt worden.
+
 ## Phasenübersicht
 
 
@@ -481,3 +535,4 @@ in Phase 5–7 **keinen** echten Compile/XAML-Codegen-Durchlauf; die drei neu ve
 **6 DATEV+Reporting**      Done (Backend real gegen SQL Server verifiziert; WinUI-Build + manueller UI-Smoke-Test ausstehend — kein Windows in dieser Session)
 **7 Admin+Härtung**        Done (Backend real gegen SQL Server verifiziert; WinUI-Build + manueller UI-Smoke-Test ausstehend — kein Windows in dieser Session)
 **8 Gärtnerei/Kultur**     Done (Backend real gegen SQL Server verifiziert inkl. Migration gegen Alt-Daten; WinUI-Build + manueller UI-Smoke-Test ausstehend — kein Windows in dieser Session)
+**9 Lückenschluss**        In Arbeit (Block 9a Build-/Testnachweis abgeschlossen; Storno/Gutschrift, Ledger-Nachvollziehbarkeit, Finanz-/Admin-Härtung, Parallelitäts-Race noch offen — Details `docs/superpowers/plans/2026-08-31-luecken-schliessen.md`)
