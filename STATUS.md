@@ -2,7 +2,8 @@
 
 Stand: 2026-08-31. Architekturplan: `PLAN.md`. Phase-9-Implementierungsplan (Lückenschluss — Storno/
 Gutschrift, Ledger-Nachvollziehbarkeit, Finanz-/Admin-Härtung, Parallelitäts-Race; Block 9a
-Build-/Testnachweis abgeschlossen, Rest offen): `docs/superpowers/plans/2026-08-31-luecken-schliessen.md`.
+Build-/Testnachweis und Block 9b Storno/Gutschrift-Backend abgeschlossen, Rest offen):
+`docs/superpowers/plans/2026-08-31-luecken-schliessen.md`.
 Phase-2-Implementierungsplan: `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md`. Phase-3-Implementierungsplan (umgesetzt): `docs/superpowers/plans/2026-08-25-phase3-lager-lieferschein.md`. Ein früherer, nicht umgesetzter Planungsentwurf liegt zusätzlich unter `docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md` — dessen technische Befunde (READ-COMMITTED-Race, Nummernkreis-Seed) sind unter „Bekannte Risiken" übernommen. Phase-4-Implementierungsplan (umgesetzt, manueller UI-Smoke-Test noch ausstehend): `docs/superpowers/plans/2026-08-26-phase4-einkauf.md`. Phase-5-Implementierungsplan (umgesetzt, Backend-Build/-Tests real grün, WinUI komplett unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-27-phase5-finanzen-mail.md`. Phase-6-Implementierungsplan (umgesetzt, Backend-Build/-Tests/Integrationstests/Migration real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-27-phase6-datev-reporting.md`. Phase 7 (Admin+Härtung, umgesetzt nach `PLAN.md` ohne separaten Implementierungsplan, Backend-Build/-Tests/Integrationstests/Migration ebenfalls real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert — kein Windows in der Umsetzungssession): Details im Phase-7-Abschnitt unten, Deployment-Story unter `docs/deployment.md`. Phase-8-Implementierungsplan (Gärtnerei/Kulturführung, umgesetzt, Backend-Build/-Tests/Integrationstests/Migration real gegen containerisierten SQL Server verifiziert — inkl. Migration gegen eine Datenbank mit vor-Phase-8-Bestandsdaten —, WinUI unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-30-phase8-gaertnerei-kultur.md`.
 
 ## Erledigt
@@ -295,13 +296,29 @@ werden kann — Migration + Snapshot von Hand zu schreiben wäre hier das größ
    bei jedem Lauf sichtbar, solange `admin` noch das dokumentierte Passwort hat.
 
 **Weiterhin offen (fachliche Entscheidung, wie im Review empfohlen):**
-- **Storno und Gutschrift existieren nicht** (Befund 15). `BelegStatus.Storniert` wird nirgends zugewiesen,
-  es gibt keinen Storno-Service und keine Klasse `Gutschrift : Beleg` — der geseedete `GS`-Nummernkreis
-  ist unbenutzt. Eine falsch gebuchte Rechnung ist damit **in der Anwendung nicht korrigierbar**.
-  `CLAUDE.md` wurde entsprechend berichtigt (sprach von acht Belegarten und von Gegenbuchungen als
-  vorhandenem Korrekturweg).
-- **`BelegPosition.OffeneMenge` kennt den Status des Folgebelegs nicht** (Befund 16) — latent, solange es
-  kein Storno gibt, aber vor dem Storno-Bau zu erledigen.
+- **[Backend behoben, Phase 9 Block 9b, 2026-08-31]** Storno und Gutschrift existieren nicht (Befund 15).
+  `Gutschrift : Beleg` (TPH-Subtyp, Nummernkreis `GS`) und `IStornoService`/`StornoService` sind implementiert:
+  eine gebuchte, noch unbezahlte Rechnung kann storniert werden (legt eine Storno-Gutschrift mit
+  `StorniertenBelegId` an, gleicht den ursprünglichen OP aus, legt einen negativen OP für die Gutschrift an),
+  ebenso ein gebuchter Lieferschein (Bestand + Seriennummern zurück) und ein gebuchter Wareneingang (Bestand
+  zurück, schlägt mit klarer Meldung fehl statt SQL-Fehler, wenn die Ware nicht mehr da ist). Der
+  `BelegImmutabilityInterceptor` erlaubt dafür neu den Übergang `(Gebucht|Erledigt) → Storniert`
+  (Status + Fusstext). 10 neue Integrationstests, real gegen containerisierten SQL Server (inkl. paralleles
+  Doppel-Storno derselben Rechnung — nur einer gewinnt, per RowVersion-Konflikt, kein zusätzliches Locking
+  nötig). **Bewusste Scope-Grenzen:** eine bereits (teil-)bezahlte Rechnung wird abgelehnt (kein automatischer
+  Rückzahlungsfall); ein Lieferschein/Wareneingang mit bereits existierendem, nicht-storniertem Folgebeleg
+  wird abgelehnt; ein Wareneingang mit seriennummernpflichtigen Artikeln wird abgelehnt (Rückabwicklung neu
+  angelegter Seriennummern nicht automatisiert); eine fachliche Gutschrift ohne Storno-Bezug (Retoure/Kulanz)
+  ist weiterhin nicht erfassbar; DATEV-Export kennt `Gutschrift` weiterhin nicht (Belegtyp wird von
+  `DatevExportService` schlicht nicht abgefragt — kein Absturz, aber auch kein Export). **WinUI (Stornieren-
+  Button, Gutschrift-Liste/-Editor) ist nicht gebaut** — kein Windows in dieser Session, wie bei jeder
+  vorherigen Phase. Details: `docs/superpowers/plans/2026-08-31-luecken-schliessen.md`, Block 9b.
+  `CLAUDE.md` wurde entsprechend berichtigt.
+- **[Behoben, Phase 9 Block 9b, 2026-08-31]** `BelegPosition.OffeneMenge` kennt jetzt den Status des
+  Folgebelegs (Befund 16): eine Folgeposition zählt nicht mehr als übernommen, wenn ihr Beleg storniert
+  wurde. Alle sieben Aufrufstellen laden dafür `.Include(p => p.Beleg)` mit; Aufrufer, die das nicht tun,
+  verhalten sich unverändert konservativ (zählt als übernommen) — reine Verhaltensänderung nur dort, wo der
+  Belegstatus tatsächlich bekannt ist. 4 neue Domain-Tests.
 - **AuditLog-Reihenfolge** (Befund 23): die Audit-Zeilen entstehen weiterhin in `SavedChanges`. In den
   Belegpfaden liegen sie jetzt durch die neue Transaktion in derselben Transaktion wie der fachliche Save;
   generell gilt die Einschränkung weiter.
@@ -512,14 +529,47 @@ Code überhaupt übersetzt.
 gebaut und getestet — vorher war das reine Behauptung einer SDK-losen Session. Kein einziger Fund; alle
 nachfolgenden Blöcke (9b–9f, s. Plan) bauen auf einem tatsächlich verifizierten Fundament.
 
+**Block 9b — Storno und Gutschrift (Task 3–6, 10 von 12) ✅ Backend, WinUI offen (2026-08-31)**
+
+Umsetzung von Task 3 (`Gutschrift : Beleg`-Domain-Modell), Task 4 (`OffeneMenge` respektiert Belegstatus),
+Task 5 (Immutability-Interceptor erlaubt den Storno-Übergang), Task 6 (`IStornoService`/`StornoService` für
+Rechnung/Lieferschein/Wareneingang) und Task 10 (Integrationstests) — Details, Belegstellen und bewusste
+Scope-Grenzen s. oben unter „Storno und Gutschrift existieren nicht [Backend behoben]". **Zurückgestellt:**
+Task 7 (fachliche Gutschrift ohne Storno-Bezug, z. B. Retoure), Task 8 (DATEV-Export kennt `Gutschrift`
+noch nicht) und Task 11 (WinUI: Stornieren-Button, Gutschrift-Liste/-Editor) — bewusst nicht Teil dieses
+Durchgangs, s. Plan-Datei für den weiteren Zuschnitt. Task 12 (Doku) ist mit dieser Aktualisierung sowie der
+`CLAUDE.md`-Korrektur erledigt.
+
+Migration `StornoGutschrift` (neue Spalte `Belege.StorniertenBelegId` + FK + Index) — Modellkonsistenz per
+zweitem `dotnet ef migrations add` verifiziert (leere Diff-Migration), noch **nicht** gegen eine echte
+SQL-Server-Instanz angewendet (nur real getestet über die Testcontainers-Integrationstests, die ihre DB per
+`EnsureCreatedAsync` frisch aus dem aktuellen Modell erzeugen, nicht per Migration) — vor Produktivsetzung
+zwingend einmal per `Milet.Tools.Migrator` gegen eine bestehende Datenbank fahren und per `sqlcmd`
+gegenprüfen (Muster wie in Block 9a für die vorherigen Migrationen).
+
+Verifiziert (dieser Task, 2026-08-31): Build einzeln `Milet.Domain`/`Milet.Application`/`Milet.Infrastructure`/
+`Milet.Tools.Migrator` → je 0 Fehler, 0 Warnungen. Tests einzeln (MTP): Domain **75/75** (72 + 3 neue
+`OffeneMenge`-Storno-Tests — die restlichen der insgesamt 4 neuen Domain-Tests aus dem Befund-16-Fix waren
+in der 72er-Basis bereits mitgezählt), Application **66/66** unverändert. **IntegrationTests: alle 88 Tests
+ECHT gegen containerisierten SQL Server (nicht übersprungen) — 88/88 bestanden**, inkl. der 10 neuen
+`StornoServiceTests` (Rechnung-Storno inkl. Gutschrift-Anlage/OP-Ausgleich, Immutability nach Storno,
+Ablehnung bei bereits bezahlter Rechnung, paralleles Doppel-Storno — nur einer gewinnt, Lieferschein-Storno
+inkl. Seriennummern-Rückgabe und Ablehnung bei aktivem Folgebeleg, Wareneingang-Storno inkl. Ablehnung bei
+nicht mehr ausreichendem Bestand und bei seriennummernpflichtigen Artikeln).
+
 **Nicht durchgeführt — weiterhin offen:**
 1. **`Milet.App` wurde in dieser Session weiterhin kein einziges Mal gebaut** (kein Windows
-   verfügbar) — unverändert gegenüber Phase 5–8.
-2. Block 9b (Storno/Gutschrift), 9c (Ledger-Grund/Benutzer), 9d (Skontokonten/Login-Lockout/
-   Passwortwechsel/Lagerort-Regression), 9e (Parallelitäts-Race der Überleitung) und 9f
-   (Testlücken/Lieferadresse) aus `docs/superpowers/plans/2026-08-31-luecken-schliessen.md` sind
-   **noch nicht begonnen** — insbesondere ist der in „Bekannte Risiken" seit Phase 3 geführte
-   READ-COMMITTED-Verdacht in `BelegUeberleitungService` durch Block 9a **nicht** berührt worden.
+   verfügbar) — unverändert gegenüber Phase 5–8. Task 11 (Storno-/Gutschrift-UI) ist damit ebenfalls
+   nicht umgesetzt.
+2. Migration `StornoGutschrift` nicht gegen eine echte SQL-Server-/LocalDB-Instanz per Migrator
+   angewendet (s. Block-9b-Abschnitt oben) — nur über `EnsureCreatedAsync` in den Integrationstests
+   verifiziert.
+3. Block 9b Task 7 (fachliche Gutschrift ohne Storno-Bezug) und Task 8 (DATEV-Export für `Gutschrift`)
+   sowie Block 9c (Ledger-Grund/Benutzer), 9d (Skontokonten/Login-Lockout/Passwortwechsel/
+   Lagerort-Regression), 9e (Parallelitäts-Race der Überleitung) und 9f (Testlücken/Lieferadresse) aus
+   `docs/superpowers/plans/2026-08-31-luecken-schliessen.md` sind **noch nicht begonnen** — insbesondere
+   ist der in „Bekannte Risiken" seit Phase 3 geführte READ-COMMITTED-Verdacht in
+   `BelegUeberleitungService` weiterhin **nicht** behoben (Block 9e).
 
 ## Phasenübersicht
 
@@ -535,4 +585,4 @@ nachfolgenden Blöcke (9b–9f, s. Plan) bauen auf einem tatsächlich verifizier
 **6 DATEV+Reporting**      Done (Backend real gegen SQL Server verifiziert; WinUI-Build + manueller UI-Smoke-Test ausstehend — kein Windows in dieser Session)
 **7 Admin+Härtung**        Done (Backend real gegen SQL Server verifiziert; WinUI-Build + manueller UI-Smoke-Test ausstehend — kein Windows in dieser Session)
 **8 Gärtnerei/Kultur**     Done (Backend real gegen SQL Server verifiziert inkl. Migration gegen Alt-Daten; WinUI-Build + manueller UI-Smoke-Test ausstehend — kein Windows in dieser Session)
-**9 Lückenschluss**        In Arbeit (Block 9a Build-/Testnachweis abgeschlossen; Storno/Gutschrift, Ledger-Nachvollziehbarkeit, Finanz-/Admin-Härtung, Parallelitäts-Race noch offen — Details `docs/superpowers/plans/2026-08-31-luecken-schliessen.md`)
+**9 Lückenschluss**        In Arbeit (Block 9a Build-/Testnachweis + Block 9b Storno/Gutschrift-Backend abgeschlossen — WinUI dafür offen; Ledger-Nachvollziehbarkeit, Finanz-/Admin-Härtung, Parallelitäts-Race noch offen — Details `docs/superpowers/plans/2026-08-31-luecken-schliessen.md`)

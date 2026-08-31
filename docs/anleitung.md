@@ -148,10 +148,13 @@ Belegarten teilen sich Kopf (Kunde, Datum, Zahlungsbedingung, ...) und eine Posi
   ohne diese Konfiguration meldet der Button einen sprechenden Fehler, die übrige App bleibt
   voll funktionsfähig.
 
-> Eine falsch gebuchte Rechnung kann in dieser Version **nicht** storniert oder als
-> Gutschrift korrigiert werden — das ist ein bekannter, noch offener Funktionslückenpunkt
-> (s. `STATUS.md`). Korrekturen sind derzeit außerhalb der App zu klären (z. B. mit dem
-> Steuerberater).
+> **Storno (Backend fertig, Bedienung im Fenster steht noch aus):** Eine gebuchte, noch nicht
+> bezahlte Rechnung kann storniert werden — es entsteht automatisch eine Storno-Gutschrift, der
+> ursprüngliche offene Posten wird ausgeglichen. Eine bereits (teilweise) bezahlte Rechnung lässt
+> sich damit bewusst **nicht** automatisch stornieren (Zahlungsausgleich dafür manuell klären).
+> Diese Funktion ist als Dienst bereits eingebaut und durchgetestet, aber noch **ohne eigene
+> Schaltfläche im Programmfenster** — bis die Storno-/Gutschrift-Seiten ergänzt sind, ist sie nur
+> über einen technischen Weg auslösbar (s. `STATUS.md`, Phase 9).
 
 ## 6. Einkauf
 
@@ -167,6 +170,10 @@ Spiegelbildlich zum Verkauf: **Bestellvorschlag → Bestellung → Wareneingang 
 - **Eingangsrechnungen:** „→ Eingangsrechnung" aus dem Wareneingang, Buchen legt einen
   Kreditoren-Posten an. Weicht der Rechnungsbetrag vom zugrunde liegenden Wareneingang ab,
   warnt die App (nicht blockierend).
+- **Storno (Backend fertig, Bedienung im Fenster steht noch aus):** Ein gebuchter Wareneingang
+  kann storniert werden — der Bestand wird zurückgebucht; ist die Ware nicht mehr vollständig
+  vorhanden (bereits weiterverkauft) oder ist der Artikel seriennummernpflichtig, lehnt die
+  App das Storno mit einer klaren Meldung ab, statt einen falschen Bestand zu erzeugen.
 
 ## 7. Lager
 
@@ -174,6 +181,10 @@ Spiegelbildlich zum Verkauf: **Bestellvorschlag → Bestellung → Wareneingang 
   Lieferscheine markieren → „→ Sammelrechnung" fasst sie zu einer Rechnung zusammen. Beim
   Buchen eines Lieferscheins werden Lagerbewegungen gebucht (Bestand wird verringert); ist der
   Artikel seriennummernpflichtig, wählt ein Dialog die auszuliefernden Seriennummern aus.
+  **Storno (Backend fertig, Bedienung im Fenster steht noch aus):** Ein gebuchter Lieferschein
+  kann storniert werden — Bestand und ggf. verknüpfte Seriennummern gehen zurück auf „auf
+  Lager". Ist der Lieferschein bereits (auch nur teilweise) abgerechnet, lehnt die App das
+  Storno ab — zuerst müsste die Rechnung storniert werden.
 - **Bestandsübersicht:** zeigt den aktuellen Bestand je Artikel/Lagerort (bei Kulturpflanzen
   zusätzlich je Feld/Sektion/Kulturstufe, mit entsprechenden Filtern). Zwei Funktionen in
   derselben Seite:
@@ -249,8 +260,10 @@ werden — das verhindert, dass sich die App versehentlich aussperrt.
 
 Diese Punkte sind bewusste Lücken der aktuellen Version, keine Bedienfehler:
 
-- **Storno/Gutschrift:** Eine gebuchte Rechnung kann nicht storniert oder per Gutschrift
-  korrigiert werden.
+- **Storno/Gutschrift ohne Fenster-Bedienung:** Rechnung/Lieferschein/Wareneingang lassen sich
+  stornieren (s. jeweiliger Abschnitt), aber noch nicht per Schaltfläche im Programmfenster —
+  nur ein Fachdienst dafür ist bereits fertig. Eine fachliche Gutschrift ohne Storno-Bezug
+  (z. B. für eine Kulanz-Rückerstattung ohne stornierte Rechnung) gibt es weiterhin nicht.
 - **Erzwungener Passwortwechsel:** Das Seed-Passwort `Milet!Admin1` muss von Hand geändert
   werden, es gibt keinen erzwungenen Wechsel-Dialog.
 - **Kein automatischer Mahnlauf:** Muss jedes Mal manuell angestoßen werden.
