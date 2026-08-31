@@ -64,8 +64,17 @@ public sealed class BelegUeberleitungService(
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
-        var quellBeleg = await db.Belege.Include(b => b.Positionen)
-            .FirstOrDefaultAsync(b => b.Id == quellBelegId, ct)
+        // UPDLOCK, HOLDLOCK sperrt den Quellbeleg für die Dauer der Transaktion — zwei gleichzeitige
+        // Überleitungen desselben Quellbelegs laufen dadurch serialisiert statt beide auf derselben
+        // (zum jeweiligen Lesezeitpunkt identischen, danach aber überholten) offenen Menge zu rechnen.
+        // Ohne das sahen zwei parallele Aufrufe beide "voll offen" und committierten beide — der seit
+        // Phase 3 in STATUS.md geführte READ-COMMITTED-Verdacht, real reproduziert und hiermit behoben
+        // (s. docs/superpowers/plans/2026-08-31-luecken-schliessen.md, Task 20/21, sowie
+        // BelegUeberleitungRaceTests).
+        var quellBeleg = await db.Belege
+            .FromSqlInterpolated($"SELECT * FROM Belege WITH (UPDLOCK, HOLDLOCK) WHERE Id = {quellBelegId}")
+            .Include(b => b.Positionen)
+            .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException(nameof(Beleg), quellBelegId);
 
         var quellTyp = BelegTypErweiterung.TypVon(quellBeleg);
@@ -180,8 +189,11 @@ public sealed class BelegUeberleitungService(
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
-        var quellBeleg = await db.Belege.Include(b => b.Positionen).Include(b => b.Kunde)
-            .FirstOrDefaultAsync(b => b.Id == quellBelegId, ct)
+        // UPDLOCK, HOLDLOCK — s. Kommentar in UeberleitenAsync.
+        var quellBeleg = await db.Belege
+            .FromSqlInterpolated($"SELECT * FROM Belege WITH (UPDLOCK, HOLDLOCK) WHERE Id = {quellBelegId}")
+            .Include(b => b.Positionen).Include(b => b.Kunde)
+            .FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException(nameof(Beleg), quellBelegId);
 
         var quellTyp = BelegTypErweiterung.TypVon(quellBeleg);
@@ -305,6 +317,18 @@ public sealed class BelegUeberleitungService(
 
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
+
+        // UPDLOCK, HOLDLOCK auf jeden Quellbeleg dieser Sammelüberleitung — gleicher Schutz wie in
+        // UeberleitenAsync/UeberleitenMitAuswahlAsync, hier nacheinander je Id statt einer IN-Klausel (die
+        // bräuchte für eine variable Parameterzahl FromSqlRaw mit zusammengesetztem SQL-Text, was der
+        // SQL-Injection-Analyzer zu Recht ablehnt). AsNoTracking, damit diese Instanzen die anschließende
+        // getrackte Ladeabfrage nicht kollidieren.
+        foreach (var id in quellBelegIds)
+        {
+            await db.Belege.FromSqlInterpolated($"SELECT * FROM Belege WITH (UPDLOCK, HOLDLOCK) WHERE Id = {id}")
+                .AsNoTracking()
+                .FirstOrDefaultAsync(ct);
+        }
 
         var quellBelege = await db.Belege.Include(b => b.Positionen)
             .Where(b => quellBelegIds.Contains(b.Id))
