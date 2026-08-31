@@ -148,6 +148,11 @@ public static class StammdatenSeed
                 WirtschaftsjahrBeginnMonat = 1,
                 SachkontenLaenge = 4,
                 BankkontoNr = 1200,
+                // SKR03-Standardkonten (s. DatevExportService.SkontoKontoDefault) — Startwert für den
+                // Singleton, seither über den FibuKonten-Tab editierbar (kein "je fehlendem Wert
+                // ergänzen"-Nachzug, weil es nur diese eine Zeile gibt, s. Task oben).
+                SkontoDebitorKontoNr = 8736,
+                SkontoKreditorKontoNr = 3736,
             });
         }
 

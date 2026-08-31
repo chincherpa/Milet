@@ -61,6 +61,7 @@ public static class AdminSeed
                 PasswortHash = PasswortHasher.Hash(StandardAdminPasswort),
                 RolleId = administratorRolle.Id,
                 Aktiv = true,
+                PasswortWechselErforderlich = true,
             });
             await db.SaveChangesAsync(ct);
         }

@@ -146,6 +146,44 @@ public sealed class DatevExportServiceTests : IAsyncLifetime
         Assert.Null(rechnung.ExportiertAm);
     }
 
+    [Fact]
+    public async Task ExportierenAsync_KonfigurierteSkontokontenStattStandardkonto_WerdenVerwendet()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var heute = DateOnly.FromDateTime(DateTime.Today);
+        var rechnungId = await NeueGebuchteRechnungAsync(_kundeMitKontoId, heute, ct);
+
+        await using (var db = new MiletDbContext(_options))
+        {
+            var konfiguration = await db.FibuKonfiguration.FirstAsync(f => f.Id == 1, ct);
+            konfiguration.SkontoDebitorKontoNr = 49999;
+            await db.SaveChangesAsync(ct);
+
+            var rechnung = await db.Rechnungen.Include(r => r.Steuersummen).FirstAsync(r => r.Id == rechnungId, ct);
+            var offenerPosten = new Milet.Domain.Entities.Finanzen.OffenerPosten
+            {
+                Beleg = rechnung, KundeId = rechnung.KundeId,
+                Typ = Milet.Domain.Entities.Finanzen.OffenerPostenTyp.Debitor,
+                Betrag = 119m, OffenerBetrag = 0m, Faelligkeit = heute,
+            };
+            db.Add(offenerPosten);
+            db.Add(new Milet.Domain.Entities.Finanzen.Zahlung
+            {
+                KundeId = rechnung.KundeId, Typ = Milet.Domain.Entities.Finanzen.OffenerPostenTyp.Debitor,
+                Zahlungsdatum = heute, Gesamtbetrag = 117m,
+                Zuordnungen = [new Milet.Domain.Entities.Finanzen.ZahlungZuordnung { OffenerPosten = offenerPosten, Betrag = 117m, SkontoBetrag = 2m }],
+            });
+            await db.SaveChangesAsync(ct);
+        }
+
+        var service = new DatevExportService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var ergebnis = await service.ExportierenAsync(heute.AddDays(-1), heute.AddDays(1), ct);
+
+        var csv = System.Text.Encoding.GetEncoding(1252).GetString(ergebnis.CsvBytes);
+        Assert.Contains("49999", csv);
+        Assert.DoesNotContain("8736", csv);
+    }
+
     private static bool DockerVerfuegbar()
     {
         try

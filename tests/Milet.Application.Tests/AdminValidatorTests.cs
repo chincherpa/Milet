@@ -56,6 +56,22 @@ public class AdminValidatorTests
         Assert.False(ergebnis.IsValid);
     }
 
+    [Fact]
+    public void FibuKonfiguration_SkontoKontenNichtGesetzt_Gueltig()
+    {
+        var ergebnis = new FibuKonfigurationValidator().Validate(Gueltig() with { SkontoDebitorKontoNr = null, SkontoKreditorKontoNr = null });
+
+        Assert.True(ergebnis.IsValid);
+    }
+
+    [Fact]
+    public void FibuKonfiguration_SkontoDebitorKontoNullOderNegativ_Fehler()
+    {
+        var ergebnis = new FibuKonfigurationValidator().Validate(Gueltig() with { SkontoDebitorKontoNr = 0 });
+
+        Assert.False(ergebnis.IsValid);
+    }
+
     private static BenutzerDto GueltigerNeuerBenutzer() => new()
     {
         Benutzername = "mmuster",

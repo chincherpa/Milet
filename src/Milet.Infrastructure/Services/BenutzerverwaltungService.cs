@@ -76,6 +76,13 @@ public sealed class BenutzerverwaltungService(
         if (!string.IsNullOrEmpty(dto.NeuesPasswort))
         {
             benutzer.PasswortHash = PasswortHasher.Hash(dto.NeuesPasswort);
+            // Ein Passwort-Reset ist der natürliche Entsperren-Weg (s. Plan Phase 9, Task 17): der Grund für
+            // eine Sperre (zu viele Fehlversuche) ist mit dem neuen Passwort ohnehin hinfällig. Der neue Wert
+            // wird typischerweise außerhalb der App weitergegeben — der Benutzer muss ihn beim nächsten Login
+            // durch ein eigenes ersetzen (Task 18).
+            benutzer.FehlgeschlageneVersuche = 0;
+            benutzer.GesperrtBis = null;
+            benutzer.PasswortWechselErforderlich = true;
         }
 
         await StelleSicherDassEinAdminBleibtAsync(db, benutzer.Id, benutzer.Aktiv, benutzer.RolleId, ct);

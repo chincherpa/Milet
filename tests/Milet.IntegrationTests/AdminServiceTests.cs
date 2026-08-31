@@ -132,6 +132,80 @@ public sealed class AdminServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task AnmeldenAsync_FuenfFalschePasswoerter_SperrtKontoUndWirftBeimSechstenVersuch()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var service = new AuthService(_factory);
+
+        for (var i = 0; i < 5; i++)
+        {
+            var session = await service.AnmeldenAsync("tuser", "falsches-passwort", ct);
+            Assert.Null(session);
+        }
+
+        // Sechster Versuch — selbst mit dem RICHTIGEN Passwort abgelehnt, weil das Konto jetzt gesperrt ist.
+        var ex = await Assert.ThrowsAsync<KontoGesperrtException>(() => service.AnmeldenAsync("tuser", "korrektes-passwort", ct));
+        Assert.True(ex.GesperrtBis > DateTime.UtcNow);
+
+        await using var db = new MiletDbContext(_options);
+        var benutzer = await db.Benutzer.FirstAsync(b => b.Benutzername == "tuser", ct);
+        Assert.Equal(5, benutzer.FehlgeschlageneVersuche);
+        Assert.NotNull(benutzer.GesperrtBis);
+    }
+
+    [Fact]
+    public async Task AnmeldenAsync_ErfolgNachFehlversuchen_SetztZaehlerZurueck()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var service = new AuthService(_factory);
+
+        await service.AnmeldenAsync("tuser", "falsches-passwort", ct);
+        await service.AnmeldenAsync("tuser", "falsches-passwort", ct);
+        var session = await service.AnmeldenAsync("tuser", "korrektes-passwort", ct);
+
+        Assert.NotNull(session);
+        await using var db = new MiletDbContext(_options);
+        var benutzer = await db.Benutzer.FirstAsync(b => b.Benutzername == "tuser", ct);
+        Assert.Equal(0, benutzer.FehlgeschlageneVersuche);
+        Assert.Null(benutzer.GesperrtBis);
+    }
+
+    [Fact]
+    public async Task Benutzerverwaltung_PasswortReset_EntsperrtKontoUndErzwingtWechsel()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var authService = new AuthService(_factory);
+        for (var i = 0; i < 5; i++) await authService.AnmeldenAsync("tuser", "falsches-passwort", ct);
+
+        int benutzerId;
+        byte[] rowVersion;
+        await using (var db = new MiletDbContext(_options))
+        {
+            var benutzer = await db.Benutzer.FirstAsync(b => b.Benutzername == "tuser", ct);
+            benutzerId = benutzer.Id;
+            rowVersion = benutzer.RowVersion;
+            Assert.NotNull(benutzer.GesperrtBis);
+        }
+
+        var verwaltung = new BenutzerverwaltungService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        await verwaltung.SpeichereAsync(new BenutzerDto
+        {
+            Id = benutzerId, Benutzername = "tuser", Anzeigename = "Test User", RolleId = _rolleId, Aktiv = true,
+            NeuesPasswort = "neues-passwort-123", RowVersion = rowVersion,
+        }, ct);
+
+        await using var nachDb = new MiletDbContext(_options);
+        var nachReset = await nachDb.Benutzer.FirstAsync(b => b.Id == benutzerId, ct);
+        Assert.Null(nachReset.GesperrtBis);
+        Assert.Equal(0, nachReset.FehlgeschlageneVersuche);
+        Assert.True(nachReset.PasswortWechselErforderlich);
+
+        var session = await authService.AnmeldenAsync("tuser", "neues-passwort-123", ct);
+        Assert.NotNull(session);
+        Assert.True(session!.PasswortWechselErforderlich);
+    }
+
+    [Fact]
     public async Task Benutzerverwaltung_OhneAdministrationsrecht_WirftKeinZugriffException()
     {
         var ct = TestContext.Current.CancellationToken;

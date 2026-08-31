@@ -35,6 +35,8 @@ internal static class AdminMapping
         WirtschaftsjahrBeginnMonat = f.WirtschaftsjahrBeginnMonat,
         SachkontenLaenge = f.SachkontenLaenge,
         BankkontoNr = f.BankkontoNr,
+        SkontoDebitorKontoNr = f.SkontoDebitorKontoNr,
+        SkontoKreditorKontoNr = f.SkontoKreditorKontoNr,
     };
 
     public static void ApplyTo(this FibuKonfigurationDto dto, FibuKonfiguration entity)
@@ -45,6 +47,8 @@ internal static class AdminMapping
         entity.WirtschaftsjahrBeginnMonat = dto.WirtschaftsjahrBeginnMonat;
         entity.SachkontenLaenge = dto.SachkontenLaenge;
         entity.BankkontoNr = dto.BankkontoNr;
+        entity.SkontoDebitorKontoNr = dto.SkontoDebitorKontoNr;
+        entity.SkontoKreditorKontoNr = dto.SkontoKreditorKontoNr;
     }
 
     public static RechtDto ToDto(this Recht r) => new()
@@ -72,6 +76,8 @@ internal static class AdminMapping
         RolleId = b.RolleId,
         RollenName = b.Rolle?.Name,
         Aktiv = b.Aktiv,
+        GesperrtBis = b.GesperrtBis,
+        PasswortWechselErforderlich = b.PasswortWechselErforderlich,
         RowVersion = b.RowVersion,
     };
 

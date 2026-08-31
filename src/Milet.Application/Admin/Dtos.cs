@@ -21,6 +21,10 @@ public sealed record FibuKonfigurationDto
     public int WirtschaftsjahrBeginnMonat { get; init; } = 1;
     public int SachkontenLaenge { get; init; } = 4;
     public int BankkontoNr { get; init; }
+
+    /// <summary>NULL = Standardkonto des Kontenrahmens wird beim DATEV-Export verwendet.</summary>
+    public int? SkontoDebitorKontoNr { get; init; }
+    public int? SkontoKreditorKontoNr { get; init; }
 }
 
 public sealed record RechtDto
@@ -52,6 +56,10 @@ public sealed record BenutzerDto
     public int RolleId { get; init; }
     public string? RollenName { get; init; }
     public bool Aktiv { get; init; } = true;
+
+    /// <summary>Nur zur Anzeige — wird über einen Passwort-Reset zurückgesetzt, nicht direkt editierbar.</summary>
+    public DateTime? GesperrtBis { get; init; }
+    public bool PasswortWechselErforderlich { get; init; }
     public byte[] RowVersion { get; init; } = [];
 }
 
@@ -62,6 +70,10 @@ public sealed record BenutzerSessionDto
     public string BenutzerName { get; init; } = string.Empty;
     public string RollenName { get; init; } = string.Empty;
     public IReadOnlyList<string> Rechte { get; init; } = [];
+
+    /// <summary>Login-Flow (WinUI) muss vor dem Öffnen der Shell einen Passwortwechsel erzwingen, wenn
+    /// gesetzt — s. Benutzer.PasswortWechselErforderlich.</summary>
+    public bool PasswortWechselErforderlich { get; init; }
 }
 
 public sealed record AuditLogDto

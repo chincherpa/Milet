@@ -29,7 +29,11 @@ public sealed class BestandService(
         }
 
         var artikel = await artikelQuery.ToListAsync(ct);
-        var lagerorte = await db.Lagerorte.AsNoTracking().Where(l => l.Aktiv).ToListAsync(ct);
+        // ALLE Lagerorte (nicht nur aktive) — sonst verschwindet echter, noch vorhandener Bestand eines
+        // deaktivierten Lagerorts stillschweigend aus der Übersicht (Regression aus der Phase-3-Abnahme,
+        // s. Plan Phase 9 Task 19). Ein deaktivierter Lagerort bekommt unten nur keine synthetische
+        // Nullbestand-Zeile mehr (dort gibt es ohnehin nichts anzulegen).
+        var lagerorte = await db.Lagerorte.AsNoTracking().ToListAsync(ct);
         var bestaende = await db.ArtikelBestaende.AsNoTracking()
             .Include(b => b.Sektion).Include(b => b.Kulturstufe)
             .ToListAsync(ct);
@@ -48,7 +52,8 @@ public sealed class BestandService(
                 var zeilen = bestaendeJeArtikelUndLagerort[(a.Id, l.Id)].ToList();
                 if (zeilen.Count == 0)
                 {
-                    ergebnis.Add(new ArtikelBestandDto(a.Id, a.Artikelnummer, a.Bezeichnung, a.HatSeriennummern, l.Id, l.Bezeichnung, 0m, a.Mindestbestand, IstKulturpflanze: a.IstKulturpflanze));
+                    if (!l.Aktiv) continue;
+                    ergebnis.Add(new ArtikelBestandDto(a.Id, a.Artikelnummer, a.Bezeichnung, a.HatSeriennummern, l.Id, l.Bezeichnung, 0m, a.Mindestbestand, IstKulturpflanze: a.IstKulturpflanze, LagerortAktiv: l.Aktiv));
                     continue;
                 }
 
@@ -56,7 +61,7 @@ public sealed class BestandService(
                 {
                     ergebnis.Add(new ArtikelBestandDto(
                         a.Id, a.Artikelnummer, a.Bezeichnung, a.HatSeriennummern, l.Id, l.Bezeichnung, b.Menge, a.Mindestbestand,
-                        b.SektionId, b.Sektion?.Bezeichnung, b.KulturstufeId, b.Kulturstufe?.Bezeichnung, a.IstKulturpflanze));
+                        b.SektionId, b.Sektion?.Bezeichnung, b.KulturstufeId, b.Kulturstufe?.Bezeichnung, a.IstKulturpflanze, l.Aktiv));
                 }
             }
         }

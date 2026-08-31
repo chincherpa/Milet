@@ -19,4 +19,12 @@ public class FibuKonfiguration
 
     /// <summary>Sachkonto für Zahlungseingänge/-ausgänge (Bank/Kasse), Gegenkonto beim Zahlungs-Export.</summary>
     public int BankkontoNr { get; set; }
+
+    /// <summary>Sammelkonto für gewährtes Skonto (Debitor). NULL = Standardkonto des Kontenrahmens
+    /// (SKR03 8736, SKR04 4736) wird verwendet, s. DatevExportService.</summary>
+    public int? SkontoDebitorKontoNr { get; set; }
+
+    /// <summary>Sammelkonto für erhaltenes Skonto (Kreditor). NULL = Standardkonto des Kontenrahmens
+    /// (SKR03 3736, SKR04 5736) wird verwendet, s. DatevExportService.</summary>
+    public int? SkontoKreditorKontoNr { get; set; }
 }

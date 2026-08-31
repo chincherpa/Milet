@@ -32,12 +32,12 @@ public sealed class DatevExportService(
     public async Task<DatevExportVorschauDto> VorschauAsync(DateOnly von, DateOnly bis, CancellationToken ct = default)
     {
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
-        var (rechnungen, eingangsrechnungen, zahlungen, mwStKonten, bankkonto, kontenrahmen) = await LadeAsync(db, von, bis, ct);
+        var (rechnungen, eingangsrechnungen, zahlungen, mwStKonten, bankkonto, kontenrahmen, skontoDebitorKontoNr, skontoKreditorKontoNr) = await LadeAsync(db, von, bis, ct);
 
         var zeilen = new List<DatevBuchungszeile>();
         BuildeRechnungszeilen(rechnungen, mwStKonten, zeilen);
         BuildeEingangsrechnungszeilen(eingangsrechnungen, mwStKonten, zeilen);
-        BuildeZahlungszeilen(zahlungen, bankkonto, kontenrahmen, zeilen);
+        BuildeZahlungszeilen(zahlungen, bankkonto, kontenrahmen, skontoDebitorKontoNr, skontoKreditorKontoNr, zeilen);
 
         var summeUmsatz = zeilen.Sum(z => z.Umsatz);
         return new DatevExportVorschauDto(rechnungen.Count, eingangsrechnungen.Count, zahlungen.Count, zeilen.Count, summeUmsatz);
@@ -48,7 +48,7 @@ public sealed class DatevExportService(
         berechtigung.PruefeRecht(RechtCodes.Finanzen);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
 
-        var (rechnungen, eingangsrechnungen, zahlungen, mwStKonten, bankkonto, kontenrahmen) = await LadeAsync(db, von, bis, ct);
+        var (rechnungen, eingangsrechnungen, zahlungen, mwStKonten, bankkonto, kontenrahmen, skontoDebitorKontoNr, skontoKreditorKontoNr) = await LadeAsync(db, von, bis, ct);
 
         var zeilen = new List<DatevBuchungszeile>();
         var exportierteBelegIds = new List<int>();
@@ -71,7 +71,7 @@ public sealed class DatevExportService(
         foreach (var zahlung in zahlungen)
         {
             var vorher = zeilen.Count;
-            BuildeZahlungszeilen([zahlung], bankkonto, kontenrahmen, zeilen);
+            BuildeZahlungszeilen([zahlung], bankkonto, kontenrahmen, skontoDebitorKontoNr, skontoKreditorKontoNr, zeilen);
             if (zeilen.Count > vorher) exportierteZahlungIds.Add(zahlung.Id);
         }
 
@@ -133,7 +133,8 @@ public sealed class DatevExportService(
 
     private static async Task<(
         List<Rechnung> Rechnungen, List<Eingangsrechnung> Eingangsrechnungen, List<Zahlung> Zahlungen,
-        Dictionary<int, (int? Erloes, int? Aufwand)> MwStKonten, int Bankkonto, Kontenrahmen Kontenrahmen)>
+        Dictionary<int, (int? Erloes, int? Aufwand)> MwStKonten, int Bankkonto, Kontenrahmen Kontenrahmen,
+        int? SkontoDebitorKontoNr, int? SkontoKreditorKontoNr)>
         LadeAsync(MiletDbContext db, DateOnly von, DateOnly bis, CancellationToken ct)
     {
         var rechnungen = await db.Rechnungen.AsNoTracking()
@@ -164,7 +165,8 @@ public sealed class DatevExportService(
         var konfiguration = await db.FibuKonfiguration.AsNoTracking().FirstOrDefaultAsync(f => f.Id == 1, ct);
 
         return (rechnungen, eingangsrechnungen, zahlungen, mwStKonten, konfiguration?.BankkontoNr ?? 0,
-            konfiguration?.Kontenrahmen ?? Kontenrahmen.Skr03);
+            konfiguration?.Kontenrahmen ?? Kontenrahmen.Skr03,
+            konfiguration?.SkontoDebitorKontoNr, konfiguration?.SkontoKreditorKontoNr);
     }
 
     private static void BuildeRechnungszeilen(
@@ -240,7 +242,8 @@ public sealed class DatevExportService(
     /// Debitor würde um 100 entlastet, die Bank aber nur um 98 belastet.
     /// </summary>
     private static void BuildeZahlungszeilen(
-        IReadOnlyList<Zahlung> zahlungen, int bankkonto, Kontenrahmen kontenrahmen, List<DatevBuchungszeile> zeilen)
+        IReadOnlyList<Zahlung> zahlungen, int bankkonto, Kontenrahmen kontenrahmen,
+        int? skontoDebitorKontoNr, int? skontoKreditorKontoNr, List<DatevBuchungszeile> zeilen)
     {
         if (bankkonto <= 0) return;
 
@@ -272,7 +275,9 @@ public sealed class DatevExportService(
 
             if (skontoGesamt == 0) continue;
 
-            var skontokonto = SkontoKonto(kontenrahmen, zahlung.Typ);
+            var skontokonto = zahlung.Typ == OffenerPostenTyp.Debitor
+                ? skontoDebitorKontoNr ?? SkontoKontoDefault(kontenrahmen, zahlung.Typ)
+                : skontoKreditorKontoNr ?? SkontoKontoDefault(kontenrahmen, zahlung.Typ);
             foreach (var zuordnung in zahlung.Zuordnungen.Where(z => z.SkontoBetrag > 0))
             {
                 var steuergruppen = (zuordnung.OffenerPosten?.Beleg?.Steuersummen ?? [])
@@ -302,15 +307,12 @@ public sealed class DatevExportService(
     }
 
     /// <summary>
-    /// Sammelkonto für gewährte/erhaltene Skonti im jeweiligen Standardkontenrahmen (SKR03: 8736/3736,
-    /// SKR04: 4736/5736).
-    ///
-    /// Bewusst hier verdrahtet und nicht konfigurierbar: die Skontokonten gehören fachlich neben
-    /// <c>BankkontoNr</c> in die FibuKonfiguration, das ist aber eine Schemaänderung. Bis dahin ist ein
-    /// Standardkonto, das der Steuerberater umschlüsseln kann, die deutlich kleinere Übel-Variante
-    /// gegenüber einem unausgeglichenen Buchungsstapel (s. STATUS.md, offene Punkte).
+    /// Fallback-Sammelkonto für gewährte/erhaltene Skonti im jeweiligen Standardkontenrahmen (SKR03:
+    /// 8736/3736, SKR04: 4736/5736) — greift nur, wenn <see cref="FibuKonfiguration.SkontoDebitorKontoNr"/>/
+    /// <see cref="FibuKonfiguration.SkontoKreditorKontoNr"/> nicht gepflegt sind (Phase 9, Task 16: vorher
+    /// war dieses Konto hart verdrahtet und nicht konfigurierbar).
     /// </summary>
-    private static int SkontoKonto(Kontenrahmen kontenrahmen, OffenerPostenTyp typ) => (kontenrahmen, typ) switch
+    private static int SkontoKontoDefault(Kontenrahmen kontenrahmen, OffenerPostenTyp typ) => (kontenrahmen, typ) switch
     {
         (Kontenrahmen.Skr04, OffenerPostenTyp.Debitor) => 4736,
         (Kontenrahmen.Skr04, _) => 5736,

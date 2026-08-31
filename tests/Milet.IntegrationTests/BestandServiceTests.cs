@@ -95,6 +95,35 @@ public sealed class BestandServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SucheAsync_DeaktivierterLagerortMitBestand_ZeigtBestandAberKeineSynthetischeNullzeile()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var service = new BestandService(new TestDbContextFactory(_options), AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
+        await service.KorrigiereAsync(new() { ArtikelId = _artikelId, LagerortId = _lagerortId, MengeDelta = 7, Grund = "Start" }, ct);
+
+        int zweiterArtikelId;
+        await using (var db = new MiletDbContext(_options))
+        {
+            var zweiterArtikel = new Artikel { Artikelnummer = "ART-OHNE-BESTAND", Bezeichnung = "Ohne Bestand hier", EinheitId = (await db.Einheiten.FirstAsync(ct)).Id, MwStSatzId = (await db.MwStSaetze.FirstAsync(ct)).Id };
+            db.Add(zweiterArtikel);
+            var lagerort = await db.Lagerorte.FirstAsync(l => l.Id == _lagerortId, ct);
+            lagerort.Aktiv = false;
+            await db.SaveChangesAsync(ct);
+            zweiterArtikelId = zweiterArtikel.Id;
+        }
+
+        var ergebnis = await service.SucheAsync(null, ct);
+
+        // Der erste Artikel hat echten Bestand am jetzt deaktivierten Lagerort — muss weiterhin sichtbar sein.
+        var zeileMitBestand = Assert.Single(ergebnis, z => z.ArtikelId == _artikelId && z.LagerortId == _lagerortId);
+        Assert.Equal(7m, zeileMitBestand.Menge);
+        Assert.False(zeileMitBestand.LagerortAktiv);
+
+        // Der zweite Artikel hat DORT keinen Bestand — keine synthetische Nullzeile für einen deaktivierten Lagerort.
+        Assert.DoesNotContain(ergebnis, z => z.ArtikelId == zweiterArtikelId && z.LagerortId == _lagerortId);
+    }
+
+    [Fact]
     public async Task Korrektur_SetztBemerkungUndBenutzerIdAufDerLagerbewegung()
     {
         var ct = TestContext.Current.CancellationToken;

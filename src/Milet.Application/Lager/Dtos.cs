@@ -24,7 +24,10 @@ public sealed record ArtikelBestandDto(
     string? SektionBezeichnung = null,
     int? KulturstufeId = null,
     string? KulturstufeBezeichnung = null,
-    bool IstKulturpflanze = false);
+    bool IstKulturpflanze = false,
+    /// <summary>Für UI-Markierung: ein deaktivierter Lagerort erscheint hier nur noch mit tatsächlich
+    /// vorhandenem Bestand (kein synthetischer Nullbestand mehr, s. Plan Phase 9 Task 19).</summary>
+    bool LagerortAktiv = true);
 
 public sealed record BestandskorrekturDto
 {

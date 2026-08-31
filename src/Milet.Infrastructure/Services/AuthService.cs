@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Milet.Application.Admin;
+using Milet.Application.Common;
 using Milet.Domain.Services;
 using Milet.Infrastructure.Persistence;
 
@@ -19,6 +20,9 @@ public sealed class AuthService(IDbContextFactory<MiletDbContext> dbContextFacto
     private static readonly Lazy<string> DummyHash =
         new(() => PasswortHasher.Hash("nie-vergebenes-Passwort-fuer-konstante-Antwortzeit"));
 
+    private const int MaxFehlversuche = 5;
+    private static readonly TimeSpan Sperrdauer = TimeSpan.FromMinutes(15);
+
     public async Task<BenutzerSessionDto?> AnmeldenAsync(string benutzername, string passwort, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(benutzername) || string.IsNullOrEmpty(passwort))
@@ -28,28 +32,53 @@ public sealed class AuthService(IDbContextFactory<MiletDbContext> dbContextFacto
 
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
 
-        var benutzer = await db.Benutzer.AsNoTracking()
+        // Getrackt statt AsNoTracking (anders als vor Phase 9): ein Fehlversuch/Erfolg schreibt jetzt
+        // FehlgeschlageneVersuche/GesperrtBis auf denselben geladenen Benutzer zurück.
+        var benutzer = await db.Benutzer
             .Include(b => b.Rolle).ThenInclude(r => r.Rechte)
             .FirstOrDefaultAsync(b => b.Benutzername == benutzername.Trim(), ct);
 
         // Bewusst keine unterschiedliche Fehlermeldung für "Benutzer existiert nicht" vs.
         // "Passwort falsch" vs. "Benutzer deaktiviert" — kein User-Enumeration-Leck. Verifiziert wird immer,
         // notfalls gegen den Dummy-Hash (s. o.), damit auch die Antwortzeit nichts verrät; das Ergebnis der
-        // Dummy-Prüfung wird verworfen.
+        // Dummy-Prüfung wird verworfen. Die Sperrprüfung läuft danach — sie darf eine eigene Meldung geben
+        // (s. KontoGesperrtException), weil der Angreifer den Benutzernamen an dieser Stelle bereits kennt.
         var anmeldbar = benutzer is not null && benutzer.Aktiv;
         var passwortKorrekt = PasswortHasher.Verify(passwort, anmeldbar ? benutzer!.PasswortHash : DummyHash.Value);
 
+        if (anmeldbar && benutzer!.GesperrtBis is { } gesperrtBis && gesperrtBis > DateTime.UtcNow)
+        {
+            throw new KontoGesperrtException(gesperrtBis);
+        }
+
         if (!anmeldbar || !passwortKorrekt)
         {
+            if (anmeldbar)
+            {
+                benutzer!.FehlgeschlageneVersuche++;
+                if (benutzer.FehlgeschlageneVersuche >= MaxFehlversuche)
+                {
+                    benutzer.GesperrtBis = DateTime.UtcNow.Add(Sperrdauer);
+                }
+                await db.SaveChangesAsync(ct);
+            }
             return null;
+        }
+
+        if (benutzer!.FehlgeschlageneVersuche > 0 || benutzer.GesperrtBis is not null)
+        {
+            benutzer.FehlgeschlageneVersuche = 0;
+            benutzer.GesperrtBis = null;
+            await db.SaveChangesAsync(ct);
         }
 
         return new BenutzerSessionDto
         {
-            BenutzerId = benutzer!.Id,
+            BenutzerId = benutzer.Id,
             BenutzerName = benutzer.Anzeigename,
             RollenName = benutzer.Rolle.Name,
             Rechte = benutzer.Rolle.Rechte.Select(r => r.Code).ToList(),
+            PasswortWechselErforderlich = benutzer.PasswortWechselErforderlich,
         };
     }
 }

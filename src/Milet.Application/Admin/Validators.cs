@@ -11,6 +11,8 @@ public sealed class FibuKonfigurationValidator : AbstractValidator<FibuKonfigura
         RuleFor(f => f.WirtschaftsjahrBeginnMonat).InclusiveBetween(1, 12);
         RuleFor(f => f.SachkontenLaenge).InclusiveBetween(4, 8);
         RuleFor(f => f.BankkontoNr).GreaterThan(0).WithMessage("Bankkonto ist erforderlich.");
+        RuleFor(f => f.SkontoDebitorKontoNr).GreaterThan(0).When(f => f.SkontoDebitorKontoNr is not null);
+        RuleFor(f => f.SkontoKreditorKontoNr).GreaterThan(0).When(f => f.SkontoKreditorKontoNr is not null);
     }
 }
 
