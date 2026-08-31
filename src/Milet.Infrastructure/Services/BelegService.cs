@@ -156,6 +156,15 @@ public sealed class BelegService(
                 throw new InvalidOperationException($"Beleg '{beleg.BelegNummer}' ist bereits gebucht und kann nicht mehr geändert werden.");
 
             db.Entry(beleg).Property(b => b.RowVersion).OriginalValue = dto.RowVersion;
+
+            // Bislang immer 1:1 aus dem Kunden-/Lieferantenstamm eingefroren und im Editor nie änderbar
+            // (Phase 2, relevant seit dem Lieferschein in Phase 3, s. STATUS.md "Bekannte Risiken") — nur
+            // beim Update übernommen (der obige Entwurf-Guard erzwingt das ohnehin), NIE bei der Neuanlage:
+            // dort ist dto.LieferadresseSnapshot noch der DTO-Default (leer), die soeben oben gesetzte
+            // Vorbelegung aus Kunde/Lieferant/Firma darf nicht überschrieben werden. Eine abweichende
+            // Lieferadresse (Baustelle, Filiale, Geschenksendung) ist damit jetzt erfassbar, ohne den
+            // Kundenstamm selbst zu ändern.
+            beleg.LieferadresseSnapshot = dto.LieferadresseSnapshot.ToEntity();
         }
 
         beleg.BelegDatum = dto.BelegDatum;
