@@ -81,7 +81,7 @@ public sealed class InventurServiceTests : IAsyncLifetime
         if (_container is not null) await _container.DisposeAsync();
     }
 
-    private InventurService NeuerService() => new(_factory, AllesErlaubtBerechtigungsService.Instanz);
+    private InventurService NeuerService() => new(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
 
     [Fact]
     public async Task NeueInventurAsync_Feld_ErzeugtEinePositionJeBestandszeile()

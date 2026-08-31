@@ -11,6 +11,9 @@ public sealed class LagerbewegungConfiguration : IEntityTypeConfiguration<Lagerb
         b.ToTable("Lagerbewegungen");
         b.HasKey(x => x.Id);
         b.Property(x => x.Menge).HasPrecision(18, 3);
+        // 300 statt 200: automatische Storno-Bemerkungen kombinieren einen Präfix (z. B. "Storno Lieferschein
+        // LS-2026-0001: ") mit dem bis zu 200 Zeichen langen, vom Nutzer erfassten Storno-Grund.
+        b.Property(x => x.Bemerkung).HasMaxLength(300);
 
         b.HasOne(x => x.Artikel).WithMany().HasForeignKey(x => x.ArtikelId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne(x => x.Lagerort).WithMany().HasForeignKey(x => x.LagerortId).OnDelete(DeleteBehavior.Restrict);

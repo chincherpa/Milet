@@ -15,7 +15,8 @@ namespace Milet.Infrastructure.Services;
 /// durch dieselbe Negativsperre wie ein Lieferschein.</summary>
 public sealed class KulturBuchungService(
     IDbContextFactory<MiletDbContext> dbContextFactory,
-    IBerechtigungsService berechtigung) : IKulturBuchungService
+    IBerechtigungsService berechtigung,
+    ICurrentUserService currentUser) : IKulturBuchungService
 {
     private static readonly KulturZugangValidator ZugangValidator = new();
     private static readonly StufenwechselValidator StufenwechselValidator = new();
@@ -31,7 +32,7 @@ public sealed class KulturBuchungService(
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         await BestandService.BucheBewegungAsync(
             db, dto.ArtikelId, dto.FeldId, dto.Menge, LagerbewegungTyp.Kulturzugang, null, ct,
-            dto.SektionId, dto.KulturstufeId);
+            dto.SektionId, dto.KulturstufeId, dto.Bemerkung, currentUser.BenutzerId);
         await transaction.CommitAsync(ct);
     }
 
@@ -47,10 +48,10 @@ public sealed class KulturBuchungService(
         // Transaktion zurück und es entsteht kein Zugang (kein "halber" Stufenwechsel).
         await BestandService.BucheBewegungAsync(
             db, dto.ArtikelId, dto.VonFeldId, -dto.Menge, LagerbewegungTyp.Stufenwechsel, null, ct,
-            dto.VonSektionId, dto.VonKulturstufeId);
+            dto.VonSektionId, dto.VonKulturstufeId, dto.Bemerkung, currentUser.BenutzerId);
         await BestandService.BucheBewegungAsync(
             db, dto.ArtikelId, dto.NachFeldId, dto.Menge, LagerbewegungTyp.Stufenwechsel, null, ct,
-            dto.NachSektionId, dto.NachKulturstufeId);
+            dto.NachSektionId, dto.NachKulturstufeId, dto.Bemerkung, currentUser.BenutzerId);
         await transaction.CommitAsync(ct);
     }
 
@@ -66,10 +67,10 @@ public sealed class KulturBuchungService(
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         await BestandService.BucheBewegungAsync(
             db, dto.ArtikelId, dto.VonFeldId, -dto.Menge, LagerbewegungTyp.Umsetzen, null, ct,
-            dto.VonSektionId, dto.KulturstufeId);
+            dto.VonSektionId, dto.KulturstufeId, dto.Bemerkung, currentUser.BenutzerId);
         await BestandService.BucheBewegungAsync(
             db, dto.ArtikelId, dto.NachFeldId, dto.Menge, LagerbewegungTyp.Umsetzen, null, ct,
-            dto.NachSektionId, dto.KulturstufeId);
+            dto.NachSektionId, dto.KulturstufeId, dto.Bemerkung, currentUser.BenutzerId);
         await transaction.CommitAsync(ct);
     }
 
@@ -82,7 +83,7 @@ public sealed class KulturBuchungService(
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         await BestandService.BucheBewegungAsync(
             db, dto.ArtikelId, dto.FeldId, -dto.Menge, LagerbewegungTyp.Ausfall, null, ct,
-            dto.SektionId, dto.KulturstufeId);
+            dto.SektionId, dto.KulturstufeId, dto.Bemerkung, currentUser.BenutzerId);
         await transaction.CommitAsync(ct);
     }
 }

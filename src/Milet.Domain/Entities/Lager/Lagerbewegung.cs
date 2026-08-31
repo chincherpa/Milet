@@ -34,4 +34,10 @@ public class Lagerbewegung
 
     public DateTime Zeitpunkt { get; set; }
     public int? BenutzerId { get; set; }
+
+    /// <summary>Freitext-Grund — bei manueller Bestandskorrektur/Ausfall der vom Nutzer erfasste Grund, bei
+    /// automatischen Buchungen (Lieferschein/Wareneingang-Buchen, Inventurabschluss, Storno) ein Verweis auf
+    /// den auslösenden Beleg. NULL bei Zeilen, die vor Einführung dieses Felds entstanden sind (Phase 9,
+    /// Task 13) oder deren Aufrufer keinen Grund mitgibt.</summary>
+    public string? Bemerkung { get; set; }
 }

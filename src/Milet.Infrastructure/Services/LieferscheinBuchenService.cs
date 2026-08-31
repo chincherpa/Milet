@@ -12,7 +12,8 @@ namespace Milet.Infrastructure.Services;
 
 public sealed class LieferscheinBuchenService(
     IDbContextFactory<MiletDbContext> dbContextFactory,
-    IBerechtigungsService berechtigung) : ILieferscheinBuchenService
+    IBerechtigungsService berechtigung,
+    ICurrentUserService currentUser) : ILieferscheinBuchenService
 {
     public async Task<BelegDto> BuchenAsync(
         int lieferscheinId, IReadOnlyDictionary<int, IReadOnlyList<int>> seriennummernJePosition, CancellationToken ct = default)
@@ -73,7 +74,8 @@ public sealed class LieferscheinBuchenService(
             // (kein separater Read-Modify-Write-Check davor, siehe BestandService.BucheBewegungAsync).
             await BestandService.BucheBewegungAsync(
                 db, artikelId, lagerortId, -position.Menge, LagerbewegungTyp.Lieferung, position.Id, ct,
-                position.SektionId, position.KulturstufeId);
+                position.SektionId, position.KulturstufeId,
+                $"Lieferschein {lieferschein.BelegNummer}", currentUser.BenutzerId);
 
             if (artikel.HatSeriennummern)
             {

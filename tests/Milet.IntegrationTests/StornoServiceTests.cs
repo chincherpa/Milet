@@ -115,7 +115,7 @@ public sealed class StornoServiceTests : IAsyncLifetime
         db.Add(lieferschein);
         await db.SaveChangesAsync(ct);
 
-        var buchen = new LieferscheinBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var buchen = new LieferscheinBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
         var gebucht = await buchen.BuchenAsync(lieferschein.Id, new Dictionary<int, IReadOnlyList<int>>(), ct);
         return gebucht.Id;
     }
@@ -139,7 +139,7 @@ public sealed class StornoServiceTests : IAsyncLifetime
         db.Add(wareneingang);
         await db.SaveChangesAsync(ct);
 
-        var buchen = new WareneingangBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var buchen = new WareneingangBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
         var gebucht = await buchen.BuchenAsync(wareneingang.Id, new Dictionary<int, IReadOnlyList<string>>(), ct);
         return (gebucht.Id, gebucht.Positionen[0].Id);
     }
@@ -150,7 +150,7 @@ public sealed class StornoServiceTests : IAsyncLifetime
         var ct = TestContext.Current.CancellationToken;
         var rechnungId = await GebuchteRechnungAsync(ct);
 
-        var service = new StornoService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new StornoService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
         var gutschrift = await service.StorniereRechnungAsync(rechnungId, "Testgrund", ct);
 
         Assert.Equal(BelegTyp.Gutschrift, gutschrift.BelegTyp);
@@ -174,7 +174,7 @@ public sealed class StornoServiceTests : IAsyncLifetime
     {
         var ct = TestContext.Current.CancellationToken;
         var rechnungId = await GebuchteRechnungAsync(ct);
-        var service = new StornoService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new StornoService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
         await service.StorniereRechnungAsync(rechnungId, "Testgrund", ct);
 
         await using var db = new MiletDbContext(_options);
@@ -198,7 +198,7 @@ public sealed class StornoServiceTests : IAsyncLifetime
             await db.SaveChangesAsync(ct);
         }
 
-        var service = new StornoService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new StornoService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => service.StorniereRechnungAsync(rechnungId, "Testgrund", ct));
         Assert.Contains("bereits", ex.Message);
     }
@@ -208,7 +208,7 @@ public sealed class StornoServiceTests : IAsyncLifetime
     {
         var ct = TestContext.Current.CancellationToken;
         var rechnungId = await GebuchteRechnungAsync(ct);
-        var service = new StornoService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new StornoService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
 
         var ergebnisse = await Task.WhenAll(Enumerable.Range(0, 2).Select(async _ =>
         {
@@ -231,7 +231,7 @@ public sealed class StornoServiceTests : IAsyncLifetime
         await using (var db = new MiletDbContext(_options))
             Assert.Equal(15m, (await db.ArtikelBestaende.FirstAsync(b => b.ArtikelId == _artikelId, ct)).Menge);
 
-        var service = new StornoService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new StornoService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
         var storniert = await service.StorniereLieferscheinAsync(lieferscheinId, "Rückläufer", ct);
 
         Assert.Equal(BelegStatus.Storniert, storniert.Status);
@@ -239,6 +239,11 @@ public sealed class StornoServiceTests : IAsyncLifetime
 
         await using var nachDb = new MiletDbContext(_options);
         Assert.Equal(20m, (await nachDb.ArtikelBestaende.FirstAsync(b => b.ArtikelId == _artikelId, ct)).Menge);
+
+        var stornoBewegung = await nachDb.Lagerbewegungen.SingleAsync(l => l.Typ == LagerbewegungTyp.StornoRueckgabe, ct);
+        Assert.Contains(storniert.BelegNummer, stornoBewegung.Bemerkung);
+        Assert.Contains("Rückläufer", stornoBewegung.Bemerkung);
+        Assert.Equal(TestCurrentUserService.Instanz.BenutzerId, stornoBewegung.BenutzerId);
     }
 
     [Fact]
@@ -274,10 +279,10 @@ public sealed class StornoServiceTests : IAsyncLifetime
             positionId = lieferschein.Positionen[0].Id;
         }
 
-        var buchen = new LieferscheinBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var buchen = new LieferscheinBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
         await buchen.BuchenAsync(lieferscheinId, new Dictionary<int, IReadOnlyList<int>> { [positionId] = [seriennummerId] }, ct);
 
-        var service = new StornoService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new StornoService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
         await service.StorniereLieferscheinAsync(lieferscheinId, "Rückläufer", ct);
 
         await using var nachDb = new MiletDbContext(_options);
@@ -312,7 +317,7 @@ public sealed class StornoServiceTests : IAsyncLifetime
             await db.SaveChangesAsync(ct);
         }
 
-        var service = new StornoService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new StornoService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => service.StorniereLieferscheinAsync(lieferscheinId, "Testgrund", ct));
         Assert.Contains("Folgebeleg", ex.Message);
     }
@@ -326,7 +331,7 @@ public sealed class StornoServiceTests : IAsyncLifetime
         await using (var db = new MiletDbContext(_options))
             Assert.Equal(25m, (await db.ArtikelBestaende.FirstAsync(b => b.ArtikelId == _artikelId, ct)).Menge);
 
-        var service = new StornoService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new StornoService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
         var storniert = await service.StorniereWareneingangAsync(wareneingangId, "Falschlieferung", ct);
 
         Assert.Equal(BelegStatus.Storniert, storniert.Status);
@@ -344,7 +349,7 @@ public sealed class StornoServiceTests : IAsyncLifetime
         // verbleibenden 1 nicht.
         await GebuchterLieferscheinAsync(_artikelId, 24, ct);
 
-        var service = new StornoService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new StornoService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => service.StorniereWareneingangAsync(wareneingangId, "Testgrund", ct));
         Assert.Contains("Bestand", ex.Message);
     }
@@ -355,7 +360,7 @@ public sealed class StornoServiceTests : IAsyncLifetime
         var ct = TestContext.Current.CancellationToken;
         var (wareneingangId, _) = await GebuchterWareneingangMitSeriennummerAsync(ct);
 
-        var service = new StornoService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new StornoService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => service.StorniereWareneingangAsync(wareneingangId, "Testgrund", ct));
         Assert.Contains("Seriennummer", ex.Message);
     }
@@ -379,7 +384,7 @@ public sealed class StornoServiceTests : IAsyncLifetime
         db.Add(wareneingang);
         await db.SaveChangesAsync(ct);
 
-        var buchen = new WareneingangBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var buchen = new WareneingangBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
         var gebucht = await buchen.BuchenAsync(
             wareneingang.Id,
             new Dictionary<int, IReadOnlyList<string>> { [wareneingang.Positionen[0].Id] = ["SN-WE-1"] }, ct);

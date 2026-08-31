@@ -86,7 +86,7 @@ public sealed class WareneingangBuchenServiceTests : IAsyncLifetime
     {
         var ct = TestContext.Current.CancellationToken;
         var wareneingang = await NeuerWareneingangAsync(_artikelId, 20, ct);
-        var service = new WareneingangBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new WareneingangBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
 
         var gebucht = await service.BuchenAsync(wareneingang.Id, new Dictionary<int, IReadOnlyList<string>>(), ct);
 
@@ -94,6 +94,10 @@ public sealed class WareneingangBuchenServiceTests : IAsyncLifetime
         await using var db = new MiletDbContext(_options);
         var bestand = await db.ArtikelBestaende.FirstAsync(b => b.ArtikelId == _artikelId && b.LagerortId == _lagerortId, ct);
         Assert.Equal(20m, bestand.Menge);
+
+        var bewegung = await db.Lagerbewegungen.SingleAsync(l => l.ArtikelId == _artikelId && l.Typ == LagerbewegungTyp.Wareneingang, ct);
+        Assert.Contains(gebucht.BelegNummer, bewegung.Bemerkung);
+        Assert.Equal(TestCurrentUserService.Instanz.BenutzerId, bewegung.BenutzerId);
     }
 
     [Fact]
@@ -102,7 +106,7 @@ public sealed class WareneingangBuchenServiceTests : IAsyncLifetime
         var ct = TestContext.Current.CancellationToken;
         var wareneingang = await NeuerWareneingangAsync(_artikelSerialisiertId, 2, ct);
         var positionId = wareneingang.Positionen[0].Id;
-        var service = new WareneingangBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new WareneingangBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
 
         await service.BuchenAsync(wareneingang.Id, new Dictionary<int, IReadOnlyList<string>> { [positionId] = ["SN-A", "SN-B"] }, ct);
 
@@ -119,7 +123,7 @@ public sealed class WareneingangBuchenServiceTests : IAsyncLifetime
         var ct = TestContext.Current.CancellationToken;
         var wareneingang = await NeuerWareneingangAsync(_artikelSerialisiertId, 2, ct);
         var positionId = wareneingang.Positionen[0].Id;
-        var service = new WareneingangBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new WareneingangBuchenService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.BuchenAsync(wareneingang.Id, new Dictionary<int, IReadOnlyList<string>> { [positionId] = ["SN-A"] }, ct));

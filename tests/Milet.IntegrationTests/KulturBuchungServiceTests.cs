@@ -67,7 +67,7 @@ public sealed class KulturBuchungServiceTests : IAsyncLifetime
         if (_container is not null) await _container.DisposeAsync();
     }
 
-    private KulturBuchungService NeuerService() => new(new TestDbContextFactory(_options), AllesErlaubtBerechtigungsService.Instanz);
+    private KulturBuchungService NeuerService() => new(new TestDbContextFactory(_options), AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
 
     [Fact]
     public async Task Zugang_BuchtPositivenBestand()
@@ -190,13 +190,15 @@ public sealed class KulturBuchungServiceTests : IAsyncLifetime
         var service = NeuerService();
         await service.ZugangAsync(new KulturZugangDto { ArtikelId = _artikelId, FeldId = _feldAId, SektionId = _sektionAId, KulturstufeId = _stufeJpId, Menge = 200m }, ct);
 
-        await service.AusfallAsync(new AusfallDto { ArtikelId = _artikelId, FeldId = _feldAId, SektionId = _sektionAId, KulturstufeId = _stufeJpId, Menge = 30m }, ct);
+        await service.AusfallAsync(new AusfallDto { ArtikelId = _artikelId, FeldId = _feldAId, SektionId = _sektionAId, KulturstufeId = _stufeJpId, Menge = 30m, Bemerkung = "Frostschaden" }, ct);
 
         await using var db = new MiletDbContext(_options);
         var bestand = await db.ArtikelBestaende.FirstAsync(b => b.SektionId == _sektionAId && b.KulturstufeId == _stufeJpId, ct);
         Assert.Equal(170m, bestand.Menge);
-        var ausfallSumme = await db.Lagerbewegungen.Where(l => l.Typ == LagerbewegungTyp.Ausfall).SumAsync(l => l.Menge, ct);
-        Assert.Equal(-30m, ausfallSumme);
+        var ausfallBewegung = await db.Lagerbewegungen.SingleAsync(l => l.Typ == LagerbewegungTyp.Ausfall, ct);
+        Assert.Equal(-30m, ausfallBewegung.Menge);
+        Assert.Equal("Frostschaden", ausfallBewegung.Bemerkung);
+        Assert.Equal(TestCurrentUserService.Instanz.BenutzerId, ausfallBewegung.BenutzerId);
     }
 
     [Fact]

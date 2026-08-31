@@ -171,7 +171,7 @@ public sealed class BestandServiceKulturDimensionenTests : IAsyncLifetime
         await BuchenAsync(_kulturArtikelId, _feldId, 30m, _sektionBId, _stufeTpId, ct);
         await BuchenAsync(_handelswareArtikelId, _hauptlagerId, 15m, null, null, ct);
 
-        var service = new BestandService(new TestDbContextFactory(_options), AllesErlaubtBerechtigungsService.Instanz);
+        var service = new BestandService(new TestDbContextFactory(_options), AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
         var ergebnis = await service.SucheAsync(null, ct);
 
         var kulturZeilen = ergebnis.Where(b => b.ArtikelId == _kulturArtikelId && b.LagerortId == _feldId).ToList();

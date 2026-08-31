@@ -27,7 +27,8 @@ namespace Milet.Infrastructure.Services;
 /// Status erlaubte Änderung akzeptiert) und bei der Rechnung im Kopftext der neuen Gutschrift.</summary>
 public sealed class StornoService(
     IDbContextFactory<MiletDbContext> dbContextFactory,
-    IBerechtigungsService berechtigung) : IStornoService
+    IBerechtigungsService berechtigung,
+    ICurrentUserService currentUser) : IStornoService
 {
     private const int MaxGrundLaenge = 200;
 
@@ -156,7 +157,8 @@ public sealed class StornoService(
             // (LieferscheinBuchenService), gleiche Dimensionen (Sektion/Kulturstufe).
             await BestandService.BucheBewegungAsync(
                 db, artikelId, lagerortId, position.Menge, LagerbewegungTyp.StornoRueckgabe, position.Id, ct,
-                position.SektionId, position.KulturstufeId);
+                position.SektionId, position.KulturstufeId,
+                $"Storno Lieferschein {lieferschein.BelegNummer}: {grund}", currentUser.BenutzerId);
 
             if (artikelJeId[artikelId].HatSeriennummern)
             {
@@ -219,7 +221,8 @@ public sealed class StornoService(
             // BestandService fehl, wenn die Ware bereits weiterverkauft/-verarbeitet wurde (kein SQL-Fehler).
             await BestandService.BucheBewegungAsync(
                 db, artikelId, lagerortId, -position.Menge, LagerbewegungTyp.StornoRueckgabe, position.Id, ct,
-                position.SektionId, position.KulturstufeId);
+                position.SektionId, position.KulturstufeId,
+                $"Storno Wareneingang {wareneingang.BelegNummer}: {grund}", currentUser.BenutzerId);
         }
 
         wareneingang.Status = BelegStatus.Storniert;

@@ -12,7 +12,8 @@ namespace Milet.Infrastructure.Services;
 
 public sealed class InventurService(
     IDbContextFactory<MiletDbContext> dbContextFactory,
-    IBerechtigungsService berechtigung) : IInventurService
+    IBerechtigungsService berechtigung,
+    ICurrentUserService currentUser) : IInventurService
 {
     public async Task<IReadOnlyList<InventurDto>> SucheAsync(CancellationToken ct = default)
     {
@@ -170,7 +171,8 @@ public sealed class InventurService(
             var delta = position.IstMenge!.Value - position.SollMenge;
             await BestandService.BucheBewegungAsync(
                 db, position.ArtikelId, inventur.LagerortId, delta, LagerbewegungTyp.InventurKorrektur, null, ct,
-                position.SektionId, position.KulturstufeId);
+                position.SektionId, position.KulturstufeId,
+                $"Inventurabschluss {inventur.Lagerort!.Code} vom {inventur.Datum:dd.MM.yyyy}", currentUser.BenutzerId);
         }
 
         inventur.Status = InventurStatus.Abgeschlossen;

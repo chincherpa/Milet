@@ -47,7 +47,7 @@ public sealed class BestandServiceTests : IAsyncLifetime
     public async Task Korrektur_UnzureichenderBestand_WirftNegativsperre()
     {
         var ct = TestContext.Current.CancellationToken;
-        var service = new BestandService(new TestDbContextFactory(_options), AllesErlaubtBerechtigungsService.Instanz);
+        var service = new BestandService(new TestDbContextFactory(_options), AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.KorrigiereAsync(new() { ArtikelId = _artikelId, LagerortId = _lagerortId, MengeDelta = -1, Grund = "Test" }, ct));
@@ -57,7 +57,7 @@ public sealed class BestandServiceTests : IAsyncLifetime
     public async Task Korrektur_PositivGefolgtVonNegativUeberBestand_LetzeBuchungWirftBestandBleibtKonsistent()
     {
         var ct = TestContext.Current.CancellationToken;
-        var service = new BestandService(new TestDbContextFactory(_options), AllesErlaubtBerechtigungsService.Instanz);
+        var service = new BestandService(new TestDbContextFactory(_options), AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
 
         await service.KorrigiereAsync(new() { ArtikelId = _artikelId, LagerortId = _lagerortId, MengeDelta = 10, Grund = "Erstbestückung" }, ct);
         await Assert.ThrowsAsync<InvalidOperationException>(
@@ -73,7 +73,7 @@ public sealed class BestandServiceTests : IAsyncLifetime
     {
         var ct = TestContext.Current.CancellationToken;
         var factory = new TestDbContextFactory(_options);
-        var service = new BestandService(factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new BestandService(factory, AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
 
         await service.KorrigiereAsync(new() { ArtikelId = _artikelId, LagerortId = _lagerortId, MengeDelta = 100, Grund = "Start" }, ct);
 
@@ -92,6 +92,20 @@ public sealed class BestandServiceTests : IAsyncLifetime
         Assert.True(bestand.Menge >= 0);
         Assert.Equal(ledgerSumme, bestand.Menge);
         Assert.Equal(100m - 5m * ergebnisse.Count(erfolg => erfolg), bestand.Menge);
+    }
+
+    [Fact]
+    public async Task Korrektur_SetztBemerkungUndBenutzerIdAufDerLagerbewegung()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var service = new BestandService(new TestDbContextFactory(_options), AllesErlaubtBerechtigungsService.Instanz, TestCurrentUserService.Instanz);
+
+        await service.KorrigiereAsync(new() { ArtikelId = _artikelId, LagerortId = _lagerortId, MengeDelta = 5, Grund = "Inventurdifferenz" }, ct);
+
+        await using var db = new MiletDbContext(_options);
+        var bewegung = await db.Lagerbewegungen.SingleAsync(l => l.ArtikelId == _artikelId && l.LagerortId == _lagerortId, ct);
+        Assert.Equal("Inventurdifferenz", bewegung.Bemerkung);
+        Assert.Equal(TestCurrentUserService.Instanz.BenutzerId, bewegung.BenutzerId);
     }
 
     private static bool DockerVerfuegbar()

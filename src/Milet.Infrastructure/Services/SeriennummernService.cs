@@ -10,7 +10,8 @@ namespace Milet.Infrastructure.Services;
 
 public sealed class SeriennummernService(
     IDbContextFactory<MiletDbContext> dbContextFactory,
-    IBerechtigungsService berechtigung) : ISeriennummernService
+    IBerechtigungsService berechtigung,
+    ICurrentUserService currentUser) : ISeriennummernService
 {
     public async Task<IReadOnlyList<SeriennummerDto>> SucheAsync(int? artikelId, CancellationToken ct = default)
     {
@@ -46,7 +47,9 @@ public sealed class SeriennummernService(
             throw new InvalidOperationException($"Seriennummer '{nummer}' ist für diesen Artikel bereits erfasst.");
 
         db.Seriennummern.Add(new Seriennummer { ArtikelId = artikelId, Nummer = nummer, Status = SeriennummerStatus.AufLager, LagerortId = lagerortId });
-        await BestandService.BucheBewegungAsync(db, artikelId, lagerortId, 1m, LagerbewegungTyp.Korrektur, belegPositionId: null, ct);
+        await BestandService.BucheBewegungAsync(
+            db, artikelId, lagerortId, 1m, LagerbewegungTyp.Korrektur, belegPositionId: null, ct,
+            bemerkung: $"Seriennummer {nummer} erfasst", benutzerId: currentUser.BenutzerId);
         await transaction.CommitAsync(ct);
     }
 }

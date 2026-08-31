@@ -12,7 +12,8 @@ namespace Milet.Infrastructure.Services;
 
 public sealed class BestandService(
     IDbContextFactory<MiletDbContext> dbContextFactory,
-    IBerechtigungsService berechtigung) : IBestandService
+    IBerechtigungsService berechtigung,
+    ICurrentUserService currentUser) : IBestandService
 {
     private static readonly BestandskorrekturValidator Validator = new();
 
@@ -69,7 +70,9 @@ public sealed class BestandService(
         await Validator.ValidateAndThrowAsync(dto, ct);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
-        await BucheBewegungAsync(db, dto.ArtikelId, dto.LagerortId, dto.MengeDelta, LagerbewegungTyp.Korrektur, belegPositionId: null, ct, dto.SektionId, dto.KulturstufeId);
+        await BucheBewegungAsync(
+            db, dto.ArtikelId, dto.LagerortId, dto.MengeDelta, LagerbewegungTyp.Korrektur, belegPositionId: null, ct,
+            dto.SektionId, dto.KulturstufeId, dto.Grund, currentUser.BenutzerId);
         await transaction.CommitAsync(ct);
     }
 
@@ -80,7 +83,7 @@ public sealed class BestandService(
     internal static async Task BucheBewegungAsync(
         MiletDbContext db, int artikelId, int lagerortId, decimal mengeDelta,
         LagerbewegungTyp typ, int? belegPositionId, CancellationToken ct,
-        int? sektionId = null, int? kulturstufeId = null)
+        int? sektionId = null, int? kulturstufeId = null, string? bemerkung = null, int? benutzerId = null)
     {
         // Eine vorgelagerte Abfrage (per Subquery-Projektion ein einziger Round-Trip) lädt Artikel.IstKulturpflanze
         // und ob der Lagerort aktive Sektionen hat — Grundlage für die zentralen Dimensionsregeln (KulturRegeln).
@@ -137,6 +140,8 @@ public sealed class BestandService(
             Menge = mengeDelta,
             BelegPositionId = belegPositionId,
             Zeitpunkt = DateTime.UtcNow,
+            Bemerkung = bemerkung,
+            BenutzerId = benutzerId,
         });
 
         await db.SaveChangesAsync(ct);
