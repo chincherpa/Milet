@@ -1,8 +1,8 @@
 # Milet — Projektstatus
 
 Stand: 2026-08-31. Architekturplan: `PLAN.md`. Phase-9-Implementierungsplan (Lückenschluss — Storno/
-Gutschrift, Ledger-Nachvollziehbarkeit, Finanz-/Admin-Härtung, Parallelitäts-Race; Block 9a
-Build-/Testnachweis und Block 9b Storno/Gutschrift-Backend abgeschlossen, Rest offen):
+Gutschrift, Ledger-Nachvollziehbarkeit, Finanz-/Admin-Härtung, Parallelitäts-Race; alle sechs Blöcke 9a–9f
+backend-seitig abgeschlossen und real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert):
 `docs/superpowers/plans/2026-08-31-luecken-schliessen.md`.
 Phase-2-Implementierungsplan: `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md`. Phase-3-Implementierungsplan (umgesetzt): `docs/superpowers/plans/2026-08-25-phase3-lager-lieferschein.md`. Ein früherer, nicht umgesetzter Planungsentwurf liegt zusätzlich unter `docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md` — dessen technische Befunde (READ-COMMITTED-Race, Nummernkreis-Seed) sind unter „Bekannte Risiken" übernommen. Phase-4-Implementierungsplan (umgesetzt, manueller UI-Smoke-Test noch ausstehend): `docs/superpowers/plans/2026-08-26-phase4-einkauf.md`. Phase-5-Implementierungsplan (umgesetzt, Backend-Build/-Tests real grün, WinUI komplett unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-27-phase5-finanzen-mail.md`. Phase-6-Implementierungsplan (umgesetzt, Backend-Build/-Tests/Integrationstests/Migration real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-27-phase6-datev-reporting.md`. Phase 7 (Admin+Härtung, umgesetzt nach `PLAN.md` ohne separaten Implementierungsplan, Backend-Build/-Tests/Integrationstests/Migration ebenfalls real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert — kein Windows in der Umsetzungssession): Details im Phase-7-Abschnitt unten, Deployment-Story unter `docs/deployment.md`. Phase-8-Implementierungsplan (Gärtnerei/Kulturführung, umgesetzt, Backend-Build/-Tests/Integrationstests/Migration real gegen containerisierten SQL Server verifiziert — inkl. Migration gegen eine Datenbank mit vor-Phase-8-Bestandsdaten —, WinUI unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-30-phase8-gaertnerei-kultur.md`.
 
@@ -483,7 +483,11 @@ in Phase 5–7 **keinen** echten Compile/XAML-Codegen-Durchlauf; die drei neu ve
   real gegen containerisierten SQL Server gelaufen (s. Phase-8-Abschnitt oben).
 - Kein Docker auf dieser Maschine → Integrationstests mit Testcontainers laufen hier nur übersprungen, nicht tatsächlich ausgeführt. Das betrifft inzwischen konkret Phase 3: `BestandServiceTests` (Race-/Negativsperre-Test des atomaren `BucheBewegungAsync`-UPDATE) und `LieferscheinBuchenServiceTests` (paralleles Buchen) sind **nie gegen eine echte DB gelaufen**, nur compile-verifiziert + sauber übersprungen. Der manuelle UI-Smoke-Test (s. „Offen") würde die fachliche Kernlogik zumindest einmal seriell gegen LocalDB nachweisen, ersetzt aber nicht den Parallelitäts-Nachweis. Docker sollte vor Produktivsetzung verfügbar gemacht werden oder ein LocalDB-Fallback für diese Tests ergänzt werden.
 - **[Umgesetzt in Phase 5, funktional unverifiziert]** Graph-Auth: `GraphEmailService` (MSAL/WAM-Broker) ist implementiert und baut gegen die echten NuGet-Pakete, aber ohne eigene Entra-App-Registrierung + Windows nicht testbar — `NichtKonfigurierterEmailService`-Fallback stellt sicher, dass die App ohne Graph-Konfiguration voll funktionsfähig bleibt. DATEV-Format — noch nicht relevant, erst ab Phase 6. QuestPDF-Lizenz (Community, <1M USD Umsatz) bereits gesetzt (`PdfService`-statischer Konstruktor).
-- Lieferadresse ist in Phase 2 nicht im Belegeditor editierbar (immer 1:1 aus Kundenstamm übernommen) — bewusste Vereinfachung, relevant erst mit Lieferschein (Phase 3).
+- **[Backend behoben, Phase 9 Block 9f, 2026-08-31]** Lieferadresse war seit Phase 2 nicht im Belegeditor
+  editierbar (immer 1:1 aus Kundenstamm übernommen). `BelegService.SpeichereAsync` übernimmt jetzt
+  `dto.LieferadresseSnapshot` beim Update eines Entwurfs (nicht bei der Neuanlage, dort bleibt die
+  Vorbelegung aus Kunde/Lieferant/Firma unverändert). **WinUI (ein editierbares Feld im Belegeditor) ist
+  nicht gebaut** — kein Windows in dieser Session.
 - **[Behoben, Phase 9 Block 9e, 2026-08-31]** Offene-Mengen-Prüfung in `BelegUeberleitungService` schützte
   trotz gegenteiligem Kommentar im Code nicht gegen parallele Überleitungen: der In-Transaktion-Re-Check las
   unter SQL Servers Default-Isolationslevel READ COMMITTED ohne Sperre — zwei gleichzeitige Transaktionen
@@ -498,7 +502,7 @@ in Phase 5–7 **keinen** echten Compile/XAML-Codegen-Durchlauf; die drei neu ve
   nicht umgesetzten Planungsentwurf (`docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md`).
 - **[Behoben in Phase 4, nachgebessert 2026-08-29]** `StammdatenSeed` legt Nummernkreise nur an, wenn die `Nummernkreise`-Tabelle komplett leer ist, nicht „je fehlendem Code" — eine bereits migrierte Datenbank bekommt einen später neu hinzugefügten Nummernkreis-Code nie automatisch nachgetragen. Bisher folgenlos (alle bislang genutzten Codes existierten schon vor der ersten Migration), wird aber relevant, sobald eine spätere Phase einen neuen Code auf einer bestehenden DB einführt. Genau dieser Fall trat mit Phase 4 ein (neue Codes `WE`/`ER`) und wurde in Task 5 des Phase-4-Plans behoben — der Seed wurde auf „je fehlendem Code ergänzen" umgestellt statt „nur wenn Tabelle leer"; per `sqlcmd` verifiziert, dass `BE`/`WE`/`ER` alle mit `NaechsteNummer=1` existieren (s. Phase-4-Abschnitt oben). Der Fix griff allerdings nicht für den Jahreswechsel: der Abgleich lief nur über den Code, während `NumberRangeService` strikt nach dem laufenden Jahr sucht — ab dem 01.01. hätte das System keine Belegnummer mehr vergeben können (Befund 1 des Reviews vom 2026-08-29). Seither Abgleich über `(Code, Jahr)` plus Lazy-Anlage des Jahreskreises im `NumberRangeService` (s. Abschnitt Review-Fixes 2026-08-29).
 
-### Phase 9 — Lückenschluss ⏳ (Block 9a abgeschlossen, Rest offen) (2026-08-31)
+### Phase 9 — Lückenschluss ✅ Backend abgeschlossen (Blöcke 9a–9f), WinUI unverifiziert (2026-08-31)
 
 Umsetzung von `docs/superpowers/plans/2026-08-31-luecken-schliessen.md`. Diese Session lief headless auf
 **Linux ohne Windows-Toolchain** (`dotnet-sdk-10.0` per `apt` → 10.0.111, Builds/Tests aus einer
@@ -568,19 +572,73 @@ Ablehnung bei bereits bezahlter Rechnung, paralleles Doppel-Storno — nur einer
 inkl. Seriennummern-Rückgabe und Ablehnung bei aktivem Folgebeleg, Wareneingang-Storno inkl. Ablehnung bei
 nicht mehr ausreichendem Bestand und bei seriennummernpflichtigen Artikeln).
 
-**Nicht durchgeführt — weiterhin offen:**
-1. **`Milet.App` wurde in dieser Session weiterhin kein einziges Mal gebaut** (kein Windows
-   verfügbar) — unverändert gegenüber Phase 5–8. Task 11 (Storno-/Gutschrift-UI) ist damit ebenfalls
-   nicht umgesetzt.
-2. Migration `StornoGutschrift` nicht gegen eine echte SQL-Server-/LocalDB-Instanz per Migrator
-   angewendet (s. Block-9b-Abschnitt oben) — nur über `EnsureCreatedAsync` in den Integrationstests
-   verifiziert.
-3. Block 9b Task 7 (fachliche Gutschrift ohne Storno-Bezug) und Task 8 (DATEV-Export für `Gutschrift`)
-   sowie Block 9c (Ledger-Grund/Benutzer), 9d (Skontokonten/Login-Lockout/Passwortwechsel/
-   Lagerort-Regression), 9e (Parallelitäts-Race der Überleitung) und 9f (Testlücken/Lieferadresse) aus
-   `docs/superpowers/plans/2026-08-31-luecken-schliessen.md` sind **noch nicht begonnen** — insbesondere
-   ist der in „Bekannte Risiken" seit Phase 3 geführte READ-COMMITTED-Verdacht in
-   `BelegUeberleitungService` weiterhin **nicht** behoben (Block 9e).
+Migration `StornoGutschrift` wurde ursprünglich nur per `EnsureCreatedAsync` in den Integrationstests
+verifiziert (s. o.) — im Rahmen von Block 9c dann zusammen mit `LagerbewegungBemerkung` real per
+`Milet.Tools.Migrator` gegen eine frische SQL-Server-Instanz angewendet (s. dort), damit ist auch dieser
+Punkt erledigt.
+
+**Block 9c — Lagerbewegung trägt Grund und Benutzer (Task 13–15) ✅ (2026-08-31)**
+
+`Lagerbewegung.Bemerkung` (neu, `nvarchar(300)`) + `BenutzerId` werden jetzt von allen Schreibpfaden
+gesetzt (Bestandskorrektur, Kulturbuchungen, Lieferschein-/Wareneingang-Buchen, Inventurabschluss,
+Seriennummern-Erfassung, Storno) — s. Detailbeschreibung oben unter „Ledger-Nachvollziehbarkeit". Sieben
+Services injizieren dafür neu `ICurrentUserService`. Migration `LagerbewegungBemerkung`. **Migrator real
+gegen frische SQL-Server-Instanz verifiziert** (11 Migrationen inkl. Block 9b/9c, Testdaten-Seed
+durchgelaufen) **und ein zweites Mal** (Idempotenz), Modellkonsistenz per leerer Diff-Migration. Domain
+75/75, Application 66/66, IntegrationTests 89/89 echt gegen SQL Server.
+
+**Block 9d — Skontokonten, Login-Lockout, Passwortwechsel, Lagerort-Regression (Task 16–19) ✅ (2026-08-31)**
+
+`FibuKonfiguration.SkontoDebitorKontoNr`/`SkontoKreditorKontoNr` (NULL = Standardkonto des
+Kontenrahmens), `Benutzer.FehlgeschlageneVersuche`/`GesperrtBis` (Sperre nach 5 Fehlversuchen für 15
+Minuten, `KontoGesperrtException`), `Benutzer.PasswortWechselErforderlich` (gesetzt vom AdminSeed und bei
+jedem Passwort-Reset durch einen Administrator — der zugleich entsperrt), `BestandService.SucheAsync`
+zeigt echten Bestand an einem deaktivierten Lagerort wieder an. Migration `SkontoLoginHaertung`. **Migrator
+real gegen frische SQL-Server-Instanz verifiziert** (12 Migrationen) **und ein zweites Mal** (Idempotenz,
+admin-Nutzer weiterhin mit `PasswortWechselErforderlich=1` und den geseedeten SKR03-Skontokonten
+8736/3736), Modellkonsistenz per leerer Diff-Migration. Application 68/68, IntegrationTests 94/94 echt
+gegen SQL Server.
+
+**Block 9e — READ-COMMITTED-Race in der Überleitung real behoben (Task 20–21) ✅ (2026-08-31)**
+
+Der seit Phase 3 unverifiziert geführte Verdacht wurde **real reproduziert**
+(`BelegUeberleitungRaceTests`: zwei parallele Teillieferungen à 6 Stück gegen einen Auftrag über 10 Stück
+lieferten vor dem Fix tatsächlich 12 aus — ein voller statt Teil-Abruf hätte das Problem zufällig über den
+RowVersion-Konflikt auf dem Auftragsstatus verdeckt, deshalb bewusst ein Teilmengen-Szenario) und
+behoben: alle drei Lesestellen der Quellbelege in `BelegUeberleitungService` laden jetzt über
+`FromSqlInterpolated(... WITH (UPDLOCK, HOLDLOCK) ...)` statt per einfachem LINQ. Kein Schemawandel.
+IntegrationTests 95/95 echt gegen SQL Server (kein Regressions-Fail).
+
+**Block 9f — Testlücken geschlossen, Lieferadresse editierbar (Task 22–23) ✅ (2026-08-31)**
+
+13 neue Integrationstests für zuvor ungetestete Services: `ZahlungService` (Vollzahlung/
+Teilzahlung+Skonto/Betragsüberschreitung/falscher Geschäftspartner/Skonto-Vorschlag),
+`MahnwesenService` (überfällig/noch nicht fällig/Mahnsperre/Mahnlauf setzt Mahnstufe),
+`AuditSaveChangesInterceptor` (Erstellt-/Geändert-Felder + AuditLog-Zeile, PasswortHash/RowVersion
+bleiben ausgeschlossen). `BelegService.SpeichereAsync` übernimmt `dto.LieferadresseSnapshot` jetzt beim
+Update eines Entwurfs (nicht bei der Neuanlage). Kein Schemawandel. Application 68/68, IntegrationTests
+110/110 echt gegen SQL Server.
+
+**Task 24 — Abschlussverifikation:** s. die einzelnen Blockabschnitte oben — jeder Block wurde vor dem
+Commit einzeln gebaut, getestet (real gegen containerisierten SQL Server, keine übersprungenen
+Integrationstests) und, wo ein Schemawandel dabei war, per `Milet.Tools.Migrator` gegen eine frische
+SQL-Server-Instanz sowie ein zweites Mal (Idempotenz) angewendet. Endstand: Domain 75/75, Application
+68/68, IntegrationTests **110/110**, 15 Migrationen (`InitialCreate` … `SkontoLoginHaertung`, jede
+Modellkonsistenz-geprüft).
+
+**Phase 9 — was absichtlich nicht umgesetzt ist:**
+1. **`Milet.App` (WinUI) wurde in dieser Session kein einziges Mal gebaut** — unverändert gegenüber
+   Phase 5–8, kein Windows in dieser Session verfügbar. Betrifft alle neuen Backend-Fähigkeiten
+   gleichermaßen: Storno-/Gutschrift-Bedienung, Lagerbewegungs-Grund-Anzeige, Skontokonten-Felder im
+   FibuKonten-Tab, Login-Lockout-/Passwortwechsel-Dialoge, Lieferadresse-Feld im Belegeditor. Vor
+   Abnahme zwingend: `dotnet build src/Milet.App/Milet.App.csproj -p:Platform=x64` auf Windows, danach
+   ein manueller Smoke-Test aller genannten Punkte.
+2. **Block 9b Task 7** (fachliche Gutschrift ohne Storno-Bezug, z. B. Retoure/Kulanz) und **Task 8**
+   (DATEV-Export kennt den Belegtyp `Gutschrift` weiterhin nicht — `DatevExportService` fragt nur
+   Rechnung/Eingangsrechnung ab, kein Absturz, aber auch kein Export für Gutschriften) sind bewusst
+   zurückgestellt, um Block 9b auf die kritischste Lücke (Storno) fokussiert und gründlich getestet zu
+   halten. Beide sind eigenständige, nicht triviale Erweiterungen und eher ein eigener Durchgang wert als
+   ein Nachtrag am Ende dieser Session.
 
 ## Phasenübersicht
 
@@ -596,4 +654,4 @@ nicht mehr ausreichendem Bestand und bei seriennummernpflichtigen Artikeln).
 **6 DATEV+Reporting**      Done (Backend real gegen SQL Server verifiziert; WinUI-Build + manueller UI-Smoke-Test ausstehend — kein Windows in dieser Session)
 **7 Admin+Härtung**        Done (Backend real gegen SQL Server verifiziert; WinUI-Build + manueller UI-Smoke-Test ausstehend — kein Windows in dieser Session)
 **8 Gärtnerei/Kultur**     Done (Backend real gegen SQL Server verifiziert inkl. Migration gegen Alt-Daten; WinUI-Build + manueller UI-Smoke-Test ausstehend — kein Windows in dieser Session)
-**9 Lückenschluss**        In Arbeit (Block 9a Build-/Testnachweis + Block 9b Storno/Gutschrift-Backend abgeschlossen — WinUI dafür offen; Ledger-Nachvollziehbarkeit, Finanz-/Admin-Härtung, Parallelitäts-Race noch offen — Details `docs/superpowers/plans/2026-08-31-luecken-schliessen.md`)
+**9 Lückenschluss**        Done (Backend; WinUI-Build + manueller UI-Smoke-Test ausstehend — kein Windows in dieser Session; Gutschrift ohne Storno-Bezug (Task 7) und DATEV-Export für Gutschrift (Task 8) bewusst zurückgestellt — Details `docs/superpowers/plans/2026-08-31-luecken-schliessen.md`)

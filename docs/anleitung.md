@@ -42,7 +42,14 @@ Bei der Ersteinrichtung existiert genau ein Benutzer:
 
 **Dieses Passwort muss nach der ersten Anmeldung sofort geändert werden** (Administration →
 Benutzer → Feld „Neues Passwort"). Es steht öffentlich im Quellcode und darf im Produktivbetrieb
-nicht bestehen bleiben.
+nicht bestehen bleiben. Nach jedem Passwort-Reset durch eine Administratorin/einen Administrator
+verlangt Milet beim nächsten Login zwingend ein neues, selbst gewähltes Passwort — auch beim
+allerersten Login mit dem Seed-Passwort oben (**Backend fertig, der erzwingende Dialog im
+Programmfenster steht noch aus**).
+
+Nach fünf falschen Passworteingaben hintereinander sperrt Milet das betroffene Benutzerkonto für
+15 Minuten — auch das richtige Passwort wird in dieser Zeit abgelehnt. Ein Passwort-Reset durch
+eine Administratorin/einen Administrator hebt die Sperre sofort auf.
 
 Nach dem Login zeigt die linke Navigationsleiste nur die Bereiche, für die die zugewiesene
 Rolle ein Recht besitzt (z. B. ist „Einkauf" ausgegraut, wenn die Rolle kein Einkaufs-Recht
@@ -95,7 +102,7 @@ wie oben:
 | Preislisten | Preislisten inkl. Staffelpreise (dritte Spalte: Staffelpreis je gewählter Preisliste — Menge/Preis je Artikel) |
 | Lagerorte | Physische Lagerorte, inkl. Kennzeichnung als „Feld" mit Breite/Höhe in Metern für den Gärtnerei-Grundriss |
 | Mahnstufen | Konfiguration des Mahnwesens (Fristen je Stufe) |
-| FibuKonten | Kontenrahmen (SKR03/SKR04) und Standardkonten für den DATEV-Export |
+| FibuKonten | Kontenrahmen (SKR03/SKR04), Standardkonten sowie die Skontokonten für den DATEV-Export (bleiben die Skontokonten leer, verwendet der Export das Standardkonto des gewählten Kontenrahmens) |
 | Firmenstamm | Briefkopfdaten (Firmenname, Adresse, ...) für Belegdrucke |
 | Kulturstufen | Reihenfolge/Farbe/„verkaufsfähig" der Kulturstufen (Jungpflanze → Teenagerpflanze → Verkaufspflanze) |
 
@@ -264,10 +271,13 @@ Diese Punkte sind bewusste Lücken der aktuellen Version, keine Bedienfehler:
   stornieren (s. jeweiliger Abschnitt), aber noch nicht per Schaltfläche im Programmfenster —
   nur ein Fachdienst dafür ist bereits fertig. Eine fachliche Gutschrift ohne Storno-Bezug
   (z. B. für eine Kulanz-Rückerstattung ohne stornierte Rechnung) gibt es weiterhin nicht.
-- **Erzwungener Passwortwechsel:** Das Seed-Passwort `Milet!Admin1` muss von Hand geändert
-  werden, es gibt keinen erzwungenen Wechsel-Dialog.
+- **Erzwungener Passwortwechsel ohne Fenster-Bedienung:** Der Dienst dahinter erzwingt den
+  Wechsel bereits (s. Abschnitt Anmeldung), der dazugehörige Dialog im Programmfenster fehlt noch.
 - **Kein automatischer Mahnlauf:** Muss jedes Mal manuell angestoßen werden.
 - **Granularität der Rechte:** Rechte gelten je Hauptmodul, nicht je einzelne Aktion.
+- **DATEV-Export kennt keine Gutschriften:** Solange es keine fachliche Gutschrift ohne
+  Storno-Bezug gibt, ist das folgenlos — sobald diese Funktion nachgerüstet wird, muss der
+  DATEV-Export sie noch mit abbilden.
 - **Kein Mobil-/Web-Zugriff:** Milet ist eine Windows-Desktop-Anwendung (WinUI 3), kein Web-
   oder Mobilclient ist vorgesehen.
 
