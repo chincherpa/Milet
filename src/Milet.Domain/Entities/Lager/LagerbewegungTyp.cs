@@ -20,4 +20,8 @@ public enum LagerbewegungTyp
 
     /// <summary>Realer Verlust (Frost, Trockenheit, Pilz) — eigener Typ statt „Korrektur", damit die Ausfallquote je Sorte/Stufe auswertbar bleibt (E7), Phase 8.</summary>
     Ausfall = 8,
+
+    /// <summary>Gegenbuchung eines Storno (Lieferschein- oder Wareneingang-Rückgängigmachung, s. StornoService) —
+    /// eigener Typ statt „Korrektur", damit ein Storno im Ledger von einer manuellen Korrektur unterscheidbar bleibt.</summary>
+    StornoRueckgabe = 9,
 }

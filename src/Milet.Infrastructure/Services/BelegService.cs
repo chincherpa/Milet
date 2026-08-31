@@ -26,6 +26,7 @@ public sealed class BelegService(
         BelegTyp.Bestellung => db.Bestellungen,
         BelegTyp.Wareneingang => db.Wareneingaenge,
         BelegTyp.Eingangsrechnung => db.Eingangsrechnungen,
+        BelegTyp.Gutschrift => db.Gutschriften,
         _ => throw new ArgumentOutOfRangeException(nameof(typ)),
     };
 
@@ -38,6 +39,7 @@ public sealed class BelegService(
         BelegTyp.Bestellung => new Bestellung(),
         BelegTyp.Wareneingang => new Wareneingang(),
         BelegTyp.Eingangsrechnung => new Eingangsrechnung(),
+        BelegTyp.Gutschrift => new Gutschrift(),
         _ => throw new ArgumentOutOfRangeException(nameof(typ)),
     };
 
@@ -50,6 +52,7 @@ public sealed class BelegService(
         BelegTyp.Bestellung => "BE",
         BelegTyp.Wareneingang => "WE",
         BelegTyp.Eingangsrechnung => "ER",
+        BelegTyp.Gutschrift => "GS",
         _ => throw new ArgumentOutOfRangeException(nameof(typ)),
     };
 
@@ -285,7 +288,7 @@ public sealed class BelegService(
 
         // Die Positionen des zu löschenden Belegs zählen nach dem Löschen nicht mehr als übernommen.
         var zuLoeschendeIds = zuLoeschen.Positionen.Select(p => p.Id).ToHashSet();
-        var verbleibendeFolgepositionen = await db.BelegPositionen.AsNoTracking()
+        var verbleibendeFolgepositionen = await db.BelegPositionen.AsNoTracking().Include(p => p.Beleg)
             .Where(p => p.UrsprungsPositionId != null && quellPositionIds.Contains(p.UrsprungsPositionId.Value))
             .ToListAsync(ct);
         verbleibendeFolgepositionen.RemoveAll(p => zuLoeschendeIds.Contains(p.Id));

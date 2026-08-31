@@ -44,3 +44,26 @@ public interface ILieferscheinBuchenService
     Task<BelegDto> BuchenAsync(
         int lieferscheinId, IReadOnlyDictionary<int, IReadOnlyList<int>> seriennummernJePosition, CancellationToken ct = default);
 }
+
+/// <summary>Storno gebuchter Belege — Gegenbuchung statt Löschen/Ändern (GoBD). Jede Methode verlangt einen
+/// Grund und läuft in einer eigenen Transaktion; s. StornoService-Implementierung für die jeweiligen
+/// fachlichen Voraussetzungen und Scope-Grenzen.</summary>
+public interface IStornoService
+{
+    /// <summary>Storniert eine gebuchte, noch nicht (teil-)bezahlte Rechnung: legt eine Storno-Gutschrift mit
+    /// gespiegelten Positionen an (<see cref="BelegDto.StorniertenBelegId"/> zeigt auf die Rechnung), gleicht
+    /// den ursprünglichen offenen Posten aus und setzt die Rechnung auf <see cref="Domain.Entities.Verkauf.BelegStatus.Storniert"/>.
+    /// Gibt die neu angelegte Gutschrift zurück.</summary>
+    Task<BelegDto> StorniereRechnungAsync(int rechnungId, string grund, CancellationToken ct = default);
+
+    /// <summary>Storniert einen gebuchten Lieferschein: bucht den Bestand je Artikelposition zurück (inkl.
+    /// verknüpfter Seriennummern zurück auf AufLager) und setzt den Beleg auf Storniert. Schlägt fehl, wenn
+    /// der Lieferschein bereits (teilweise) abgerechnet wurde. Gibt den stornierten Lieferschein zurück.</summary>
+    Task<BelegDto> StorniereLieferscheinAsync(int lieferscheinId, string grund, CancellationToken ct = default);
+
+    /// <summary>Storniert einen gebuchten Wareneingang: bucht den Zugang je Artikelposition zurück (schlägt mit
+    /// einer verständlichen Meldung fehl, wenn die Ware nicht mehr vollständig vorhanden ist) und setzt den
+    /// Beleg auf Storniert. Wareneingänge mit seriennummernpflichtigen Artikeln werden bewusst abgelehnt (s.
+    /// Implementierung). Gibt den stornierten Wareneingang zurück.</summary>
+    Task<BelegDto> StorniereWareneingangAsync(int wareneingangId, string grund, CancellationToken ct = default);
+}

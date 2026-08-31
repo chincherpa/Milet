@@ -14,12 +14,15 @@ namespace Milet.Infrastructure.Persistence.Interceptors;
 /// Eine frühere Fassung prüfte nur <c>Beleg</c> im Zustand <c>Modified</c>: ein <c>db.Remove(beleg)</c>
 /// auf einen gebuchten Beleg und jede Änderung an dessen Positionen liefen ungehindert durch.
 ///
-/// Einzige Ausnahme: der reine Lebenszyklus-Übergang Gebucht → Erledigt, den <c>BelegUeberleitungService</c>
-/// setzt, wenn ein Gebucht-Beleg vollständig in einen Folgebeleg überführt wurde (z. B. Wareneingang →
-/// Eingangsrechnung). Das ist keine inhaltliche Änderung am GoBD-relevanten Beleg, sondern nur eine
-/// Statusfortschreibung — deshalb erlaubt, aber nur wenn Status wirklich die EINZIGE geänderte Property ist
-/// (sonst könnte eine inhaltliche Änderung am Status-Flip vorbeigeschmuggelt werden). Storniert bleibt in
-/// jedem Fall vollständig gesperrt.</summary>
+/// Zwei Ausnahmen erlauben eine Statusfortschreibung auf einem sonst gesperrten Beleg:
+/// (1) der reine Lebenszyklus-Übergang Gebucht → Erledigt, den <c>BelegUeberleitungService</c> setzt, wenn
+/// ein Gebucht-Beleg vollständig in einen Folgebeleg überführt wurde (z. B. Wareneingang → Eingangsrechnung);
+/// hier darf ausschließlich Status geändert sein.
+/// (2) der Storno-Übergang (Gebucht|Erledigt) → Storniert, den <c>StornoService</c> setzt: hier dürfen
+/// zusätzlich zu Status auch Fusstext geändert sein (der Storno-Grund hat kein eigenes Feld, s. StornoService)
+/// — alles andere (Positionen/Summen/Kunde/...) bleibt über <see cref="PruefeUntergeordnet{TEntity}"/> bzw.
+/// diese Prüfung weiterhin vollständig gesperrt. Ein bereits stornierter Beleg ist in jedem Fall endgültig
+/// gesperrt — Storno ist keine Statusmaschine, aus der man weiter herauskäme.</summary>
 public sealed class BelegImmutabilityInterceptor : SaveChangesInterceptor
 {
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
@@ -63,15 +66,20 @@ public sealed class BelegImmutabilityInterceptor : SaveChangesInterceptor
             if (urspruenglicherStatus is BelegStatus.Storniert)
                 throw Gesperrt(entry.Entity.BelegNummer, urspruenglicherStatus, "er kann nicht mehr geändert werden");
 
-            if (urspruenglicherStatus is BelegStatus.Gebucht)
+            if (urspruenglicherStatus is BelegStatus.Gebucht or BelegStatus.Erledigt)
             {
-                var geaendertePropertien = entry.Properties.Where(p => p.IsModified).ToList();
-                var nurStatusFortschreibungAufErledigt =
-                    geaendertePropertien.Count == 1
-                    && geaendertePropertien[0].Metadata.Name == nameof(Beleg.Status)
-                    && entry.Entity.Status == BelegStatus.Erledigt;
+                var geaendertePropertien = entry.Properties.Where(p => p.IsModified).Select(p => p.Metadata.Name).ToHashSet();
 
-                if (!nurStatusFortschreibungAufErledigt)
+                var nurStatusFortschreibungAufErledigt =
+                    urspruenglicherStatus == BelegStatus.Gebucht
+                    && entry.Entity.Status == BelegStatus.Erledigt
+                    && geaendertePropertien.SetEquals([nameof(Beleg.Status)]);
+
+                var nurStornoFortschreibung =
+                    entry.Entity.Status == BelegStatus.Storniert
+                    && geaendertePropertien.IsSubsetOf([nameof(Beleg.Status), nameof(Beleg.Fusstext)]);
+
+                if (!nurStatusFortschreibungAufErledigt && !nurStornoFortschreibung)
                     throw Gesperrt(entry.Entity.BelegNummer, urspruenglicherStatus, "er kann nicht mehr geändert werden");
             }
         }

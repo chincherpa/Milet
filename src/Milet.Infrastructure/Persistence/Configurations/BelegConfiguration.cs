@@ -20,7 +20,8 @@ public sealed class BelegConfiguration : IEntityTypeConfiguration<Beleg>
             .HasValue<Lieferschein>(nameof(BelegTyp.Lieferschein))
             .HasValue<Bestellung>(nameof(BelegTyp.Bestellung))
             .HasValue<Wareneingang>(nameof(BelegTyp.Wareneingang))
-            .HasValue<Eingangsrechnung>(nameof(BelegTyp.Eingangsrechnung));
+            .HasValue<Eingangsrechnung>(nameof(BelegTyp.Eingangsrechnung))
+            .HasValue<Gutschrift>(nameof(BelegTyp.Gutschrift));
 
         b.Property(x => x.BelegNummer).HasMaxLength(20).IsRequired();
         // HasFilter: Rechnungen aus einer Sammelüberleitung haben vorübergehend BelegNummer = '' (Nummer wird erst
@@ -34,6 +35,7 @@ public sealed class BelegConfiguration : IEntityTypeConfiguration<Beleg>
         // durchgesetzt vom CHECK-Constraint oben, nicht von EF-Required (das würde beide zwingend machen).
         b.HasOne(x => x.Kunde).WithMany().HasForeignKey(x => x.KundeId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne(x => x.Lieferant).WithMany().HasForeignKey(x => x.LieferantId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne(x => x.StorniertenBeleg).WithMany().HasForeignKey(x => x.StorniertenBelegId).OnDelete(DeleteBehavior.Restrict);
 
         b.OwnsOne(x => x.RechnungsadresseSnapshot, a =>
         {

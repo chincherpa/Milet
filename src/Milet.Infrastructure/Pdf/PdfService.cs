@@ -24,6 +24,7 @@ public sealed class PdfService(
             BelegTyp.Angebot => "Angebot",
             BelegTyp.Auftrag => "Auftragsbestätigung",
             BelegTyp.Rechnung => "Rechnung",
+            BelegTyp.Gutschrift => "Gutschrift",
             _ => throw new ArgumentOutOfRangeException(nameof(belegId)),
         };
         return new BelegPdfDocument(beleg, firma, titel).GeneratePdf();

@@ -97,7 +97,7 @@ public sealed class ReportingService(IDbContextFactory<MiletDbContext> dbContext
         if (auftraege.Count == 0) return [];
 
         var quellPositionIds = auftraege.SelectMany(a => a.Positionen).Select(p => p.Id).ToList();
-        var folgepositionen = await db.BelegPositionen.AsNoTracking()
+        var folgepositionen = await db.BelegPositionen.AsNoTracking().Include(p => p.Beleg)
             .Where(p => p.UrsprungsPositionId != null && quellPositionIds.Contains(p.UrsprungsPositionId.Value))
             .ToListAsync(ct);
 

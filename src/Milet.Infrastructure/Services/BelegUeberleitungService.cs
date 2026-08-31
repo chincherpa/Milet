@@ -79,7 +79,7 @@ public sealed class BelegUeberleitungService(
 
         // Offene-Mengen-Prüfung explizit in derselben Transaktion — Schutz gegen Race zweier gleichzeitiger Überleitungen.
         var quellPositionIds = quellBeleg.Positionen.Select(p => p.Id).ToList();
-        var folgepositionen = await db.BelegPositionen.AsNoTracking()
+        var folgepositionen = await db.BelegPositionen.AsNoTracking().Include(p => p.Beleg)
             .Where(p => p.UrsprungsPositionId != null && quellPositionIds.Contains(p.UrsprungsPositionId.Value))
             .ToListAsync(ct);
 
@@ -159,7 +159,7 @@ public sealed class BelegUeberleitungService(
             ?? throw new NotFoundException(nameof(Beleg), quellBelegId);
 
         var quellPositionIds = quellBeleg.Positionen.Select(p => p.Id).ToList();
-        var folgepositionen = await db.BelegPositionen.AsNoTracking()
+        var folgepositionen = await db.BelegPositionen.AsNoTracking().Include(p => p.Beleg)
             .Where(p => p.UrsprungsPositionId != null && quellPositionIds.Contains(p.UrsprungsPositionId.Value))
             .ToListAsync(ct);
 
@@ -200,7 +200,7 @@ public sealed class BelegUeberleitungService(
         }
 
         var quellPositionIds = quellBeleg.Positionen.Select(p => p.Id).ToList();
-        var folgepositionen = await db.BelegPositionen.AsNoTracking()
+        var folgepositionen = await db.BelegPositionen.AsNoTracking().Include(p => p.Beleg)
             .Where(p => p.UrsprungsPositionId != null && quellPositionIds.Contains(p.UrsprungsPositionId.Value))
             .ToListAsync(ct);
 
@@ -332,7 +332,7 @@ public sealed class BelegUeberleitungService(
         }
 
         var alleQuellPositionIds = quellBelege.SelectMany(b => b.Positionen).Select(p => p.Id).ToList();
-        var folgepositionen = await db.BelegPositionen.AsNoTracking()
+        var folgepositionen = await db.BelegPositionen.AsNoTracking().Include(p => p.Beleg)
             .Where(p => p.UrsprungsPositionId != null && alleQuellPositionIds.Contains(p.UrsprungsPositionId.Value))
             .ToListAsync(ct);
 

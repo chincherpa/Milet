@@ -54,6 +54,9 @@ public sealed record BelegDto
     public string? Kopftext { get; init; }
     public string? Fusstext { get; init; }
     public string? ExterneReferenz { get; init; }
+
+    /// <summary>Nur Gutschrift: Id der stornierten Rechnung, s. <see cref="Domain.Entities.Verkauf.Beleg.StorniertenBelegId"/>.</summary>
+    public int? StorniertenBelegId { get; init; }
     public IReadOnlyList<BelegPositionDto> Positionen { get; init; } = [];
     public byte[] RowVersion { get; init; } = [];
 }

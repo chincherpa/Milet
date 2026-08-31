@@ -21,6 +21,7 @@ public static class BelegTypErweiterung
         Bestellung => BelegTyp.Bestellung,
         Wareneingang => BelegTyp.Wareneingang,
         Eingangsrechnung => BelegTyp.Eingangsrechnung,
+        Gutschrift => BelegTyp.Gutschrift,
         null => throw new ArgumentNullException(nameof(beleg)),
         _ => throw new InvalidOperationException($"Unbekannter Beleg-Subtyp {beleg.GetType().Name}."),
     };

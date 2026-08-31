@@ -54,6 +54,7 @@ internal static class VerkaufMapping
             Kopftext = b.Kopftext,
             Fusstext = b.Fusstext,
             ExterneReferenz = b.ExterneReferenz,
+            StorniertenBelegId = b.StorniertenBelegId,
             Positionen = mitPositionen ? b.Positionen.OrderBy(p => p.PositionsNr).Select(p => p.ToDto()).ToList() : [],
             RowVersion = b.RowVersion,
         };

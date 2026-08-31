@@ -9,4 +9,5 @@ public enum BelegTyp
     Bestellung = 4,
     Wareneingang = 5,
     Eingangsrechnung = 6,
+    Gutschrift = 7,
 }

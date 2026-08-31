@@ -61,5 +61,11 @@ public abstract class Beleg : AuditableEntity, IHasRowVersion
     /// für gebuchte Rechnungen/Eingangsrechnungen.</summary>
     public DateTime? ExportiertAm { get; set; }
 
+    /// <summary>Nur Gutschrift: Selbstreferenz auf die Rechnung, die diese Gutschrift storniert
+    /// (s. StornoService). NULL bei jeder anderen Belegart und bei einer fachlichen Gutschrift ohne
+    /// Storno-Bezug.</summary>
+    public int? StorniertenBelegId { get; set; }
+    public Beleg? StorniertenBeleg { get; set; }
+
     public byte[] RowVersion { get; set; } = [];
 }

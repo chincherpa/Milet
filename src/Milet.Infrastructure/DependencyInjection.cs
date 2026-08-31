@@ -62,6 +62,7 @@ public static class DependencyInjection
         services.AddTransient<IFirmenstammService, FirmenstammService>();
         services.AddTransient<IBelegUeberleitungService, BelegUeberleitungService>();
         services.AddTransient<IRechnungBuchenService, RechnungBuchenService>();
+        services.AddTransient<IStornoService, StornoService>();
         services.AddTransient<IPdfService, Pdf.PdfService>();
         services.AddTransient<IBestandService, BestandService>();
         services.AddTransient<ILagerortService, LagerortService>();

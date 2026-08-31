@@ -41,12 +41,19 @@ public class BelegPosition
     /// <summary>Trägt Teillieferung/Teilfakturierung/Sammelrechnung: offene Menge = Menge − Σ referenzierender Folgepositionen.</summary>
     public int? UrsprungsPositionId { get; set; }
 
-    /// <summary>Berechnet die noch nicht überführte Menge dieser Position anhand aller Positionen im System, die auf sie verweisen.</summary>
+    /// <summary>Berechnet die noch nicht überführte Menge dieser Position anhand aller Positionen im System, die auf sie verweisen.
+    /// Eine Folgeposition zählt nicht mit, wenn ihr Beleg storniert wurde — sonst würde z. B. ein stornierter
+    /// Lieferschein die gelieferte Menge dauerhaft blockieren, obwohl sie nie beim Kunden ankam. Callers, die
+    /// den Belegstatus der Folgeposition nicht mitladen (Beleg == null), zählen sie weiterhin als übernommen
+    /// — das bisherige, konservative Verhalten vor Einführung des Storno (s. Plan Phase 9, Task 4).</summary>
     public static decimal OffeneMenge(BelegPosition position, IEnumerable<BelegPosition> alle)
     {
         ArgumentNullException.ThrowIfNull(position);
         ArgumentNullException.ThrowIfNull(alle);
-        var uebernommen = alle.Where(p => p.UrsprungsPositionId == position.Id).Sum(p => p.Menge);
+        var uebernommen = alle
+            .Where(p => p.UrsprungsPositionId == position.Id)
+            .Where(p => p.Beleg is not { Status: BelegStatus.Storniert })
+            .Sum(p => p.Menge);
         return position.Menge - uebernommen;
     }
 }
