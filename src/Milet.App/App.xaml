@@ -17,7 +17,7 @@
             <conv:HexColorToBrushConverter x:Key="HexColorToBrushConverter" />
             <conv:KontrastFarbeConverter x:Key="KontrastFarbeConverter" />
             <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
-            <conv:AmpelToColorConverter x:Key="AmpelToColorConverter" />
+            <conv:AmpelZuSichtbarkeitConverter x:Key="AmpelZuSichtbarkeitConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -87,7 +87,16 @@
                     Visibility="{x:Bind ViewModel.ZeigtVerfuegbarkeitPanel, Mode=OneWay}">
                 <StackPanel Spacing="6">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Ellipse Width="14" Height="14" Fill="{x:Bind ViewModel.PositionVerfuegbarkeit.Ampel, Mode=OneWay, Converter={StaticResource AmpelToColorConverter}}" />
+                        <Grid Width="14" Height="14">
+                            <Ellipse Fill="{ThemeResource MiletAmpelGruenBrush}"
+                                     Visibility="{x:Bind ViewModel.PositionVerfuegbarkeit.Ampel, Mode=OneWay, Converter={StaticResource AmpelZuSichtbarkeitConverter}, ConverterParameter=Gruen}" />
+                            <Ellipse Fill="{ThemeResource MiletAmpelGelbBrush}"
+                                     Visibility="{x:Bind ViewModel.PositionVerfuegbarkeit.Ampel, Mode=OneWay, Converter={StaticResource AmpelZuSichtbarkeitConverter}, ConverterParameter=Gelb}" />
+                            <Ellipse Fill="{ThemeResource MiletAmpelRotBrush}"
+                                     Visibility="{x:Bind ViewModel.PositionVerfuegbarkeit.Ampel, Mode=OneWay, Converter={StaticResource AmpelZuSichtbarkeitConverter}, ConverterParameter=Rot}" />
+                            <Ellipse Fill="{ThemeResource MiletAmpelNeutralBrush}"
+                                     Visibility="{x:Bind ViewModel.PositionVerfuegbarkeit.Ampel, Mode=OneWay, Converter={StaticResource AmpelZuSichtbarkeitConverter}, ConverterParameter=Neutral}" />
+                        </Grid>
                         <TextBlock Text="Verkaufsfähig frei:" FontWeight="SemiBold" />
                         <TextBlock Text="{x:Bind ViewModel.PositionVerfuegbarkeit.Frei, Mode=OneWay}" />
                         <TextBlock Text="Stück" Opacity="0.7" />
