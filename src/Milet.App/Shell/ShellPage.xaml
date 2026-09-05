@@ -58,6 +58,29 @@
             <NavigationViewItem Content="Reporting" Tag="reporting" Icon="ReportHacked" />
             <NavigationViewItem Content="Administration" Tag="admin" Icon="Setting" />
         </NavigationView.MenuItems>
+
+        <!-- Bewusst nur ein Symbol mit Kurzhinweis: der Fußbereich wird in der schmalen Pane auf
+             Symbolbreite gestaucht, ein breiter Umschalter würde dort abgeschnitten. Ohne
+             Rechte-Prüfung — die Darstellung darf jeder umstellen. -->
+        <NavigationView.PaneFooter>
+            <Button x:Name="DarstellungButton" Margin="4,4,4,8" Padding="12,8"
+                    Background="Transparent" BorderThickness="0"
+                    ToolTipService.ToolTip="Darstellung (hell/dunkel)"
+                    AutomationProperties.Name="Darstellung">
+                <FontIcon Glyph="&#xE793;" FontSize="16" />
+                <Button.Flyout>
+                    <MenuFlyout Placement="Right">
+                        <RadioMenuFlyoutItem x:Name="DarstellungSystem" Text="Systemvorgabe"
+                                             GroupName="Darstellung" Tag="Default" Click="DarstellungGewaehlt" />
+                        <RadioMenuFlyoutItem x:Name="DarstellungHell" Text="Hell"
+                                             GroupName="Darstellung" Tag="Light" Click="DarstellungGewaehlt" />
+                        <RadioMenuFlyoutItem x:Name="DarstellungDunkel" Text="Dunkel"
+                                             GroupName="Darstellung" Tag="Dark" Click="DarstellungGewaehlt" />
+                    </MenuFlyout>
+                </Button.Flyout>
+            </Button>
+        </NavigationView.PaneFooter>
+
         <Frame x:Name="ContentFrame" />
     </NavigationView>
 </Page>

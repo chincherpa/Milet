@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Milet.App.Services;
 using Milet.App.ViewModels;
@@ -27,10 +28,14 @@ namespace Milet.App.Shell;
 public sealed partial class ShellPage : Page
 {
     private readonly INavigationService _navigation;
+    private readonly IThemeService _theme;
 
     public ShellPage()
     {
         InitializeComponent();
+
+        _theme = App.Host.Services.GetRequiredService<IThemeService>();
+        SetzeDarstellungsAuswahl();
 
         _navigation = App.Host.Services.GetRequiredService<INavigationService>();
         _navigation.Initialize(ContentFrame);
@@ -78,6 +83,22 @@ public sealed partial class ShellPage : Page
 
         _navigation.Navigate<DashboardViewModel>();
         AktualisiereMenueSichtbarkeit();
+    }
+
+    /// <summary>Setzt den Haken im Darstellungsmenü auf die gespeicherte Wahl.</summary>
+    private void SetzeDarstellungsAuswahl()
+    {
+        DarstellungSystem.IsChecked = _theme.Aktuell == ElementTheme.Default;
+        DarstellungHell.IsChecked = _theme.Aktuell == ElementTheme.Light;
+        DarstellungDunkel.IsChecked = _theme.Aktuell == ElementTheme.Dark;
+    }
+
+    private void DarstellungGewaehlt(object sender, RoutedEventArgs e)
+    {
+        if (sender is RadioMenuFlyoutItem { Tag: string tag } && Enum.TryParse<ElementTheme>(tag, out var theme))
+        {
+            _theme.Anwenden(theme);
+        }
     }
 
     /// <summary>UI-Sichtbarkeit gemäß den Rechten des angemeldeten Benutzers (s. PLAN.md "RBAC":
