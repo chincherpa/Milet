@@ -1,0 +1,72 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- App-eigene semantische Farben. Alles, was nicht aus den WinUI-Systemressourcen kommt, gehört
+         hierher — hartcodierte Farben in XAML oder Code-Behind sind theme-blind und brechen im Hellmodus.
+         Konvention der ThemeDictionaries: "Default" ist der Dunkel-Zweig, daneben "Light" und
+         "HighContrast". Schlüssel tragen das Präfix "Milet", damit sie nie mit WinUI-Schlüsseln kollidieren.
+
+         Zugriff: aus XAML per {ThemeResource ...}; aus Code-Behind (die Gärtnerei-Pläne zeichnen ihre
+         Elemente imperativ) über ThemeRessourcen.Brush(element, schluessel). -->
+
+    <ResourceDictionary.ThemeDictionaries>
+
+        <!-- Dunkel: auf dunklem Grund tragen hellere, leicht entsättigte Töne besser. -->
+        <ResourceDictionary x:Key="Default">
+            <SolidColorBrush x:Key="MiletAmpelGruenBrush" Color="#4ADE80" />
+            <SolidColorBrush x:Key="MiletAmpelGelbBrush" Color="#FBBF24" />
+            <SolidColorBrush x:Key="MiletAmpelRotBrush" Color="#F87171" />
+            <SolidColorBrush x:Key="MiletAmpelNeutralBrush" Color="#9CA3AF" />
+
+            <SolidColorBrush x:Key="MiletPlanRasterBrush" Color="#3CC8C8C8" />
+            <SolidColorBrush x:Key="MiletPlanFeldFuellungBrush" Color="#2864B5F6" />
+            <SolidColorBrush x:Key="MiletPlanFeldRandBrush" Color="#64B5F6" />
+            <SolidColorBrush x:Key="MiletPlanSektionFuellungBrush" Color="#7881C784" />
+            <SolidColorBrush x:Key="MiletPlanSektionRandBrush" Color="#81C784" />
+            <SolidColorBrush x:Key="MiletPlanGriffFuellungBrush" Color="#F5F5F5" />
+            <SolidColorBrush x:Key="MiletPlanGriffRandBrush" Color="#1B1B1B" />
+            <SolidColorBrush x:Key="MiletPlanUnbekanntFuellungBrush" Color="#3CC8C8C8" />
+            <SolidColorBrush x:Key="MiletPlanUnbekanntRandBrush" Color="#9CA3AF" />
+        </ResourceDictionary>
+
+        <!-- Hell: auf hellem Grund braucht es dunklere, kräftigere Töne für denselben Kontrast. -->
+        <ResourceDictionary x:Key="Light">
+            <SolidColorBrush x:Key="MiletAmpelGruenBrush" Color="#16A34A" />
+            <SolidColorBrush x:Key="MiletAmpelGelbBrush" Color="#D97706" />
+            <SolidColorBrush x:Key="MiletAmpelRotBrush" Color="#DC2626" />
+            <SolidColorBrush x:Key="MiletAmpelNeutralBrush" Color="#6B7280" />
+
+            <SolidColorBrush x:Key="MiletPlanRasterBrush" Color="#3C5A5A5A" />
+            <SolidColorBrush x:Key="MiletPlanFeldFuellungBrush" Color="#282196F3" />
+            <SolidColorBrush x:Key="MiletPlanFeldRandBrush" Color="#1976D2" />
+            <SolidColorBrush x:Key="MiletPlanSektionFuellungBrush" Color="#784CAF50" />
+            <SolidColorBrush x:Key="MiletPlanSektionRandBrush" Color="#2E7D32" />
+            <SolidColorBrush x:Key="MiletPlanGriffFuellungBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="MiletPlanGriffRandBrush" Color="#1B1B1B" />
+            <SolidColorBrush x:Key="MiletPlanUnbekanntFuellungBrush" Color="#3C5A5A5A" />
+            <SolidColorBrush x:Key="MiletPlanUnbekanntRandBrush" Color="#6B7280" />
+        </ResourceDictionary>
+
+        <!-- Hoher Kontrast: keine eigenen Werte erfinden, sondern die vom Benutzer eingestellten
+             Systemfarben durchreichen. Farbcodierung (Ampel, Kulturstufen) trägt hier keine Information
+             mehr — die Texte daneben bleiben die eigentliche Aussage. -->
+        <ResourceDictionary x:Key="HighContrast">
+            <SolidColorBrush x:Key="MiletAmpelGruenBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="MiletAmpelGelbBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="MiletAmpelRotBrush" Color="{ThemeResource SystemColorHotlightColor}" />
+            <SolidColorBrush x:Key="MiletAmpelNeutralBrush" Color="{ThemeResource SystemColorGrayTextColor}" />
+
+            <SolidColorBrush x:Key="MiletPlanRasterBrush" Color="{ThemeResource SystemColorGrayTextColor}" />
+            <SolidColorBrush x:Key="MiletPlanFeldFuellungBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="MiletPlanFeldRandBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="MiletPlanSektionFuellungBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="MiletPlanSektionRandBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="MiletPlanGriffFuellungBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+            <SolidColorBrush x:Key="MiletPlanGriffRandBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+            <SolidColorBrush x:Key="MiletPlanUnbekanntFuellungBrush" Color="{ThemeResource SystemColorWindowColor}" />
+            <SolidColorBrush x:Key="MiletPlanUnbekanntRandBrush" Color="{ThemeResource SystemColorGrayTextColor}" />
+        </ResourceDictionary>
+
+    </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>

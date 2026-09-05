@@ -1,0 +1,16 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- App-weite Styles. Lag vorher byte-gleich dupliziert in AdministrationPage.xaml und
+         KleinstammPage.xaml; beide Seiten verweisen jetzt auf diese eine Definition. -->
+
+    <!-- Master-Liste der Master-Detail-Masken (Administration, Kleinstamm). -->
+    <Style x:Key="MasterListStyle" TargetType="ListView">
+        <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="4" />
+    </Style>
+</ResourceDictionary>
