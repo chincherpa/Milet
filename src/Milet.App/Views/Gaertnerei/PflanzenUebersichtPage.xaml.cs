@@ -1,13 +1,13 @@
 using System.Collections.Specialized;
 using System.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
+using Milet.App.Converters;
+using Milet.App.Themes;
 using Milet.App.ViewModels.Gaertnerei;
-using Windows.UI;
 
 namespace Milet.App.Views.Gaertnerei;
 
@@ -18,6 +18,7 @@ public sealed partial class PflanzenUebersichtPage : Page
 {
     public PflanzenUebersichtViewModel ViewModel { get; }
     private readonly Dictionary<PlanElementViewModel, Border> _boxenJeElement = [];
+    private readonly Dictionary<PlanElementViewModel, PropertyChangedEventHandler> _handlerJeElement = [];
 
     public PflanzenUebersichtPage()
     {
@@ -26,6 +27,12 @@ public sealed partial class PflanzenUebersichtPage : Page
 
         ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         ViewModel.Elemente.CollectionChanged += Elemente_CollectionChanged;
+
+        // s. GrundrissPage: imperativ gezeichnete Themefarben müssen beim Umschalten neu gesetzt werden,
+        // und im Konstruktor steht ActualTheme noch nicht auf dem geerbten Wert.
+        ActualThemeChanged += (_, _) => NeuZeichnen();
+        Loaded += (_, _) => NeuZeichnen();
+
         NeuZeichnen();
     }
 
@@ -47,6 +54,13 @@ public sealed partial class PflanzenUebersichtPage : Page
 
     private void NeuZeichnen()
     {
+        // s. GrundrissPage: ohne Abmelden sammeln sich die Handler bei jedem Neuzeichnen an.
+        foreach (var (element, handler) in _handlerJeElement)
+        {
+            element.PropertyChanged -= handler;
+        }
+
+        _handlerJeElement.Clear();
         PlanCanvas.Children.Clear();
         _boxenJeElement.Clear();
 
@@ -64,7 +78,7 @@ public sealed partial class PflanzenUebersichtPage : Page
         var schritt = ViewModel.Zoom;
         if (schritt <= 0) return;
 
-        var rasterBrush = new SolidColorBrush(Color.FromArgb(60, 128, 128, 128));
+        var rasterBrush = ThemeRessourcen.Brush(this, "MiletPlanRasterBrush");
         for (var x = 0.0; x <= breite; x += schritt)
         {
             PlanCanvas.Children.Add(new Line { X1 = x, Y1 = 0, X2 = x, Y2 = hoehe, Stroke = rasterBrush, StrokeThickness = 0.5 });
@@ -111,30 +125,33 @@ public sealed partial class PflanzenUebersichtPage : Page
         PlanCanvas.Children.Add(box);
         _boxenJeElement[element] = box;
 
-        element.PropertyChanged += (_, _) => AktualisierePosition(element);
+        PropertyChangedEventHandler handler = (_, _) => AktualisierePosition(element);
+        element.PropertyChanged += handler;
+        _handlerJeElement[element] = handler;
     }
 
-    private static void AktualisiereFarbe(PlanElementViewModel element, Border box)
+    private void AktualisiereFarbe(PlanElementViewModel element, Border box)
     {
         if (element.IstFeld)
         {
-            box.Background = new SolidColorBrush(Color.FromArgb(20, 33, 150, 243));
-            box.BorderBrush = new SolidColorBrush(Colors.DodgerBlue);
+            box.Background = ThemeRessourcen.Brush(this, "MiletPlanFeldFuellungBrush");
+            box.BorderBrush = ThemeRessourcen.Brush(this, "MiletPlanFeldRandBrush");
             return;
         }
 
-        if (element.HighlightFarbeHex is { } hex && hex.Length == 7 && hex[0] == '#')
+        // Hervorgehobene Sektionen tragen die Stammdatenfarbe der Kulturstufe, nicht die Themefarbe —
+        // die bleibt deshalb bewusst hartcodiert aus den Daten. Das Parsen läuft über FarbHelfer, weil
+        // ein fehlerhafter Wert hier sonst beim Zeichnen eine FormatException wirft.
+        if (FarbHelfer.VersucheHexZuFarbe(element.HighlightFarbeHex, alpha: 180, out var fuellung)
+            && FarbHelfer.VersucheHexZuFarbe(element.HighlightFarbeHex, alpha: 255, out var rand))
         {
-            var r = System.Convert.ToByte(hex.Substring(1, 2), 16);
-            var g = System.Convert.ToByte(hex.Substring(3, 2), 16);
-            var b = System.Convert.ToByte(hex.Substring(5, 2), 16);
-            box.Background = new SolidColorBrush(Color.FromArgb(180, r, g, b));
-            box.BorderBrush = new SolidColorBrush(Color.FromArgb(255, r, g, b));
+            box.Background = new SolidColorBrush(fuellung);
+            box.BorderBrush = new SolidColorBrush(rand);
         }
         else
         {
-            box.Background = new SolidColorBrush(Color.FromArgb(60, 128, 128, 128));
-            box.BorderBrush = new SolidColorBrush(Colors.Gray);
+            box.Background = ThemeRessourcen.Brush(this, "MiletPlanUnbekanntFuellungBrush");
+            box.BorderBrush = ThemeRessourcen.Brush(this, "MiletPlanUnbekanntRandBrush");
         }
     }
 

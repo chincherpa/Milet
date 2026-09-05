@@ -1,16 +1,14 @@
 using System.Collections.Specialized;
 using System.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.UI;
 using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
+using Milet.App.Themes;
 using Milet.App.ViewModels.Gaertnerei;
 using Windows.Foundation;
-using Windows.UI;
 
 namespace Milet.App.Views.Gaertnerei;
 
@@ -23,6 +21,7 @@ public sealed partial class GrundrissPage : Page
 
     private readonly Dictionary<PlanElementViewModel, Border> _boxenJeElement = [];
     private readonly Dictionary<PlanElementViewModel, Border> _handlesJeElement = [];
+    private readonly Dictionary<PlanElementViewModel, PropertyChangedEventHandler> _handlerJeElement = [];
     private PlanElementViewModel? _ziehElement;
     private bool _istGroessenAenderung;
     private Point _letzterZiehPunkt;
@@ -34,6 +33,13 @@ public sealed partial class GrundrissPage : Page
 
         ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         ViewModel.Elemente.CollectionChanged += Elemente_CollectionChanged;
+
+        // Die Farben kommen aus dem Theme, gezeichnet wird aber imperativ — beim Umschalten muss der
+        // Canvas darum neu aufgebaut werden. Loaded deckt zusätzlich den Start ab: im Konstruktor hängt
+        // die Seite noch nicht im Fensterbaum, ActualTheme liefert dort erst die Applikationsvorgabe.
+        ActualThemeChanged += (_, _) => NeuZeichnen();
+        Loaded += (_, _) => NeuZeichnen();
+
         NeuZeichnen();
     }
 
@@ -58,6 +64,14 @@ public sealed partial class GrundrissPage : Page
 
     private void NeuZeichnen()
     {
+        // Ohne das Abmelden sammelt jedes Element bei jedem Neuzeichnen (Zoom, Themewechsel,
+        // Elementänderung) einen weiteren PropertyChanged-Handler an.
+        foreach (var (element, handler) in _handlerJeElement)
+        {
+            element.PropertyChanged -= handler;
+        }
+
+        _handlerJeElement.Clear();
         PlanCanvas.Children.Clear();
         _boxenJeElement.Clear();
         _handlesJeElement.Clear();
@@ -77,7 +91,7 @@ public sealed partial class GrundrissPage : Page
         var schritt = ViewModel.Zoom;
         if (schritt <= 0) return;
 
-        var rasterBrush = new SolidColorBrush(Color.FromArgb(60, 128, 128, 128));
+        var rasterBrush = ThemeRessourcen.Brush(this, "MiletPlanRasterBrush");
         for (var x = 0.0; x <= breite; x += schritt)
         {
             PlanCanvas.Children.Add(new Line { X1 = x, Y1 = 0, X2 = x, Y2 = hoehe, Stroke = rasterBrush, StrokeThickness = 0.5 });
@@ -96,10 +110,12 @@ public sealed partial class GrundrissPage : Page
         {
             Width = element.PixelBreite,
             Height = element.PixelHoehe,
-            Background = element.IstFeld
-                ? new SolidColorBrush(Color.FromArgb(40, 33, 150, 243))
-                : new SolidColorBrush(Color.FromArgb(120, 76, 175, 80)),
-            BorderBrush = element.IstFeld ? new SolidColorBrush(Colors.DodgerBlue) : new SolidColorBrush(Colors.DarkGreen),
+            Background = ThemeRessourcen.Brush(this, element.IstFeld
+                ? "MiletPlanFeldFuellungBrush"
+                : "MiletPlanSektionFuellungBrush"),
+            BorderBrush = ThemeRessourcen.Brush(this, element.IstFeld
+                ? "MiletPlanFeldRandBrush"
+                : "MiletPlanSektionRandBrush"),
             BorderThickness = new Thickness(ausgewaehlt ? 3 : 1),
             CornerRadius = new CornerRadius(2),
             Child = new TextBlock
@@ -127,8 +143,8 @@ public sealed partial class GrundrissPage : Page
         {
             Width = 10,
             Height = 10,
-            Background = new SolidColorBrush(Colors.White),
-            BorderBrush = new SolidColorBrush(Colors.Black),
+            Background = ThemeRessourcen.Brush(this, "MiletPlanGriffFuellungBrush"),
+            BorderBrush = ThemeRessourcen.Brush(this, "MiletPlanGriffRandBrush"),
             BorderThickness = new Thickness(1),
             Visibility = ausgewaehlt ? Visibility.Visible : Visibility.Collapsed,
         };
@@ -143,7 +159,9 @@ public sealed partial class GrundrissPage : Page
 
         // Numerische Eingabe im Formular ist gleichwertig zur Maus — beide Wege ändern dieselben
         // PlanElementViewModel-Properties, PropertyChanged hält die Zeichnung synchron.
-        element.PropertyChanged += (_, _) => AktualisierePosition(element);
+        PropertyChangedEventHandler handler = (_, _) => AktualisierePosition(element);
+        element.PropertyChanged += handler;
+        _handlerJeElement[element] = handler;
     }
 
     private void AktualisierePosition(PlanElementViewModel element)

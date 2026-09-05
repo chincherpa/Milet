@@ -42,7 +42,8 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border Background="{Binding FarbeHex, Converter={StaticResource HexColorToBrushConverter}}" CornerRadius="8" Padding="6,2">
-                                            <TextBlock Text="{Binding Menge}" FontSize="11" Foreground="White" />
+                                            <TextBlock Text="{Binding Menge}" FontSize="11"
+                                                       Foreground="{Binding FarbeHex, Converter={StaticResource KontrastFarbeConverter}}" />
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>

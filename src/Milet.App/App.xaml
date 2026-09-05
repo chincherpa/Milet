@@ -15,6 +15,7 @@
             <conv:DateOnlyToDateTimeOffsetConverter x:Key="DateOnlyToDateTimeOffsetConverter" />
             <conv:NullableInt32ToDoubleConverter x:Key="NullableInt32ToDoubleConverter" />
             <conv:HexColorToBrushConverter x:Key="HexColorToBrushConverter" />
+            <conv:KontrastFarbeConverter x:Key="KontrastFarbeConverter" />
             <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
             <conv:AmpelToColorConverter x:Key="AmpelToColorConverter" />
         </ResourceDictionary>
