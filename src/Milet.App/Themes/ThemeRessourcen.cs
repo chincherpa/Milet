@@ -27,7 +27,7 @@ internal static class ThemeRessourcen
 
         if (FarbenDictionary().ThemeDictionaries.TryGetValue(zweigName, out var zweigWert)
             && zweigWert is ResourceDictionary zweig
-            && zweig.TryGetValue(schluessel, out var brushWert)
+            && ((IDictionary<object, object>)zweig).TryGetValue(schluessel, out var brushWert)
             && brushWert is Brush brush)
         {
             return brush;
@@ -43,11 +43,9 @@ internal static class ThemeRessourcen
     {
         // Farben.xaml ist das einzige gemergte Dictionary mit ThemeDictionaries — danach wird gesucht,
         // damit die Reihenfolge der MergedDictionaries in App.xaml frei bleibt.
-        _farben ??= Application.Current.Resources.MergedDictionaries
+        return _farben ??= Application.Current.Resources.MergedDictionaries
             .FirstOrDefault(d => d.ThemeDictionaries.ContainsKey("Light"))
             ?? throw new InvalidOperationException(
                 "Themes/Farben.xaml ist nicht in App.xaml gemergt — Theme-Farben sind nicht auflösbar.");
-
-        return _farben;
     }
 }

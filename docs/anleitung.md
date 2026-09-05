@@ -244,6 +244,14 @@ werden — das verhindert, dass sich die App versehentlich aussperrt.
   unabhängig von der Menüsichtbarkeit).
 - **Gleichzeitige Bearbeitung:** s. Abschnitt Stammdaten — derselbe Mechanismus (Neu-laden-
   Dialog) gilt für alle Belege und Stammdaten mit Änderungsverfolgung.
+- **Helle oder dunkle Darstellung:** Ganz unten in der Navigationsleiste sitzt ein Symbol
+  „Darstellung". Dahinter stehen drei Möglichkeiten:
+  - **Systemvorgabe** — Milet folgt der Windows-Einstellung (Standard).
+  - **Hell** bzw. **Dunkel** — Milet bleibt bei dieser Wahl, unabhängig von Windows.
+
+  Die Umschaltung wirkt sofort, ein Neustart ist nicht nötig. Die Wahl wird pro
+  Windows-Benutzer und Rechner gespeichert (`%LOCALAPPDATA%\Milet\ui-einstellungen.json`),
+  gilt also nicht automatisch auch an einem anderen Arbeitsplatz.
 
 ## 12. Was Milet (noch) nicht kann
 
