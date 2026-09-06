@@ -67,6 +67,8 @@ public partial class App : Microsoft.UI.Xaml.Application
 
         builder.Services.AddSingleton<INavigationService, NavigationService>();
         builder.Services.AddSingleton<IDialogService, DialogService>();
+        builder.Services.AddSingleton<IAppEinstellungenService, AppEinstellungenService>();
+        builder.Services.AddSingleton<IThemeService, ThemeService>();
 
         builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddTransient<DashboardViewModel>();

@@ -51,7 +51,16 @@
                             <ColumnDefinition Width="260" /><ColumnDefinition Width="110" />
                             <ColumnDefinition Width="100" />
                         </Grid.ColumnDefinitions>
-                        <Ellipse Grid.Column="0" Width="12" Height="12" VerticalAlignment="Center" Fill="{Binding Ampel, Converter={StaticResource AmpelToColorConverter}}" />
+                        <Grid Grid.Column="0" Width="12" Height="12" VerticalAlignment="Center">
+                            <Ellipse Fill="{ThemeResource MiletAmpelGruenBrush}"
+                                     Visibility="{Binding Ampel, Converter={StaticResource AmpelZuSichtbarkeitConverter}, ConverterParameter=Gruen}" />
+                            <Ellipse Fill="{ThemeResource MiletAmpelGelbBrush}"
+                                     Visibility="{Binding Ampel, Converter={StaticResource AmpelZuSichtbarkeitConverter}, ConverterParameter=Gelb}" />
+                            <Ellipse Fill="{ThemeResource MiletAmpelRotBrush}"
+                                     Visibility="{Binding Ampel, Converter={StaticResource AmpelZuSichtbarkeitConverter}, ConverterParameter=Rot}" />
+                            <Ellipse Fill="{ThemeResource MiletAmpelNeutralBrush}"
+                                     Visibility="{Binding Ampel, Converter={StaticResource AmpelZuSichtbarkeitConverter}, ConverterParameter=Neutral}" />
+                        </Grid>
                         <TextBlock Grid.Column="1" Text="{Binding Beleg.BelegNummer}" />
                         <TextBlock Grid.Column="2" Text="{Binding Beleg.BelegDatum}" />
                         <TextBlock Grid.Column="3" Text="{Binding Beleg.KundeAnzeige}" />

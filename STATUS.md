@@ -1,6 +1,6 @@
 # Milet — Projektstatus
 
-Stand: 2026-08-30. Architekturplan: `PLAN.md`. Phase-2-Implementierungsplan: `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md`. Phase-3-Implementierungsplan (umgesetzt): `docs/superpowers/plans/2026-08-25-phase3-lager-lieferschein.md`. Ein früherer, nicht umgesetzter Planungsentwurf liegt zusätzlich unter `docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md` — dessen technische Befunde (READ-COMMITTED-Race, Nummernkreis-Seed) sind unter „Bekannte Risiken" übernommen. Phase-4-Implementierungsplan (umgesetzt, manueller UI-Smoke-Test noch ausstehend): `docs/superpowers/plans/2026-08-26-phase4-einkauf.md`. Phase-5-Implementierungsplan (umgesetzt, Backend-Build/-Tests real grün, WinUI komplett unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-27-phase5-finanzen-mail.md`. Phase-6-Implementierungsplan (umgesetzt, Backend-Build/-Tests/Integrationstests/Migration real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-27-phase6-datev-reporting.md`. Phase 7 (Admin+Härtung, umgesetzt nach `PLAN.md` ohne separaten Implementierungsplan, Backend-Build/-Tests/Integrationstests/Migration ebenfalls real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert — kein Windows in der Umsetzungssession): Details im Phase-7-Abschnitt unten, Deployment-Story unter `docs/deployment.md`. Phase-8-Implementierungsplan (Gärtnerei/Kulturführung, umgesetzt, Backend-Build/-Tests/Integrationstests/Migration real gegen containerisierten SQL Server verifiziert — inkl. Migration gegen eine Datenbank mit vor-Phase-8-Bestandsdaten —, WinUI unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-30-phase8-gaertnerei-kultur.md`.
+Stand: 2026-09-05. Architekturplan: `PLAN.md`. Phase-2-Implementierungsplan: `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md`. Phase-3-Implementierungsplan (umgesetzt): `docs/superpowers/plans/2026-08-25-phase3-lager-lieferschein.md`. Ein früherer, nicht umgesetzter Planungsentwurf liegt zusätzlich unter `docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md` — dessen technische Befunde (READ-COMMITTED-Race, Nummernkreis-Seed) sind unter „Bekannte Risiken" übernommen. Phase-4-Implementierungsplan (umgesetzt, manueller UI-Smoke-Test noch ausstehend): `docs/superpowers/plans/2026-08-26-phase4-einkauf.md`. Phase-5-Implementierungsplan (umgesetzt, Backend-Build/-Tests real grün, WinUI komplett unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-27-phase5-finanzen-mail.md`. Phase-6-Implementierungsplan (umgesetzt, Backend-Build/-Tests/Integrationstests/Migration real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-27-phase6-datev-reporting.md`. Phase 7 (Admin+Härtung, umgesetzt nach `PLAN.md` ohne separaten Implementierungsplan, Backend-Build/-Tests/Integrationstests/Migration ebenfalls real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert — kein Windows in der Umsetzungssession): Details im Phase-7-Abschnitt unten, Deployment-Story unter `docs/deployment.md`. Phase-8-Implementierungsplan (Gärtnerei/Kulturführung, umgesetzt, Backend-Build/-Tests/Integrationstests/Migration real gegen containerisierten SQL Server verifiziert — inkl. Migration gegen eine Datenbank mit vor-Phase-8-Bestandsdaten —, WinUI unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-30-phase8-gaertnerei-kultur.md`.
 
 ## Erledigt
 
@@ -445,6 +445,72 @@ in Phase 5–7 **keinen** echten Compile/XAML-Codegen-Durchlauf; die drei neu ve
    (E9-Auswahl einer Sektion/Kulturstufe), wurde aber nicht gesondert untersucht.
 4. Kein automatisierter Test für den Grundriss-Canvas-Code-behind (`GrundrissPage.xaml.cs`, „Plan B" aus
    E11) — reiner WinUI-Rendering-Code, nur per manuellem Smoke-Test (s. Punkt 1) verifizierbar.
+
+### Darstellung Hell/Dunkel ⚠️ (rein statisch geschrieben — kein .NET SDK in dieser Session, nichts gebaut, nichts getestet) (2026-09-05, Branch `claude/light-mode-toggle-plan-ordynh`)
+
+Ausgangspunkt war die Annahme, die App habe „nur einen dunklen Modus". Das stimmte so nicht: `RequestedTheme`,
+`ElementTheme`, `ApplicationTheme` und `ThemeDictionaries` kamen im gesamten `Milet.App` **kein einziges Mal**
+vor. WinUI folgte damit automatisch dem Windows-Systemtheme — die App wirkte dunkel, weil Windows dunkel
+eingestellt war. Es fehlten die Umschaltung samt Persistenz **und** ein tragfähiger Hellmodus: mehrere Farben
+lagen hartcodiert in XAML und Code-Behind.
+
+**Umschaltung:**
+- `Themes/Farben.xaml` — erste Ressourcen-Datei des Projekts überhaupt. `ThemeDictionaries`
+  (Default=Dunkel/Light/HighContrast) mit den App-eigenen semantischen Brushes (`Milet*`).
+- `Themes/Styles.xaml` — `MasterListStyle`, der byte-gleich in `AdministrationPage.xaml` und
+  `KleinstammPage.xaml` dupliziert lag.
+- `Themes/ThemeRessourcen.cs` — löst diese Brushes für Code-Behind anhand `element.ActualTheme` auf.
+  `Application.Current.Resources[key]` löst gegen das Applikations-Theme auf und lieferte bei
+  umgeschaltetem `RequestedTheme` die falsche Farbe.
+- `Services/AppEinstellungenService.cs` — UI-Einstellungen als JSON unter
+  `%LOCALAPPDATA%\Milet\ui-einstellungen.json`. Nicht über `ApplicationData.Current`: die App ist
+  unpackaged (`WindowsPackageType=None`), diese API steht ohne Paketidentität nicht zur Verfügung. Die
+  Einstellung gilt damit pro Windows-Benutzer und Rechner, nicht pro Milet-Benutzer.
+- `Services/ThemeService.cs` — setzt `RequestedTheme` auf dem Wurzelelement jedes angemeldeten Fensters.
+  `Application.Current.RequestedTheme` schied aus (nur vor der Fenstererzeugung setzbar, kennt kein
+  „Systemvorgabe"). Anmeldeliste statt festem Verweis, weil `MainWindow` beim Start noch nicht existiert;
+  beide Fenster melden sich im Konstruktor an, also vor `Activate()` → kein Flackern. Zusätzlich werden
+  ab Windows 11 die Farben der Titelleiste mitgezogen.
+- `DialogService` setzt `RequestedTheme` jetzt explizit am `ContentDialog` — der hängt im Popup-Baum des
+  `XamlRoot` und erbt das Fenster-Theme nicht.
+- Umschalter als Symbol mit Menü im `PaneFooter` der NavigationView (Systemvorgabe/Hell/Dunkel), bewusst
+  ohne Rechte-Prüfung.
+
+**Farbsanierung (der Hellmodus war ohne sie an diesen Stellen kaputt):**
+- Grundriss-/Pflanzenübersicht-Canvas: Raster, Feld- und Sektionsflächen sowie der Größen-Anfasser kommen
+  aus `Farben.xaml`. Der Anfasser war fest weiß mit schwarzem Rand, im Dunkelmodus also invertiert falsch.
+- Beide Seiten zeichnen imperativ und reagierten deshalb nicht auf einen Themewechsel — `ActualThemeChanged`
+  löst jetzt ein Neuzeichnen aus, `Loaded` deckt zusätzlich den Start ab (im Konstruktor hängt die Seite
+  noch nicht im Fensterbaum, `ActualTheme` liefert dort erst die Applikationsvorgabe).
+- Nebenbefund dabei behoben: beim Neuzeichnen wurden die `PropertyChanged`-Handler der Planelemente nie
+  abgemeldet, bei jedem Zoom-/Datenwechsel kam eine weitere Anmeldung dazu.
+- `Converters/FarbHelfer.cs` — gemeinsames `#RRGGBB`-Parsing. `PflanzenUebersichtPage.xaml.cs` parste bisher
+  inline **ohne** try/catch; ein fehlerhafter Wert warf beim Zeichnen eine `FormatException`.
+- `KontrastFarbeConverter` ersetzt das feste `Foreground="White"` auf den Kulturstufen-Chips (weiß auf dem
+  hellgrünen Seed-Wert `#8BC34A` ist in jedem Theme unlesbar) — Schwarz/Weiß nach relativer Luminanz.
+- `AmpelToColorConverter` (feste `LimeGreen`/`Orange`/`Red`) ersetzt durch vier überlagerte Ellipsen mit
+  `{ThemeResource}`-Füllung plus `AmpelZuSichtbarkeitConverter`. Ein `IValueConverter` kennt kein Element
+  und kann nicht theme-abhängig auflösen; zudem werden Bindungen beim Themewechsel nicht neu ausgewertet.
+
+**Verifikationsstand — ehrlich:** In der Umsetzungssession war **kein .NET SDK** im Container vorhanden. Es
+wurde weder `Milet.App` gebaut noch ein Testprojekt ausgeführt. Geprüft wurde ausschließlich statisch:
+XML-Wohlgeformtheit aller geänderten XAML-Dateien, Auflösbarkeit der verwendeten Typen/Namensräume und
+Konsistenz der Ressourcenschlüssel zwischen `Farben.xaml` und den Aufrufstellen. Die drei Testprojekte sind
+inhaltlich nicht berührt, aber auch das ist nicht nachgewiesen, sondern nur aus dem Diff geschlossen.
+Vollständiger manueller Ablauf in `docs/smoke-tests.md`, Abschnitt „Darstellung".
+
+**Offene Punkte:**
+1. Windows-Build (`-p:Platform=x64`) steht aus. Höchstes Risiko: ob der XAML-Compiler die beiden neuen
+   Dateien unter `Themes/` einsammelt — die csproj hat keinerlei `<Page>`-Items und verlässt sich auf das
+   Standard-Globbing (das für die 43 bestehenden XAML-Dateien funktioniert). Notfalls `<Page Include=…>`
+   ergänzen, s. Smoke-Test Schritt 1.
+2. Popups (ComboBox-Dropdown, Flyout, ToolTip) hängen im Popup-Baum und erben das auf `Window.Content`
+   gesetzte `RequestedTheme` womöglich nicht. Für `ContentDialog` ist das behandelt, für die übrigen ist es
+   ungeprüft — Smoke-Test Schritt 8 samt dokumentiertem Ausweg.
+3. Die Titelleistenfarben greifen nur ab Windows 11 (`AppWindowTitleBar.IsCustomizationSupported()`).
+4. Kein automatisierter Test. `FarbHelfer.RelativeLuminanz` und `AppEinstellungenService` wären für sich
+   testbar, liegen aber in `Milet.App` — dafür bräuchte es ein neues `net10.0-windows`-Testprojekt, das für
+   diesen Umfang bewusst nicht angelegt wurde.
 
 ## Gefixt während UI-Test (2026-08-25)
 - LocalDB-Datenbank hieß nach Projekt-Rename noch "Nexus" (Connection String erwartet "Milet") → "Fehler beim Laden" beim Öffnen der Kunden-Liste. Per `ALTER DATABASE ... MODIFY NAME` umbenannt (Seed-Daten erhalten), App neu gestartet — Kunden-Liste lädt jetzt.
