@@ -1,6 +1,6 @@
 # Milet — Projektstatus
 
-Stand: 2026-09-05. Architekturplan: `PLAN.md`. Phase-2-Implementierungsplan: `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md`. Phase-3-Implementierungsplan (umgesetzt): `docs/superpowers/plans/2026-08-25-phase3-lager-lieferschein.md`. Ein früherer, nicht umgesetzter Planungsentwurf liegt zusätzlich unter `docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md` — dessen technische Befunde (READ-COMMITTED-Race, Nummernkreis-Seed) sind unter „Bekannte Risiken" übernommen. Phase-4-Implementierungsplan (umgesetzt, manueller UI-Smoke-Test noch ausstehend): `docs/superpowers/plans/2026-08-26-phase4-einkauf.md`. Phase-5-Implementierungsplan (umgesetzt, Backend-Build/-Tests real grün, WinUI komplett unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-27-phase5-finanzen-mail.md`. Phase-6-Implementierungsplan (umgesetzt, Backend-Build/-Tests/Integrationstests/Migration real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-27-phase6-datev-reporting.md`. Phase 7 (Admin+Härtung, umgesetzt nach `PLAN.md` ohne separaten Implementierungsplan, Backend-Build/-Tests/Integrationstests/Migration ebenfalls real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert — kein Windows in der Umsetzungssession): Details im Phase-7-Abschnitt unten, Deployment-Story unter `docs/deployment.md`. Phase-8-Implementierungsplan (Gärtnerei/Kulturführung, umgesetzt, Backend-Build/-Tests/Integrationstests/Migration real gegen containerisierten SQL Server verifiziert — inkl. Migration gegen eine Datenbank mit vor-Phase-8-Bestandsdaten —, WinUI unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-30-phase8-gaertnerei-kultur.md`.
+Stand: 2026-09-06. Architekturplan: `PLAN.md`. Phase-2-Implementierungsplan: `docs/superpowers/plans/2026-08-25-phase2-verkauf-pdf.md`. Phase-3-Implementierungsplan (umgesetzt): `docs/superpowers/plans/2026-08-25-phase3-lager-lieferschein.md`. Ein früherer, nicht umgesetzter Planungsentwurf liegt zusätzlich unter `docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md` — dessen technische Befunde (READ-COMMITTED-Race, Nummernkreis-Seed) sind unter „Bekannte Risiken" übernommen. Phase-4-Implementierungsplan (umgesetzt, manueller UI-Smoke-Test noch ausstehend): `docs/superpowers/plans/2026-08-26-phase4-einkauf.md`. Phase-5-Implementierungsplan (umgesetzt, Backend-Build/-Tests real grün, WinUI komplett unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-27-phase5-finanzen-mail.md`. Phase-6-Implementierungsplan (umgesetzt, Backend-Build/-Tests/Integrationstests/Migration real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-27-phase6-datev-reporting.md`. Phase 7 (Admin+Härtung, umgesetzt nach `PLAN.md` ohne separaten Implementierungsplan, Backend-Build/-Tests/Integrationstests/Migration ebenfalls real gegen containerisierten SQL Server verifiziert, WinUI unverifiziert — kein Windows in der Umsetzungssession): Details im Phase-7-Abschnitt unten, Deployment-Story unter `docs/deployment.md`. Phase-8-Implementierungsplan (Gärtnerei/Kulturführung, umgesetzt, Backend-Build/-Tests/Integrationstests/Migration real gegen containerisierten SQL Server verifiziert — inkl. Migration gegen eine Datenbank mit vor-Phase-8-Bestandsdaten —, WinUI unverifiziert — kein Windows in der Umsetzungssession): `docs/superpowers/plans/2026-08-30-phase8-gaertnerei-kultur.md`.
 
 ## Erledigt
 
@@ -512,6 +512,42 @@ Vollständiger manueller Ablauf in `docs/smoke-tests.md`, Abschnitt „Darstellu
    testbar, liegen aber in `Milet.App` — dafür bräuchte es ein neues `net10.0-windows`-Testprojekt, das für
    diesen Umfang bewusst nicht angelegt wurde.
 
+### Deep Code Review 2026-09-06 ✅ (erstmals mit echtem SDK: Backend gebaut und getestet) (Branch `claude/deep-code-review-u3j84m`)
+
+Vollständiger Review der Codebasis, Ergebnis in `REVIEW_2026-09-06.md` (21 neue Befunde: 3 hoch, 8 mittel,
+10 niedrig; dazu der Stand der noch offenen Befunde aus `REVIEW_2026-08-29.md`).
+
+**Anders als die beiden Vorgänger-Sessions war hier ein .NET SDK verfügbar** (`dotnet-sdk-10.0` per `apt`
+→ 10.0.111; Builds aus einer Scratch-Kopie mit lokal abgesenktem `global.json`, echtes Repo-`global.json`
+unverändert bei `10.0.400`). Damit ist erstmals real verifiziert:
+
+- **Alle fünf nicht-WinUI-Projekte bauen sauber — 0 Warnungen, 0 Fehler** (`TreatWarningsAsErrors` ist
+  solutionweit an). Das betrifft insbesondere die nie kompilierten Änderungen der Review-Fixes vom
+  2026-08-29: drei Konstruktorsignaturen (`BelegService`, `RechnungBuchenService`,
+  `BelegUeberleitungService`), die Interface-Änderung an `IDatevExportService` und die DTO-Änderung an
+  `DatevExportErgebnisDto`.
+- **`Milet.Domain.Tests`: 72/72 grün. `Milet.Application.Tests`: 66/66 grün.**
+- `Milet.IntegrationTests`: 78 Tests, davon **4 ausgeführt und 74 übersprungen** — der Docker-*Client*
+  ist vorhanden, aber es läuft kein Daemon (`/var/run/docker.sock` fehlt). Die Parallelitäts-/Race-Tests
+  sind also erneut nicht gelaufen.
+
+**Weiterhin unverifiziert:** `Milet.App` (WinUI) ist auf Linux nicht baubar. Der gesamte Branch
+„Darstellung Hell/Dunkel" (2026-09-05) ist damit nach wie vor **nie kompiliert worden** — der
+Windows-Build und der Smoke-Test aus dem Abschnitt darüber stehen unverändert aus.
+
+**Die drei Hoch-Befunde in Kurzform** (Details in `REVIEW_2026-09-06.md`):
+1. **Der Migrator sät `DummyDatenSeed` in eine frische Produktivdatenbank** — das Gate ist „noch keine
+   Artikel", also genau der Zustand einer neuen Produktiv-DB. Der Seed bucht dabei drei echte Rechnungen,
+   die `RE-{Jahr}-0001..0003` verbrauchen und als gebuchte Belege GoBD-unveränderlich sind; ohne Storno
+   sind sie über die Anwendung nie mehr zu entfernen. `docs/deployment.md` nennt den Seed „harmlos
+   idempotent" — für den Produktivfall irreführend.
+2. **Kulturbuchungen verwerfen `Datum` und `Bemerkung` stillschweigend.** Die Oberfläche erfasst beides
+   (inkl. „Bemerkung (Ursache)" beim Ausfall), `KulturBuchungService` liest keines der Felder;
+   `Lagerbewegung` hat keine Bemerkungsspalte und stempelt `DateTime.UtcNow`.
+3. **`Lagerbewegung.Zeitpunkt` ist UTC, jede Auswertung darüber filtert lokal** (Kulturhistorie, beide
+   Reports). In Sommerzeit fällt jede Buchung zwischen 00:00 und 02:00 Ortszeit in den Vortagsbericht —
+   dieselbe Inkonsistenz, die Befund 24 des Vorgänger-Reviews für die Belegdaten geschlossen hat.
+
 ## Gefixt während UI-Test (2026-08-25)
 - LocalDB-Datenbank hieß nach Projekt-Rename noch "Nexus" (Connection String erwartet "Milet") → "Fehler beim Laden" beim Öffnen der Kunden-Liste. Per `ALTER DATABASE ... MODIFY NAME` umbenannt (Seed-Daten erhalten), App neu gestartet — Kunden-Liste lädt jetzt.
 - Listenpreis-Präzision 4→2 Nachkommastellen (s. oben, Phase-1-Abnahme).
@@ -519,6 +555,16 @@ Vollständiger manueller Ablauf in `docs/smoke-tests.md`, Abschnitt „Darstellu
 - Phase 2: Positions-Bezeichnung + IsEnabled-Scoping (s. oben, Phase-2-Abnahme).
 
 ## Bekannte Risiken (aus Plan, weiterhin relevant)
+- **[Neu 2026-09-06, s. `REVIEW_2026-09-06.md` Befund 1]** Der Migrator führt `DummyDatenSeed`
+  bedingungslos aus; dessen Gate ist „noch keine Artikel" und trifft damit genau eine frische
+  Produktivdatenbank. Der Seed bucht drei Rechnungen aus dem lückenlosen `RE`-Kreis — gebucht, damit
+  GoBD-unveränderlich, und mangels Storno über die Anwendung nicht mehr entfernbar. Vor dem nächsten
+  Produktiv-Deployment auf Opt-in (`--mit-testdaten`) umstellen.
+- **[Neu 2026-09-06, s. `REVIEW_2026-09-06.md` Befund 7]** Der Guard gegen eine zweite offene Inventur
+  je Lagerort (`InventurService.NeueInventurAsync`) ist ein ungeschützter Read-then-Insert — dieselbe
+  READ-COMMITTED-Klasse wie die Überleitungs-Race unten. Er ist ausgerechnet der Fix für Befund 9 des
+  Reviews vom 2026-08-29 (Inventur-Doppelzählung). Billig zu schließen über einen gefilterten
+  Unique-Index `WHERE Status = Offen`.
 - **[Behoben am 2026-08-30, Phase 8]** Race beim Erstanlegen einer `ArtikelBestand`-Zeile in
   `BestandService.BucheBewegungAsync` (E4 aus dem Phase-8-Plan): das atomare `UPDATE`-Muster deckte nur den
   Fall einer bereits existierenden Zeile ab; traf `UPDATE` auf 0 Zeilen (Erstbuchung), folgte ein
