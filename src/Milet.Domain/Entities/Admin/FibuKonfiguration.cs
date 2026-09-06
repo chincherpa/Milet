@@ -19,4 +19,14 @@ public class FibuKonfiguration
 
     /// <summary>Sachkonto für Zahlungseingänge/-ausgänge (Bank/Kasse), Gegenkonto beim Zahlungs-Export.</summary>
     public int BankkontoNr { get; set; }
+
+    /// <summary>Sachkonto für GEWÄHRTE Skonti (Zahlungseingang eines Debitors) — Erlösschmälerung.
+    /// 0 = nicht gepflegt, dann greift das Standardkonto des Kontenrahmens (SKR03 8736, SKR04 4736).
+    /// Bewusst nach Buchungsrichtung benannt statt nach dem Kontenrahmen-Begriff: die Zuordnung zur
+    /// Debitor-/Kreditor-Zahlung ist damit ohne Buchhaltungswissen eindeutig.</summary>
+    public int SkontoKontoDebitorNr { get; set; }
+
+    /// <summary>Sachkonto für ERHALTENE Skonti (Zahlungsausgang an einen Kreditor) — Aufwandsminderung.
+    /// 0 = nicht gepflegt, dann greift das Standardkonto des Kontenrahmens (SKR03 3736, SKR04 5736).</summary>
+    public int SkontoKontoKreditorNr { get; set; }
 }

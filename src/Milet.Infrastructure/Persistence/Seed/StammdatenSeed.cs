@@ -148,6 +148,11 @@ public static class StammdatenSeed
                 WirtschaftsjahrBeginnMonat = 1,
                 SachkontenLaenge = 4,
                 BankkontoNr = 1200,
+                // SKR03-Standardkonten für gewährte/erhaltene Skonti — vorher fest im DatevExportService
+                // verdrahtet, jetzt konfigurierbar. Der Export fällt weiterhin auf dieselben Werte zurück,
+                // wenn hier 0 steht (bestehende Datenbanken bekommen den Seed nicht nachgetragen).
+                SkontoKontoDebitorNr = 8736,
+                SkontoKontoKreditorNr = 3736,
             });
         }
 

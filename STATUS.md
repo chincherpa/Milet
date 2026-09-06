@@ -610,6 +610,56 @@ hat **keine** Kleinstamm-Entität eine RowVersion; `Mahnstufe` folgt der Konvent
    Historie), Umsetzen zwischen zwei Feldern ohne Sektionen (muss jetzt gehen), Kulturstufen umsortieren,
    Inventur-Ist-Menge parallel in zwei Fenstern (muss den Neuladen-Dialog zeigen).
 
+### Altbefunde 2026-08-29 nachgezogen ⚠️ (Backend gebaut und getestet; Migrationen NICHT gegen eine DB gelaufen, WinUI unverifiziert) (2026-09-06, Branch `claude/deep-code-review-u3j84m`)
+
+Zweiter Durchgang am selben Tag: alle noch offenen Befunde aus `REVIEW_2026-08-29.md` **außer Storno und
+Gutschrift** (Befund 15 — braucht eine fachliche Entscheidung). Die Tabelle „Stand der Altbefunde" in
+`REVIEW_2026-09-06.md` führt jeden einzelnen.
+
+**Zweite Schemaänderung — Migration `20260906150645_SicherheitUndSkontokonten`:**
+- `Benutzer.FehlversuchZaehler`, `Benutzer.GesperrtBis`, `Benutzer.PasswortAenderungErforderlich`
+- `FibuKonfiguration.SkontoKontoDebitorNr`, `FibuKonfiguration.SkontoKontoKreditorNr`
+
+Reine Spaltenergänzungen mit Defaults, auf einer bestehenden DB unkritisch. Zwei Nachträge laufen bewusst
+im Seed statt in der Migration: `AdminSeed` setzt `PasswortAenderungErforderlich` für einen Alt-Admin, der
+noch das dokumentierte Initialpasswort hat, und `StammdatenSeed` gibt die SKR03-Skontokonten nur einer neu
+angelegten `FibuKonfiguration` mit (eine bestehende bleibt bei 0 und fällt weiter auf die
+Kontenrahmen-Standardwerte zurück, wie bisher).
+
+**Sicherheit (Befunde 13/30):** Login sperrt nach 5 Fehlversuchen für 15 Minuten. Die Sperre wird **nur bei
+korrektem Passwort** benannt — sonst verriete die Meldung, dass es den Benutzernamen gibt, und hebelte den
+Dummy-Hash aus, der genau das verhindert. Der Wechsel des Initialpassworts wird beim ersten Login erzwungen
+(zweite Stufe im `LoginWindow`, die Sitzung wird erst danach geöffnet); ein administratives Zurücksetzen
+setzt das Flag ebenfalls, weil der Administrator das gesetzte Passwort sonst dauerhaft mitkennt. Neue
+Domain-Regel `PasswortRegeln` (Mindestlänge 10) gilt für beide Wege — vorher prüfte die Benutzerverwaltung
+eigenständig auf 8 Zeichen.
+
+**Nebenläufigkeit (bekanntes Risiko, seit Phase 3 dokumentiert):** Alle drei Überleitungsmethoden sperren
+den/die Quellbeleg(e) mit `SELECT ... WITH (UPDLOCK, HOLDLOCK)`, bevor sie die Folgepositionen lesen.
+Gesperrt wird der Beleg, nicht die Folgepositionen — die existieren im Konfliktfall noch gar nicht
+(Phantom). Mehrere Ids aufsteigend, sonst blockieren sich zwei Sammelrechnungen gegenseitig.
+**Der Nachweis fehlt**: der Parallelitätstest dafür braucht Docker.
+
+**GoBD (Befund 23):** Der `AuditSaveChangesInterceptor` öffnet in `SavingChanges` eine eigene Transaktion,
+wenn der Aufrufer keine hat, und committet sie erst nach dem Schreiben der Audit-Zeilen; `SaveChangesFailed`
+rollt zurück. Damit können fachliche Änderung und Nachweis nicht mehr auseinanderfallen. Bringt der Aufrufer
+eine Transaktion mit (alle Buchungs- und Belegpfade), ändert sich nichts. Setzt voraus, dass keine
+wiederholende Ausführungsstrategie konfiguriert ist — `EnableRetryOnFailure` verbietet benutzereröffnete
+Transaktionen.
+
+**Testabdeckung (Befund 29):** Integrationstests 78 → **106**. Neu: `InterceptorTests` (Immutability inkl.
+der beiden erlaubten Statusübergänge, AuditLog inkl. „kein PasswortHash im JSON" und Rollback-Verhalten),
+`FinanzenServiceTests` (`ZahlungService`: Skonto/Teilzahlung/fremder Kunde/falscher Typ/Überzahlung/
+RowVersion-Konflikt; `MahnwesenService`: Selektion, Mahnsperre, Fortschreibung, zwischenzeitliche Zahlung)
+und 7 Login-Tests. **Alle 102 Testcontainers-Tests laufen weiterhin nur übersprungen** — kein Docker-Daemon.
+
+**Signaturänderungen:** `IAuthService.AnmeldenAsync` liefert `AnmeldeErgebnisDto` statt
+`BenutzerSessionDto?` (die Oberfläche muss „abgelehnt" von „gesperrt" und „Wechsel nötig" unterscheiden
+können), neu `IAuthService.PasswortAendernAsync`. `FibuKonfigurationDto` um zwei Konten erweitert.
+
+**Weiterhin offen:** Befund 15 (Storno/Gutschrift) und Befund 18 (Mahngebühr als Forderung) — beide mit
+fachlicher Entscheidung, beide in `REVIEW_2026-09-06.md` begründet.
+
 ## Gefixt während UI-Test (2026-08-25)
 - LocalDB-Datenbank hieß nach Projekt-Rename noch "Nexus" (Connection String erwartet "Milet") → "Fehler beim Laden" beim Öffnen der Kunden-Liste. Per `ALTER DATABASE ... MODIFY NAME` umbenannt (Seed-Daten erhalten), App neu gestartet — Kunden-Liste lädt jetzt.
 - Listenpreis-Präzision 4→2 Nachkommastellen (s. oben, Phase-1-Abnahme).
@@ -641,7 +691,7 @@ hat **keine** Kleinstamm-Entität eine RowVersion; `Mahnstufe` folgt der Konvent
 - Kein Docker auf dieser Maschine → Integrationstests mit Testcontainers laufen hier nur übersprungen, nicht tatsächlich ausgeführt. Das betrifft inzwischen konkret Phase 3: `BestandServiceTests` (Race-/Negativsperre-Test des atomaren `BucheBewegungAsync`-UPDATE) und `LieferscheinBuchenServiceTests` (paralleles Buchen) sind **nie gegen eine echte DB gelaufen**, nur compile-verifiziert + sauber übersprungen. Der manuelle UI-Smoke-Test (s. „Offen") würde die fachliche Kernlogik zumindest einmal seriell gegen LocalDB nachweisen, ersetzt aber nicht den Parallelitäts-Nachweis. Docker sollte vor Produktivsetzung verfügbar gemacht werden oder ein LocalDB-Fallback für diese Tests ergänzt werden.
 - **[Umgesetzt in Phase 5, funktional unverifiziert]** Graph-Auth: `GraphEmailService` (MSAL/WAM-Broker) ist implementiert und baut gegen die echten NuGet-Pakete, aber ohne eigene Entra-App-Registrierung + Windows nicht testbar — `NichtKonfigurierterEmailService`-Fallback stellt sicher, dass die App ohne Graph-Konfiguration voll funktionsfähig bleibt. DATEV-Format — noch nicht relevant, erst ab Phase 6. QuestPDF-Lizenz (Community, <1M USD Umsatz) bereits gesetzt (`PdfService`-statischer Konstruktor).
 - Lieferadresse ist in Phase 2 nicht im Belegeditor editierbar (immer 1:1 aus Kundenstamm übernommen) — bewusste Vereinfachung, relevant erst mit Lieferschein (Phase 3).
-- **Offene-Mengen-Prüfung in `BelegUeberleitungService` (inkl. `UeberleitenMitAuswahlAsync`/`UeberleitenMehrereAsync`) schützt trotz gegenteiligem Kommentar im Code vermutlich nicht gegen parallele Überleitungen**: der In-Transaktion-Re-Check liest unter SQL Servers Default-Isolationslevel READ COMMITTED ohne Sperre — zwei gleichzeitige Transaktionen können beide „nichts geliefert" sehen und beide committen. Folgenlos bei Angebot→Auftrag (1:1, keine Teilmengen), aber ein echter potenzieller Bestandsfehler bei paralleler Teillieferung/Sammelrechnung. Noch nicht verifiziert (Docker hier nicht verfügbar) oder behoben — möglicher Fix: `UPDLOCK` auf dem/den Quellbeleg(en) beim Lesen. Fund stammt aus einem parallel entstandenen, nicht umgesetzten Planungsentwurf (`docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md`).
+- **[Behoben am 2026-09-06, Nachweis offen]** **Offene-Mengen-Prüfung in `BelegUeberleitungService` (inkl. `UeberleitenMitAuswahlAsync`/`UeberleitenMehrereAsync`) schützte trotz gegenteiligem Kommentar im Code nicht gegen parallele Überleitungen**: der In-Transaktion-Re-Check liest unter SQL Servers Default-Isolationslevel READ COMMITTED ohne Sperre — zwei gleichzeitige Transaktionen können beide „nichts geliefert" sehen und beide committen. Folgenlos bei Angebot→Auftrag (1:1, keine Teilmengen), aber ein echter potenzieller Bestandsfehler bei paralleler Teillieferung/Sammelrechnung. Der Fix ist `UPDLOCK` auf dem/den Quellbeleg(en) beim Lesen. Fund stammt aus einem parallel entstandenen, nicht umgesetzten Planungsentwurf (`docs/superpowers/plans/2026-08-26-phase3-lager-lieferschein.md`). **Umgesetzt:** alle drei Methoden sperren den/die Quellbeleg(e) mit `SELECT ... WITH (UPDLOCK, HOLDLOCK)`, bevor sie die Folgepositionen lesen (aufsteigend nach Id, sonst Deadlock-Gefahr bei Sammelrechnungen). Der Parallelitäts-Nachweis steht weiterhin aus — er braucht Docker.
 - **[Behoben in Phase 4, nachgebessert 2026-08-29]** `StammdatenSeed` legt Nummernkreise nur an, wenn die `Nummernkreise`-Tabelle komplett leer ist, nicht „je fehlendem Code" — eine bereits migrierte Datenbank bekommt einen später neu hinzugefügten Nummernkreis-Code nie automatisch nachgetragen. Bisher folgenlos (alle bislang genutzten Codes existierten schon vor der ersten Migration), wird aber relevant, sobald eine spätere Phase einen neuen Code auf einer bestehenden DB einführt. Genau dieser Fall trat mit Phase 4 ein (neue Codes `WE`/`ER`) und wurde in Task 5 des Phase-4-Plans behoben — der Seed wurde auf „je fehlendem Code ergänzen" umgestellt statt „nur wenn Tabelle leer"; per `sqlcmd` verifiziert, dass `BE`/`WE`/`ER` alle mit `NaechsteNummer=1` existieren (s. Phase-4-Abschnitt oben). Der Fix griff allerdings nicht für den Jahreswechsel: der Abgleich lief nur über den Code, während `NumberRangeService` strikt nach dem laufenden Jahr sucht — ab dem 01.01. hätte das System keine Belegnummer mehr vergeben können (Befund 1 des Reviews vom 2026-08-29). Seither Abgleich über `(Code, Jahr)` plus Lazy-Anlage des Jahreskreises im `NumberRangeService` (s. Abschnitt Review-Fixes 2026-08-29).
 
 ## Phasenübersicht

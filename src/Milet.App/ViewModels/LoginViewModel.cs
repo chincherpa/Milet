@@ -36,6 +36,23 @@ public sealed partial class LoginViewModel : ObservableObject
     [ObservableProperty]
     public partial bool SchemaAktuell { get; set; } = true;
 
+    // ---- Erzwungener Passwortwechsel ----
+    // Zweite Stufe im selben Fenster statt eines eigenen Dialogs: der Benutzer ist zu diesem Zeitpunkt noch
+    // nicht angemeldet (die Sitzung wird erst nach dem Wechsel geöffnet), ein ContentDialog bräuchte aber ein
+    // XamlRoot aus einem bereits sichtbaren Fenster.
+
+    [ObservableProperty]
+    public partial bool PasswortwechselErforderlich { get; set; }
+
+    [ObservableProperty]
+    public partial string NeuesPasswort { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string NeuesPasswortWiederholung { get; set; } = string.Empty;
+
+    /// <summary>Zwischengeparkt, bis der Wechsel durch ist — danach wird damit die Sitzung geöffnet.</summary>
+    private BenutzerSessionDto? _wartendeSession;
+
     private async Task SchemaPruefenAsync()
     {
         try
@@ -65,15 +82,30 @@ public sealed partial class LoginViewModel : ObservableObject
         AnmeldungLaeuft = true;
         try
         {
-            var session = await _authService.AnmeldenAsync(Benutzername, Passwort);
-            if (session is null)
+            var ergebnis = await _authService.AnmeldenAsync(Benutzername, Passwort);
+
+            if (ergebnis.GesperrtBis is { } gesperrtBis)
+            {
+                // Nur bei korrektem Passwort — der Dienst legt die Sperre sonst gar nicht offen.
+                Fehlermeldung = $"Zugang wegen zu vieler Fehlversuche gesperrt bis {gesperrtBis:HH:mm}.";
+                return;
+            }
+
+            if (ergebnis.Session is not { } session)
             {
                 Fehlermeldung = "Benutzername oder Passwort falsch, oder Benutzer ist deaktiviert.";
                 return;
             }
 
-            _session.Anmelden(session.BenutzerId, session.BenutzerName, session.RollenName, session.Rechte);
-            AngemeldetErfolgreich?.Invoke();
+            if (ergebnis.PasswortAenderungErforderlich)
+            {
+                _wartendeSession = session;
+                PasswortwechselErforderlich = true;
+                Fehlermeldung = "Das Passwort muss vor der ersten Nutzung geändert werden.";
+                return;
+            }
+
+            SitzungOeffnen(session);
         }
         catch (Exception ex)
         {
@@ -83,5 +115,43 @@ public sealed partial class LoginViewModel : ObservableObject
         {
             AnmeldungLaeuft = false;
         }
+    }
+
+    [RelayCommand]
+    private async Task PasswortWechselnAsync()
+    {
+        if (_wartendeSession is not { } session)
+        {
+            return;
+        }
+
+        Fehlermeldung = null;
+
+        if (!string.Equals(NeuesPasswort, NeuesPasswortWiederholung, StringComparison.Ordinal))
+        {
+            Fehlermeldung = "Die beiden Eingaben stimmen nicht überein.";
+            return;
+        }
+
+        AnmeldungLaeuft = true;
+        try
+        {
+            await _authService.PasswortAendernAsync(Benutzername, Passwort, NeuesPasswort);
+            SitzungOeffnen(session);
+        }
+        catch (Exception ex)
+        {
+            Fehlermeldung = ex.Message;
+        }
+        finally
+        {
+            AnmeldungLaeuft = false;
+        }
+    }
+
+    private void SitzungOeffnen(BenutzerSessionDto session)
+    {
+        _session.Anmelden(session.BenutzerId, session.BenutzerName, session.RollenName, session.Rechte);
+        AngemeldetErfolgreich?.Invoke();
     }
 }

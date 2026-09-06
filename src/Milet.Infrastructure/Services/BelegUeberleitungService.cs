@@ -35,6 +35,43 @@ public sealed class BelegUeberleitungService(
         berechtigung.PruefeRecht(RechtCodes.FuerBelegTyp(zielTyp));
     }
 
+    /// <summary>
+    /// Serialisiert konkurrierende Überleitungen desselben Quellbelegs. Ohne das schützt der
+    /// In-Transaktion-Re-Check der offenen Mengen NICHT: er liest unter SQL Servers Default-Isolationslevel
+    /// READ COMMITTED ohne Sperre, zwei gleichzeitige Teillieferungen aus demselben Auftrag sehen also beide
+    /// „nichts geliefert" und committen beide — der Auftrag wäre überliefert.
+    ///
+    /// Gesperrt wird der QUELLBELEG, nicht die Folgepositionen: die existieren im Konfliktfall noch gar
+    /// nicht (Phantom), eine Sperre auf ihnen liefe ins Leere. UPDLOCK verhindert, dass ein zweiter Leser
+    /// dieselbe Zeile für eine Änderung liest; HOLDLOCK hält die Sperre bis zum Ende der Transaktion.
+    ///
+    /// Muss vor dem Lesen der Folgepositionen laufen und innerhalb der Transaktion des Aufrufers.
+    /// </summary>
+    private static async Task SperreQuellbelegeAsync(MiletDbContext db, IEnumerable<int> quellBelegIds, CancellationToken ct)
+    {
+        // Aufsteigend sortiert: zwei Sammelrechnungen über sich überschneidende Lieferscheinmengen würden
+        // sich sonst gegenseitig blockieren (klassischer Deadlock durch uneinheitliche Sperrreihenfolge).
+        foreach (var id in quellBelegIds.Distinct().OrderBy(id => id))
+        {
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"SELECT TOP (1) Id FROM Belege WITH (UPDLOCK, HOLDLOCK) WHERE Id = {id}", ct);
+        }
+    }
+
+    /// <summary>
+    /// Folgepositionen einer Menge von Quellpositionen — ohne die eines stornierten Belegs: eine stornierte
+    /// Lieferung hat die Menge des Quellbelegs nicht verbraucht, sie muss also wieder überleitbar sein.
+    /// Heute ohne Wirkung (BelegStatus.Storniert wird nirgends zugewiesen, es gibt keinen Storno-Service),
+    /// aber die Stelle, an der der Storno-Bau sonst still eine falsche offene Menge erben würde.
+    /// </summary>
+    private static Task<List<BelegPosition>> LadeFolgepositionenAsync(
+        MiletDbContext db, IReadOnlyList<int> quellPositionIds, CancellationToken ct)
+        => db.BelegPositionen.AsNoTracking()
+            .Where(p => p.UrsprungsPositionId != null
+                && quellPositionIds.Contains(p.UrsprungsPositionId.Value)
+                && p.Beleg!.Status != BelegStatus.Storniert)
+            .ToListAsync(ct);
+
     private static Beleg NeueInstanz(BelegTyp typ) => typ switch
     {
         BelegTyp.Angebot => new Angebot(),
@@ -77,11 +114,11 @@ public sealed class BelegUeberleitungService(
         if (quellTyp is BelegTyp.Lieferschein or BelegTyp.Wareneingang && quellBeleg.Status != BelegStatus.Gebucht)
             throw new InvalidOperationException($"{quellTyp} '{quellBeleg.BelegNummer}' muss erst gebucht werden, bevor er überführt werden kann.");
 
-        // Offene-Mengen-Prüfung explizit in derselben Transaktion — Schutz gegen Race zweier gleichzeitiger Überleitungen.
+        // Offene-Mengen-Prüfung explizit in derselben Transaktion, mit vorheriger Sperre auf dem Quellbeleg
+        // (s. SperreQuellbelegeAsync) — sonst schützt der Re-Check unter READ COMMITTED nicht.
+        await SperreQuellbelegeAsync(db, [quellBeleg.Id], ct);
         var quellPositionIds = quellBeleg.Positionen.Select(p => p.Id).ToList();
-        var folgepositionen = await db.BelegPositionen.AsNoTracking()
-            .Where(p => p.UrsprungsPositionId != null && quellPositionIds.Contains(p.UrsprungsPositionId.Value))
-            .ToListAsync(ct);
+        var folgepositionen = await LadeFolgepositionenAsync(db, quellPositionIds, ct);
 
         var zielBeleg = NeueInstanz(zielTyp);
         zielBeleg.BelegNummer = zielTyp == BelegTyp.Rechnung
@@ -159,9 +196,8 @@ public sealed class BelegUeberleitungService(
             ?? throw new NotFoundException(nameof(Beleg), quellBelegId);
 
         var quellPositionIds = quellBeleg.Positionen.Select(p => p.Id).ToList();
-        var folgepositionen = await db.BelegPositionen.AsNoTracking()
-            .Where(p => p.UrsprungsPositionId != null && quellPositionIds.Contains(p.UrsprungsPositionId.Value))
-            .ToListAsync(ct);
+        // Reine Anzeige, keine Sperre nötig — der verbindliche Re-Check läuft in der Überleitung selbst.
+        var folgepositionen = await LadeFolgepositionenAsync(db, quellPositionIds, ct);
 
         return quellBeleg.Positionen
             .Where(p => p.PositionsTyp == PositionsTyp.Artikel)
@@ -199,10 +235,9 @@ public sealed class BelegUeberleitungService(
                 throw new InvalidOperationException($"Kunde '{quellBeleg.Kunde.Kundennummer}' hat Liefersperre.");
         }
 
+        await SperreQuellbelegeAsync(db, [quellBeleg.Id], ct);
         var quellPositionIds = quellBeleg.Positionen.Select(p => p.Id).ToList();
-        var folgepositionen = await db.BelegPositionen.AsNoTracking()
-            .Where(p => p.UrsprungsPositionId != null && quellPositionIds.Contains(p.UrsprungsPositionId.Value))
-            .ToListAsync(ct);
+        var folgepositionen = await LadeFolgepositionenAsync(db, quellPositionIds, ct);
 
         var zielBeleg = NeueInstanz(zielTyp);
         zielBeleg.BelegNummer = zielTyp == BelegTyp.Rechnung
@@ -331,10 +366,9 @@ public sealed class BelegUeberleitungService(
                 throw new InvalidOperationException("Sammelüberleitung nur für Belege derselben Zahlungsbedingung möglich.");
         }
 
+        await SperreQuellbelegeAsync(db, quellBelege.Select(b => b.Id), ct);
         var alleQuellPositionIds = quellBelege.SelectMany(b => b.Positionen).Select(p => p.Id).ToList();
-        var folgepositionen = await db.BelegPositionen.AsNoTracking()
-            .Where(p => p.UrsprungsPositionId != null && alleQuellPositionIds.Contains(p.UrsprungsPositionId.Value))
-            .ToListAsync(ct);
+        var folgepositionen = await LadeFolgepositionenAsync(db, alleQuellPositionIds, ct);
 
         var zielBeleg = NeueInstanz(zielTyp);
         zielBeleg.BelegNummer = zielTyp == BelegTyp.Rechnung

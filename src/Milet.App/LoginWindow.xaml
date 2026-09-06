@@ -21,7 +21,25 @@
                 Style="{StaticResource AccentButtonStyle}"
                 HorizontalAlignment="Stretch"
                 Command="{x:Bind ViewModel.AnmeldenCommand}"
-                IsEnabled="{x:Bind ViewModel.SchemaAktuell, Mode=OneWay}" />
+                IsEnabled="{x:Bind ViewModel.SchemaAktuell, Mode=OneWay}"
+                Visibility="{x:Bind ViewModel.PasswortwechselErforderlich, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=invers}" />
+
+            <!-- Zweite Stufe: erzwungener Passwortwechsel. Kein eigener Dialog, weil zu diesem Zeitpunkt noch
+                 keine Sitzung und kein sichtbares Hauptfenster (und damit kein XamlRoot) existiert.
+                 PasswordBox.Password ist keine bindbare Abhängigkeitseigenschaft — deshalb hier dasselbe
+                 PasswordChanged-Muster wie oben beim Anmelde-Passwort. -->
+            <StackPanel
+                Spacing="12"
+                Visibility="{x:Bind ViewModel.PasswortwechselErforderlich, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <PasswordBox x:Name="NeuesPasswortBox" Header="Neues Passwort" PasswordChanged="NeuesPasswortBox_PasswordChanged" />
+                <PasswordBox x:Name="NeuesPasswortWiederholungBox" Header="Neues Passwort wiederholen" PasswordChanged="NeuesPasswortWiederholungBox_PasswordChanged" />
+                <Button
+                    Content="Passwort ändern und anmelden"
+                    Style="{StaticResource AccentButtonStyle}"
+                    HorizontalAlignment="Stretch"
+                    Command="{x:Bind ViewModel.PasswortWechselnCommand}" />
+            </StackPanel>
+
             <ProgressRing IsActive="{x:Bind ViewModel.AnmeldungLaeuft, Mode=OneWay}" HorizontalAlignment="Center" />
         </StackPanel>
     </Grid>

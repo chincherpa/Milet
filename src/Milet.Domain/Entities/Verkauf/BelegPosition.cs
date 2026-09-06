@@ -41,7 +41,15 @@ public class BelegPosition
     /// <summary>Trägt Teillieferung/Teilfakturierung/Sammelrechnung: offene Menge = Menge − Σ referenzierender Folgepositionen.</summary>
     public int? UrsprungsPositionId { get; set; }
 
-    /// <summary>Berechnet die noch nicht überführte Menge dieser Position anhand aller Positionen im System, die auf sie verweisen.</summary>
+    /// <summary>Berechnet die noch nicht überführte Menge dieser Position anhand aller Positionen im System,
+    /// die auf sie verweisen.
+    ///
+    /// WICHTIG für Aufrufer: <paramref name="alle"/> darf keine Positionen STORNIERTER Belege enthalten —
+    /// eine stornierte Lieferung hat die Menge nicht verbraucht und muss wieder überleitbar sein. Die Methode
+    /// kann das nicht selbst filtern, weil sie den Belegstatus nicht kennt (Beleg-Navigation ist in den
+    /// AsNoTracking-Abfragen der Aufrufer nicht geladen); gefiltert wird deshalb an der Abfrage. Alle
+    /// heutigen Aufrufer tun das (BelegService, BelegUeberleitungService, VerfuegbarkeitService,
+    /// ReportingService).</summary>
     public static decimal OffeneMenge(BelegPosition position, IEnumerable<BelegPosition> alle)
     {
         ArgumentNullException.ThrowIfNull(position);

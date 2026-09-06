@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Storage;
 using Milet.Application.Abstractions;
 using Milet.Domain.Common;
 using Milet.Domain.Entities.Admin;
@@ -19,6 +20,14 @@ namespace Milet.Infrastructure.Persistence.Interceptors;
 /// Der Interceptor ist Singleton (mehrere DbContext-Instanzen aus der Factory) — der Zwischenstand
 /// je Speichervorgang hängt daher an einer <see cref="ConditionalWeakTable{TKey,TValue}"/> je Context,
 /// nicht an Instanzfeldern.
+///
+/// ATOMARITÄT: die Audit-Zeilen entstehen zwangsläufig in einem ZWEITEN SaveChanges (die Schlüssel neu
+/// angelegter Entitäten sind vorher unbekannt). Ohne Schutz hieße das: der fachliche Save ist committet,
+/// und wenn das Schreiben der Audit-Zeilen danach scheitert, existiert die Änderung ohne Nachweis — bei
+/// einem GoBD-Nachweis genau das falsche Ergebnis. Deshalb öffnet der Interceptor in
+/// <c>SavingChanges</c> eine eigene Transaktion, WENN der Aufrufer keine hat, und committet sie erst
+/// nach dem Schreiben der Audit-Zeilen. Hat der Aufrufer bereits eine Transaktion (alle Buchungs- und
+/// Belegpfade), wird nichts geöffnet — dann liegen beide Saves ohnehin darin.
 /// </summary>
 public sealed class AuditSaveChangesInterceptor(ICurrentUserService currentUser) : SaveChangesInterceptor
 {
@@ -41,29 +50,69 @@ public sealed class AuditSaveChangesInterceptor(ICurrentUserService currentUser)
 
     private static readonly ConditionalWeakTable<DbContext, List<PendingAudit>> Pending = new();
 
+    /// <summary>Transaktionen, die DIESER Interceptor geöffnet hat und deshalb auch selbst beenden muss —
+    /// eine vom Aufrufer mitgebrachte Transaktion wird nie angefasst.</summary>
+    private static readonly ConditionalWeakTable<DbContext, IDbContextTransaction> EigeneTransaktion = new();
+
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
     {
         Anwenden(eventData.Context);
+        if (BrauchtEigeneTransaktion(eventData.Context))
+        {
+            EigeneTransaktion.AddOrUpdate(eventData.Context!, eventData.Context!.Database.BeginTransaction());
+        }
+
         return base.SavingChanges(eventData, result);
     }
 
-    public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+    public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
     {
         Anwenden(eventData.Context);
-        return base.SavingChangesAsync(eventData, result, cancellationToken);
+        if (BrauchtEigeneTransaktion(eventData.Context))
+        {
+            EigeneTransaktion.AddOrUpdate(
+                eventData.Context!, await eventData.Context!.Database.BeginTransactionAsync(cancellationToken));
+        }
+
+        return await base.SavingChangesAsync(eventData, result, cancellationToken);
     }
+
+    /// <summary>
+    /// Nur wenn es etwas zu protokollieren gibt UND der Aufrufer keine Transaktion mitbringt. Der zweite
+    /// Aufruf (das Schreiben der Audit-Zeilen selbst) fällt schon über die erste Bedingung heraus: er sammelt
+    /// nichts ein, weil AuditLog keine AuditableEntity ist.
+    /// </summary>
+    /// <remarks>Setzt voraus, dass keine wiederholende Ausführungsstrategie konfiguriert ist
+    /// (<c>EnableRetryOnFailure</c>) — die verbietet vom Benutzer eröffnete Transaktionen. Die
+    /// Verbindungskonfiguration in <c>DependencyInjection.AddInfrastructure</c> nutzt die Standardstrategie.</remarks>
+    private static bool BrauchtEigeneTransaktion(DbContext? context)
+        => context is not null
+            && Pending.TryGetValue(context, out _)
+            && context.Database.CurrentTransaction is null
+            && !EigeneTransaktion.TryGetValue(context, out _);
 
     public override int SavedChanges(SaveChangesCompletedEventData eventData, int result)
     {
         // Eigener synchroner Pfad statt .GetAwaiter().GetResult() auf der async-Variante: Sync-over-Async
         // kann in einem UI-Kontext blockieren. Genutzt wird durchgängig der async-Pfad, aber der synchrone
         // darf keine Falle sein.
+        // Die eigene Transaktion VOR dem Schreiben der Audit-Zeilen aus der Tabelle nehmen: das Schreiben ist
+        // selbst ein SaveChanges und läuft erneut durch diesen Interceptor. Stünde sie noch drin, würde der
+        // innere Durchlauf sie committen — im Ergebnis zwar richtig, aber nur zufällig.
+        var transaktion = TransaktionUebernehmen(eventData.Context);
+
         var logs = BaueLogs(eventData.Context);
         if (logs is not null)
         {
             eventData.Context!.Set<AuditLog>().AddRange(logs);
             eventData.Context.SaveChanges();
+        }
+
+        if (transaktion is not null)
+        {
+            transaktion.Commit();
+            transaktion.Dispose();
         }
 
         return base.SavedChanges(eventData, result);
@@ -72,8 +121,69 @@ public sealed class AuditSaveChangesInterceptor(ICurrentUserService currentUser)
     public override async ValueTask<int> SavedChangesAsync(
         SaveChangesCompletedEventData eventData, int result, CancellationToken cancellationToken = default)
     {
+        // s. SavedChanges — erst übernehmen, dann schreiben, dann committen.
+        var transaktion = TransaktionUebernehmen(eventData.Context);
+
         await AuditSchreibenAsync(eventData.Context, cancellationToken);
+
+        if (transaktion is not null)
+        {
+            await transaktion.CommitAsync(cancellationToken);
+            await transaktion.DisposeAsync();
+        }
+
         return await base.SavedChangesAsync(eventData, result, cancellationToken);
+    }
+
+    /// <summary>Scheitert der fachliche Save, muss die selbst geöffnete Transaktion zurückgerollt werden —
+    /// sonst bliebe sie offen und die nächste Operation auf dem Context liefe unbemerkt darin weiter.</summary>
+    public override void SaveChangesFailed(DbContextErrorEventData eventData)
+    {
+        TransaktionVerwerfen(eventData.Context);
+        base.SaveChangesFailed(eventData);
+    }
+
+    public override async Task SaveChangesFailedAsync(
+        DbContextErrorEventData eventData, CancellationToken cancellationToken = default)
+    {
+        TransaktionVerwerfen(eventData.Context);
+        await base.SaveChangesFailedAsync(eventData, cancellationToken);
+    }
+
+    /// <summary>Nimmt die selbst geöffnete Transaktion aus der Tabelle und gibt sie an den Aufrufer ab —
+    /// ab hier ist ausschließlich er für Commit/Rollback zuständig.</summary>
+    private static IDbContextTransaction? TransaktionUebernehmen(DbContext? context)
+    {
+        if (context is null || !EigeneTransaktion.TryGetValue(context, out var transaktion))
+        {
+            return null;
+        }
+
+        EigeneTransaktion.Remove(context);
+        return transaktion;
+    }
+
+    private static void TransaktionVerwerfen(DbContext? context)
+    {
+        if (context is null || !EigeneTransaktion.TryGetValue(context, out var transaktion))
+        {
+            return;
+        }
+
+        EigeneTransaktion.Remove(context);
+        Pending.Remove(context);
+        try
+        {
+            transaktion.Rollback();
+        }
+        catch (InvalidOperationException)
+        {
+            // Bereits beendet (z. B. weil der Provider die Verbindung abgeräumt hat) — nichts zu tun.
+        }
+        finally
+        {
+            transaktion.Dispose();
+        }
     }
 
     private void Anwenden(DbContext? context)

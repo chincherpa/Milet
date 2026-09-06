@@ -21,6 +21,10 @@ public sealed record FibuKonfigurationDto
     public int WirtschaftsjahrBeginnMonat { get; init; } = 1;
     public int SachkontenLaenge { get; init; } = 4;
     public int BankkontoNr { get; init; }
+
+    /// <summary>0 = nicht gepflegt, dann greift das Standardkonto des Kontenrahmens (s. Entity).</summary>
+    public int SkontoKontoDebitorNr { get; init; }
+    public int SkontoKontoKreditorNr { get; init; }
 }
 
 public sealed record RechtDto
@@ -62,6 +66,30 @@ public sealed record BenutzerSessionDto
     public string BenutzerName { get; init; } = string.Empty;
     public string RollenName { get; init; } = string.Empty;
     public IReadOnlyList<string> Rechte { get; init; } = [];
+}
+
+/// <summary>Ergebnis eines Anmeldeversuchs. Ein einfaches <c>BenutzerSessionDto?</c> reicht nicht mehr:
+/// zwischen „abgelehnt" und „Passwort stimmt, aber der Zugang ist vorübergehend gesperrt" muss die
+/// Oberfläche unterscheiden können, ohne dass der abgelehnte Fall irgendetwas über die Existenz des
+/// Benutzers verrät.</summary>
+public sealed record AnmeldeErgebnisDto
+{
+    public BenutzerSessionDto? Session { get; init; }
+
+    /// <summary>Gesetzt, wenn das Passwort stimmt, der Zugang aber wegen zu vieler Fehlversuche bis zu
+    /// diesem Zeitpunkt gesperrt ist. Dann ist <see cref="Session"/> null.</summary>
+    public DateTime? GesperrtBis { get; init; }
+
+    /// <summary>Anmeldung erfolgreich, aber das Passwort muss vor dem Weiterarbeiten gewechselt werden
+    /// (Erstbenutzer aus dem Seed, administratives Zurücksetzen).</summary>
+    public bool PasswortAenderungErforderlich { get; init; }
+
+    public static AnmeldeErgebnisDto Fehlgeschlagen() => new();
+
+    public static AnmeldeErgebnisDto Gesperrt(DateTime bis) => new() { GesperrtBis = bis };
+
+    public static AnmeldeErgebnisDto Erfolgreich(BenutzerSessionDto session, bool passwortAenderungErforderlich) =>
+        new() { Session = session, PasswortAenderungErforderlich = passwortAenderungErforderlich };
 }
 
 public sealed record AuditLogDto
