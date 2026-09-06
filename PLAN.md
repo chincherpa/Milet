@@ -83,6 +83,20 @@ Atomar in Buchungs-Transaktion, kein Retry-Loop.
 - RowVersion auf jedem Aggregate Root; `DbUpdateConcurrencyException` → Standard-Dialog „neu laden?" (kein Merge-UI in v1).
 - Optional `AuditLog` (JSON-Diff) für Belege + Stammdaten (GoBD-Nachweis).
 
+### RBAC: was geprüft wird und was nicht
+- **Schreibpfade prüfen, Lesepfade nicht.** Jede schreibende Servicemethode ruft
+  `IBerechtigungsService.PruefeRecht`; Suchen/Laden/Listen tun das bewusst nicht. Begründung: die App ist
+  ein Desktop-Client für ein kleines Team, in dem jeder angemeldete Benutzer die Stammdaten sehen darf, und
+  eine Rechteprüfung je Leseabfrage wäre ein Vielfaches an Code ohne Schutzgewinn (wer die Liste nicht sehen
+  soll, bekommt den Navigationspunkt nicht).
+  Zwei bewusste Ausnahmen prüfen trotzdem, weil sie Auswertungen und keine Stammdaten liefern:
+  `DatevExportService.VorschauAsync` (Belegzahlen + Umsatzsumme) und alles unter `MarkiereAlsExportiert`.
+- **Rechte sind ein Schnappschuss des Anmeldezeitpunkts** (`CurrentSessionService`). Entzieht ein
+  Administrator einem bereits angemeldeten Benutzer ein Recht, wirkt das erst nach dessen Neuanmeldung —
+  auch auf einem anderen Rechner. Bewusst so: ein Nachlesen bei jedem `HatRecht` hieße eine DB-Abfrage in
+  einer synchronen Methode (Sync-over-Async, im Projekt durchgängig vermieden), und ein Push an andere
+  Clients gibt es in einem Desktop-Deployment ohne Server-Komponente nicht.
+
 ## Geschäftsprozesse
 
 Ein generischer `BelegUeberleitungService.Ueberleiten(sourceBelegId, targetTyp, selection)`: kopiert Kopf-Snapshots + gewählte Zeilen (offene Mengen), setzt UrsprungsPositionId. Eine Transaktion je Nutzeraktion.

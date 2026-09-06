@@ -162,6 +162,7 @@ public sealed class BelegService(
         beleg.ExterneReferenz = dto.ExterneReferenz;
 
         AktualisierePositionen(db, beleg, dto.Positionen);
+        await PruefeUrsprungsMengenAsync(db, beleg, ct);
 
         db.RemoveRange(beleg.Steuersummen);
         var neueSteuersummen = SteuerRechner.BerechneSteuersummen(beleg.Positionen);
@@ -228,6 +229,61 @@ public sealed class BelegService(
                     UrsprungsPositionId = dtoPos.UrsprungsPositionId,
                 });
             }
+        }
+    }
+
+    /// <summary>
+    /// Verteidigt die eine Invariante, auf der Teillieferung, Teilfakturierung und Sammelrechnung beruhen:
+    /// die Summe der auf eine Quellposition verweisenden Mengen darf deren Menge nicht übersteigen
+    /// (= <c>BelegPosition.OffeneMenge</c> bleibt &gt;= 0).
+    ///
+    /// Nötig, weil <c>UrsprungsPositionId</c> und <c>Menge</c> ungeprüft aus dem DTO kommen. Die sorgfältige
+    /// In-Transaktion-Prüfung in <c>BelegUeberleitungService.UeberleitenMitAuswahlAsync</c> gilt nur für den
+    /// Überleitungspfad; über diesen Speicherpfad war sie umgehbar — ein per Überleitung entstandener
+    /// Lieferschein-Entwurf über 4 von 10 Stück ließe sich auf 40 hochsetzen und buchen.
+    ///
+    /// Läuft in derselben Transaktion wie das Speichern (s. Aufrufstelle), liest also einen konsistenten
+    /// Stand. Gegen zwei GLEICHZEITIGE Überleitungen schützt das so wenig wie der Re-Check dort — das ist
+    /// die bekannte READ-COMMITTED-Race (STATUS.md „Bekannte Risiken"), hier nicht verschlimmert.
+    /// </summary>
+    private static async Task PruefeUrsprungsMengenAsync(MiletDbContext db, Beleg beleg, CancellationToken ct)
+    {
+        var ursprungsIds = beleg.Positionen
+            .Where(p => p.UrsprungsPositionId != null)
+            .Select(p => p.UrsprungsPositionId!.Value)
+            .Distinct()
+            .ToList();
+        if (ursprungsIds.Count == 0) return;
+
+        var quellPositionen = await db.BelegPositionen.AsNoTracking()
+            .Where(p => ursprungsIds.Contains(p.Id))
+            .ToListAsync(ct);
+
+        var fehlend = ursprungsIds.Except(quellPositionen.Select(p => p.Id)).ToList();
+        if (fehlend.Count > 0)
+            throw new InvalidOperationException(
+                $"Position verweist auf eine nicht existierende Ursprungsposition ({string.Join(", ", fehlend)}).");
+
+        // Alle bereits gespeicherten Folgepositionen dieser Quellen, ohne die Positionen DIESES Belegs —
+        // die stehen im Change-Tracker mit ihren neuen Mengen und werden separat addiert.
+        var fremdeFolgepositionen = await db.BelegPositionen.AsNoTracking()
+            .Where(p => p.UrsprungsPositionId != null && ursprungsIds.Contains(p.UrsprungsPositionId.Value) && p.BelegId != beleg.Id)
+            .ToListAsync(ct);
+
+        foreach (var quellPosition in quellPositionen)
+        {
+            var bereitsUebernommen = fremdeFolgepositionen
+                .Where(p => p.UrsprungsPositionId == quellPosition.Id)
+                .Sum(p => p.Menge);
+            var indiesemBeleg = beleg.Positionen
+                .Where(p => p.UrsprungsPositionId == quellPosition.Id)
+                .Sum(p => p.Menge);
+
+            var ueberhang = bereitsUebernommen + indiesemBeleg - quellPosition.Menge;
+            if (ueberhang > 0)
+                throw new InvalidOperationException(
+                    $"Position '{quellPosition.Bezeichnung}': übernommene Menge ({bereitsUebernommen + indiesemBeleg:0.###}) "
+                    + $"übersteigt die Menge der Ursprungsposition ({quellPosition.Menge:0.###}).");
         }
     }
 

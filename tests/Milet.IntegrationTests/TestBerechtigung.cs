@@ -17,3 +17,14 @@ internal sealed class AllesErlaubtBerechtigungsService : IBerechtigungsService
     {
     }
 }
+
+/// <summary>Fester Benutzer für Services, die den Anmeldenamen protokollieren (DatevExportService schreibt
+/// den Festschreibe-Vorgang selbst in den AuditLog).</summary>
+internal sealed class TestBenutzerService : ICurrentUserService
+{
+    public static readonly TestBenutzerService Instanz = new();
+
+    public int? BenutzerId => 1;
+
+    public string BenutzerName => "Test";
+}

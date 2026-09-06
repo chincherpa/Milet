@@ -176,6 +176,9 @@
                                 <Run Text=" — " />
                                 <Run Text="{Binding StufeBezeichnung}" />
                             </TextBlock>
+                            <TextBlock Text="{Binding Bemerkung}" FontSize="11" Opacity="0.8" FontStyle="Italic"
+                                       TextWrapping="Wrap"
+                                       Visibility="{Binding Bemerkung, Converter={StaticResource StringNotEmptyToVisibilityConverter}}" />
                         </StackPanel>
                     </DataTemplate>
                 </ListView.ItemTemplate>

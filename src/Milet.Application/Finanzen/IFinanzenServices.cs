@@ -48,5 +48,9 @@ public interface IDatevExportService
     /// <summary>Setzt <c>ExportiertAm</c> auf den übergebenen Vorgängen (nur dort, wo es noch nicht gesetzt
     /// ist) — erst nach diesem Aufruf liefert ein erneuter Export für denselben Zeitraum 0 Zeilen
     /// (Doppelexport-Schutz). Aufzurufen, sobald die Datei geschrieben ist.</summary>
-    Task MarkiereAlsExportiertAsync(IReadOnlyList<int> belegIds, IReadOnlyList<int> zahlungIds, CancellationToken ct = default);
+    /// <summary><paramref name="von"/>/<paramref name="bis"/> nur für den AuditLog-Eintrag: die Markierung
+    /// selbst läuft über ExecuteUpdate und damit an den Interceptoren vorbei, der GoBD-relevante Vorgang
+    /// „Stapel festgeschrieben" wird deshalb von Hand protokolliert und braucht den Zeitraum als Bezug.</summary>
+    Task MarkiereAlsExportiertAsync(
+        IReadOnlyList<int> belegIds, IReadOnlyList<int> zahlungIds, DateOnly von, DateOnly bis, CancellationToken ct = default);
 }

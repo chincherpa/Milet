@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Milet.Application.Abstractions;
 using Milet.Application.Admin;
@@ -25,12 +26,17 @@ namespace Milet.Infrastructure.Services;
 /// und tauchten nie wieder auf.</summary>
 public sealed class DatevExportService(
     IDbContextFactory<MiletDbContext> dbContextFactory,
-    IBerechtigungsService berechtigung) : IDatevExportService
+    IBerechtigungsService berechtigung,
+    ICurrentUserService currentUser) : IDatevExportService
 {
     static DatevExportService() => Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
     public async Task<DatevExportVorschauDto> VorschauAsync(DateOnly von, DateOnly bis, CancellationToken ct = default)
     {
+        // Lesepfade sind in diesem Projekt sonst ungeschützt (s. PLAN.md) — die Vorschau ist die Ausnahme:
+        // sie liefert Belegzahlen und Umsatzsumme des Zeitraums, also genau die Auswertung, für die das
+        // Finanzen-Recht existiert. Ohne die Prüfung wäre sie der offene Seiteneingang zum Export daneben.
+        berechtigung.PruefeRecht(RechtCodes.Finanzen);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         var (rechnungen, eingangsrechnungen, zahlungen, mwStKonten, bankkonto, kontenrahmen) = await LadeAsync(db, von, bis, ct);
 
@@ -106,7 +112,7 @@ public sealed class DatevExportService(
     }
 
     public async Task MarkiereAlsExportiertAsync(
-        IReadOnlyList<int> belegIds, IReadOnlyList<int> zahlungIds, CancellationToken ct = default)
+        IReadOnlyList<int> belegIds, IReadOnlyList<int> zahlungIds, DateOnly von, DateOnly bis, CancellationToken ct = default)
     {
         berechtigung.PruefeRecht(RechtCodes.Finanzen);
         if (belegIds.Count == 0 && zahlungIds.Count == 0) return;
@@ -127,6 +133,23 @@ public sealed class DatevExportService(
             await db.Zahlungen.Where(z => zahlungIds.Contains(z.Id) && z.ExportiertAm == null)
                 .ExecuteUpdateAsync(s => s.SetProperty(z => z.ExportiertAm, jetzt), ct);
         }
+
+        // ExecuteUpdateAsync geht nicht durch SaveChanges und damit an BEIDEN Interceptoren vorbei. Für den
+        // BelegImmutabilityInterceptor ist das nötig — ExportiertAm auf einer gebuchten Rechnung zu setzen
+        // wäre sonst gesperrt. Der AuditLog verlöre dabei aber ausgerechnet den Vorgang, den er nachweisen
+        // soll: "dieser Stapel wurde am X von Y festgeschrieben". Der Eintrag wird deshalb hier von Hand
+        // geschrieben — in derselben Transaktion wie die Markierung, damit beides gemeinsam gilt oder gar nicht.
+        db.Set<AuditLog>().Add(new AuditLog
+        {
+            Zeitpunkt = jetzt,
+            BenutzerId = currentUser.BenutzerId,
+            BenutzerName = currentUser.BenutzerName,
+            EntityName = "DatevExport",
+            EntityId = $"{von:yyyy-MM-dd}..{bis:yyyy-MM-dd}",
+            Aktion = "Festgeschrieben",
+            Aenderungen = JsonSerializer.Serialize(new { BelegIds = belegIds, ZahlungIds = zahlungIds }),
+        });
+        await db.SaveChangesAsync(ct);
 
         await transaktion.CommitAsync(ct);
     }

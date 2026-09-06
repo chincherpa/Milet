@@ -4,6 +4,11 @@ public interface IKulturstufenService
 {
     Task<IReadOnlyList<KulturstufeDto>> ListeAsync(CancellationToken ct = default);
     Task<KulturstufeDto> SpeichereAsync(KulturstufeDto dto, CancellationToken ct = default);
+
+    /// <summary>Tauscht die Reihenfolge mit der benachbarten Stufe. Eigener Pfad, weil Reihenfolge eindeutig
+    /// indiziert ist und ein Umsortieren über SpeichereAsync deshalb am Zwischenstand scheitert.</summary>
+    Task VerschiebeAsync(int id, bool nachOben, CancellationToken ct = default);
+
     Task LoescheAsync(int id, CancellationToken ct = default);
 }
 
@@ -14,8 +19,10 @@ public interface IGaertnereiplanService
 
     Task<GaertnereiplanDto> SpeicherePlanAsync(GaertnereiplanDto dto, CancellationToken ct = default);
 
-    /// <summary>Legt bei Id == 0 einen neuen Lagerort mit IstFeld = true an (inkl. Code-Vergabe), sonst Update.</summary>
-    Task<FeldDto> SpeichereFeldAsync(int gaertnereiplanId, FeldDto dto, CancellationToken ct = default);
+    /// <summary>Legt bei Id == 0 einen neuen Lagerort mit IstFeld = true an (inkl. Code-Vergabe), sonst Update.
+    /// Prüft, dass das Feld im Plan liegt (Fehler), und meldet Sektionen, die durch die Geometrieänderung aus
+    /// dem Feld gefallen sind (Warnung im Ergebnis, kein Abbruch).</summary>
+    Task<FeldSpeichernErgebnisDto> SpeichereFeldAsync(int gaertnereiplanId, FeldDto dto, CancellationToken ct = default);
 
     Task LoescheFeldAsync(int feldId, CancellationToken ct = default);
 
@@ -40,6 +47,11 @@ public interface IKulturBestandService
 
     /// <summary>Alle Fundstellen einer Pflanze, sortiert nach Stufe-Reihenfolge, dann Feld, dann Sektion.</summary>
     Task<IReadOnlyList<PflanzenVorkommenDto>> LadeVorkommenAsync(int artikelId, CancellationToken ct = default);
+
+    /// <summary>Fundstellen mehrerer Pflanzen in EINER Abfrage, gruppiert je ArtikelId — für Aufrufer, die
+    /// eine ganze Belegposition-Liste auf einmal bewerten (VerfuegbarkeitService.LadeFuerBelegAsync).
+    /// Artikel ohne Fundstelle fehlen im Ergebnis; <c>ILookup</c> liefert dafür eine leere Sequenz.</summary>
+    Task<ILookup<int, PflanzenVorkommenDto>> LadeVorkommenAsync(IReadOnlyList<int> artikelIds, CancellationToken ct = default);
 
     Task<IReadOnlyList<KulturHistorieZeileDto>> LadeHistorieAsync(int artikelId, int? sektionId, DateOnly? von, DateOnly? bis, CancellationToken ct = default);
 }

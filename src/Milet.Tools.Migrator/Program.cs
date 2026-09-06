@@ -12,6 +12,16 @@ using Milet.Infrastructure.Persistence.Seed;
 var connectionStringOverride = Environment.GetEnvironmentVariable("MILET_CONNECTIONSTRING")
     ?? args.FirstOrDefault(a => a.StartsWith("--connection=", StringComparison.Ordinal))?["--connection=".Length..];
 
+// Testdaten sind OPT-IN. Vorher lief DummyDatenSeed bedingungslos, und sein eigenes Gate ("noch keine
+// Artikel vorhanden") trifft genau den Zustand einer frischen PRODUKTIVdatenbank. Der Seed legt dabei nicht
+// nur erfundene Stammdaten an, sondern durchläuft die echte Buchungspipeline und BUCHT drei Rechnungen:
+// die verbrauchen RE-{Jahr}-0001..0003 aus dem lückenlosen Rechnungsnummernkreis (§14 UStG), sind als
+// gebuchte Belege durch den BelegImmutabilityInterceptor unveränderlich und mangels Storno über die
+// Anwendung nie wieder zu entfernen. Der dokumentierte Produktiv-Deployment-Schritt (docs/deployment.md § 2)
+// ist genau dieser Migratorlauf — der Standardweg darf die Datenbank nicht verunreinigen.
+var mitTestdaten = Environment.GetEnvironmentVariable("MILET_SEED_TESTDATEN") == "1"
+    || args.Contains("--mit-testdaten", StringComparer.Ordinal);
+
 var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
 {
     ContentRootPath = AppContext.BaseDirectory,
@@ -84,12 +94,23 @@ if (standardAdmin is not null && PasswortHasher.Verify(AdminSeed.StandardAdminPa
 // prüfen seit Phase 7 RBAC. Der Migrator hat keine Anmeldung: ohne diese technische Sitzung scheitert der
 // erste Migratorlauf auf einer leeren Datenbank mit KeinZugriffException('Stammdaten'). Die Sitzung wird
 // erst hier geöffnet, nachdem Migrationen und Grunddaten durch sind — Schema und Rechtekatalog stehen dann.
+// BenutzerId bewusst nullable durchgereicht: existiert der Standard-Admin nicht mehr (umbenannt/gelöscht),
+// schrieben ErstelltVonId und die AuditLog-Zeilen sonst eine 0, die auf keinen Benutzer zeigt. Es gibt
+// keinen FK auf diese Spalte, es knallt also nicht — die Herkunft wäre nur nicht mehr auflösbar.
 var sitzung = host.Services.GetRequiredService<ICurrentSessionService>();
-sitzung.Anmelden(standardAdmin?.Id ?? 0, "Migrator", "Administrator", RechtCodes.Alle);
+sitzung.Anmelden(standardAdmin?.Id, "Migrator", "Administrator", RechtCodes.Alle);
 
-var dummyAngelegt = await DummyDatenSeed.ApplyAsync(host.Services);
-Console.WriteLine(dummyAngelegt
-    ? "Testdaten (Kunden, Lieferanten, Artikel, Angebote/Aufträge/Rechnungen) angelegt."
-    : "Testdaten bereits vorhanden — übersprungen.");
+if (mitTestdaten)
+{
+    var dummyAngelegt = await DummyDatenSeed.ApplyAsync(host.Services);
+    Console.WriteLine(dummyAngelegt
+        ? "Testdaten (Kunden, Lieferanten, Artikel, Angebote/Aufträge/Rechnungen) angelegt."
+        : "Testdaten bereits vorhanden — übersprungen.");
+}
+else
+{
+    Console.WriteLine("Testdaten übersprungen (Standard). Für Entwicklung/Demo anfordern mit "
+        + "--mit-testdaten oder MILET_SEED_TESTDATEN=1.");
+}
 
 return 0;

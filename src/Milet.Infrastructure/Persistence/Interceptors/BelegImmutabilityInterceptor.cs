@@ -19,7 +19,15 @@ namespace Milet.Infrastructure.Persistence.Interceptors;
 /// Eingangsrechnung). Das ist keine inhaltliche Änderung am GoBD-relevanten Beleg, sondern nur eine
 /// Statusfortschreibung — deshalb erlaubt, aber nur wenn Status wirklich die EINZIGE geänderte Property ist
 /// (sonst könnte eine inhaltliche Änderung am Status-Flip vorbeigeschmuggelt werden). Storniert bleibt in
-/// jedem Fall vollständig gesperrt.</summary>
+/// jedem Fall vollständig gesperrt.
+///
+/// Zweite Ausnahme, spiegelbildlich: die Rücknahme Erledigt → Gebucht/Entwurf, die
+/// <c>BelegService.SetzeQuellbelegeZurueckAsync</c> setzt, wenn ein per Überleitung entstandener
+/// Folgeentwurf wieder gelöscht wird und die Menge des Quellbelegs damit erneut offen ist. Auch hier gilt:
+/// nur wenn Status wirklich die EINZIGE geänderte Property ist. Vorher fiel <c>Erledigt</c> durch alle
+/// Zweige und war damit gar nicht geprüft — der Kopf eines vollständig weiterberechneten Lieferscheins
+/// (BelegDatum, BelegNummer, Kopfsummen) war für jeden Codepfad schreibbar, während seine Positionen
+/// korrekt gesperrt waren.</summary>
 public sealed class BelegImmutabilityInterceptor : SaveChangesInterceptor
 {
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
@@ -63,15 +71,22 @@ public sealed class BelegImmutabilityInterceptor : SaveChangesInterceptor
             if (urspruenglicherStatus is BelegStatus.Storniert)
                 throw Gesperrt(entry.Entity.BelegNummer, urspruenglicherStatus, "er kann nicht mehr geändert werden");
 
-            if (urspruenglicherStatus is BelegStatus.Gebucht)
+            if (urspruenglicherStatus is BelegStatus.Gebucht or BelegStatus.Erledigt)
             {
                 var geaendertePropertien = entry.Properties.Where(p => p.IsModified).ToList();
-                var nurStatusFortschreibungAufErledigt =
+                var nurStatus =
                     geaendertePropertien.Count == 1
-                    && geaendertePropertien[0].Metadata.Name == nameof(Beleg.Status)
-                    && entry.Entity.Status == BelegStatus.Erledigt;
+                    && geaendertePropertien[0].Metadata.Name == nameof(Beleg.Status);
 
-                if (!nurStatusFortschreibungAufErledigt)
+                // Gebucht → Erledigt (Überleitung schreibt fort) und Erledigt → Gebucht/Entwurf (der
+                // Folgeentwurf wurde gelöscht, die Menge ist wieder offen) sind reine Lebenszyklus-Übergänge,
+                // keine inhaltliche Änderung am GoBD-relevanten Beleg. Entwurf ist als Ziel nur aus Erledigt
+                // erreichbar: ein gebuchter Beleg wird nie wieder zum Entwurf.
+                var erlaubterUebergang = urspruenglicherStatus is BelegStatus.Gebucht
+                    ? entry.Entity.Status == BelegStatus.Erledigt
+                    : entry.Entity.Status is BelegStatus.Gebucht or BelegStatus.Entwurf;
+
+                if (!nurStatus || !erlaubterUebergang)
                     throw Gesperrt(entry.Entity.BelegNummer, urspruenglicherStatus, "er kann nicht mehr geändert werden");
             }
         }

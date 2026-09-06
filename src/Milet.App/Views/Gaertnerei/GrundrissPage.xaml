@@ -36,7 +36,7 @@
 
         <StackPanel Grid.Row="1" Grid.Column="1" Spacing="12" VerticalAlignment="Top">
             <InfoBar IsOpen="{x:Bind ViewModel.Fehler, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Error" Title="Fehler" Message="{x:Bind ViewModel.Fehler, Mode=OneWay}" />
-            <InfoBar IsOpen="{x:Bind ViewModel.UeberlappungsWarnung, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Warning" Title="Überlappung" Message="{x:Bind ViewModel.UeberlappungsWarnung, Mode=OneWay}" />
+            <InfoBar IsOpen="{x:Bind ViewModel.Geometriewarnung, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}" Severity="Warning" Title="Hinweis zur Geometrie" Message="{x:Bind ViewModel.Geometriewarnung, Mode=OneWay}" />
 
             <TextBlock Text="Auswahl" Style="{StaticResource SubtitleTextBlockStyle}" Visibility="{x:Bind ViewModel.IstElementAusgewaehlt, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}" />
             <TextBlock Text="Kein Element ausgewählt — auf ein Feld/eine Sektion klicken oder oben anlegen." Opacity="0.7" TextWrapping="Wrap"

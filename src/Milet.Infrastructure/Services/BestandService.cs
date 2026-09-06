@@ -69,18 +69,25 @@ public sealed class BestandService(
         await Validator.ValidateAndThrowAsync(dto, ct);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
-        await BucheBewegungAsync(db, dto.ArtikelId, dto.LagerortId, dto.MengeDelta, LagerbewegungTyp.Korrektur, belegPositionId: null, ct, dto.SektionId, dto.KulturstufeId);
+        // dto.Grund ist Pflichtfeld (BestandskorrekturValidator) und wurde bis dahin verworfen — eine manuelle
+        // Bestandskorrektur ohne nachlesbaren Grund ist genau die Buchung, bei der man ihn später sucht.
+        await BucheBewegungAsync(
+            db, dto.ArtikelId, dto.LagerortId, dto.MengeDelta, LagerbewegungTyp.Korrektur, belegPositionId: null, ct,
+            dto.SektionId, dto.KulturstufeId, bemerkung: dto.Grund);
         await transaction.CommitAsync(ct);
     }
 
     /// <summary>Einziger Schreibpfad auf Bestand — ein atomares UPDATE (kein Read-Modify-Write), Negativbestand ist hart gesperrt.
     /// Läuft innerhalb der Transaktion des Aufrufers (Aufrufer öffnet/committet); wiederverwendbar von Bestandskorrektur,
     /// Lieferschein-Buchen, Inventur-Abschluss, Kulturbuchungen (Phase 8). sektionId/kulturstufeId bleiben bei Default (null)
-    /// für jeden Aufrufer, der die beiden Dimensionen nicht kennt — Handelsware verhält sich exakt wie vor Phase 8.</summary>
+    /// für jeden Aufrufer, der die beiden Dimensionen nicht kennt — Handelsware verhält sich exakt wie vor Phase 8.
+    /// zeitpunkt/bemerkung bleiben bei Default für jeden Aufrufer, der kein fachliches Datum und keinen Freitext
+    /// hat (Lieferschein, Wareneingang, Inventur); die Kulturbuchungen reichen beides aus ihrem DTO durch.</summary>
     internal static async Task BucheBewegungAsync(
         MiletDbContext db, int artikelId, int lagerortId, decimal mengeDelta,
         LagerbewegungTyp typ, int? belegPositionId, CancellationToken ct,
-        int? sektionId = null, int? kulturstufeId = null)
+        int? sektionId = null, int? kulturstufeId = null,
+        DateTime? zeitpunkt = null, string? bemerkung = null)
     {
         // Eine vorgelagerte Abfrage (per Subquery-Projektion ein einziger Round-Trip) lädt Artikel.IstKulturpflanze
         // und ob der Lagerort aktive Sektionen hat — Grundlage für die zentralen Dimensionsregeln (KulturRegeln).
@@ -136,7 +143,12 @@ public sealed class BestandService(
             Typ = typ,
             Menge = mengeDelta,
             BelegPositionId = belegPositionId,
-            Zeitpunkt = DateTime.UtcNow,
+            // DateTime.Now (lokal), nicht UtcNow: die Kulturhistorie und beide Reports bilden ihre
+            // Filtergrenzen aus lokalen DateOnly-Werten der Oberfläche (von.ToDateTime(TimeOnly.MinValue)).
+            // Mit UTC fiel in Sommerzeit jede Buchung zwischen 00:00 und 02:00 Ortszeit in den Bericht des
+            // Vortags. Gleiche Quelle wie Belegdatum und NumberRangeService.
+            Zeitpunkt = zeitpunkt ?? DateTime.Now,
+            Bemerkung = bemerkung,
         });
 
         await db.SaveChangesAsync(ct);

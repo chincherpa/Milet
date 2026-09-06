@@ -49,7 +49,8 @@ public sealed record InventurPositionDto(
     decimal SollMenge,
     decimal? IstMenge,
     int? SektionId = null,
-    int? KulturstufeId = null);
+    int? KulturstufeId = null,
+    byte[]? RowVersion = null);
 
 public sealed record InventurDto
 {

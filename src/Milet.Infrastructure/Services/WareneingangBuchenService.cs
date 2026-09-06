@@ -49,6 +49,12 @@ public sealed class WareneingangBuchenService(
 
             var artikel = artikelJeId[artikelId];
 
+            // Klare Meldung mit Positionsnummer vorab statt der generischen Regelverletzung aus
+            // BestandService.BucheBewegungAsync (wie in LieferscheinBuchenService) — bei einem Wareneingang
+            // über 20 Positionen weiß der Benutzer sonst nicht, welche gemeint ist.
+            if (artikel.IstKulturpflanze && position.KulturstufeId is null)
+                throw new InvalidOperationException($"Position {position.PositionsNr}: Kulturstufe fehlt.");
+
             // Positives Delta — BestandService.BucheBewegungAsync ist unverändert wiederverwendbar (siehe
             // Phase-3-Kommentar dort): die atomare UPDATE-Bedingung "Menge + delta >= 0" ist bei einem Zugang
             // immer erfüllt, und legt bei erstem Bestand am Lagerort die ArtikelBestand-Zeile automatisch an.

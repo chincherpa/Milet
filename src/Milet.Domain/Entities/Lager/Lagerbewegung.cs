@@ -32,6 +32,16 @@ public class Lagerbewegung
     public int? SeriennummerId { get; set; }
     public Seriennummer? Seriennummer { get; set; }
 
+    /// <summary>Fachlicher Zeitpunkt der Bewegung — bei Kulturbuchungen das vom Benutzer erfasste Datum
+    /// (nachgetragener Zugang, Ausfall von vorgestern), sonst der Buchungszeitpunkt. LOKALE Zeit, nicht UTC:
+    /// sämtliche Auswertungen darüber (Kulturhistorie, Reporting) bilden ihre Filtergrenzen aus lokalen
+    /// DateOnly-Werten der Oberfläche. Mit UtcNow fiel in Sommerzeit jede Buchung vor 02:00 Ortszeit in den
+    /// Bericht des Vortags. Gleiche Quelle wie Belegdatum und NumberRangeService (s. Kommentar dort).</summary>
     public DateTime Zeitpunkt { get; set; }
     public int? BenutzerId { get; set; }
+
+    /// <summary>Freitext des Benutzers zur Bewegung — bei Ausfall die Ursache ("Frostschaden Nacht 12./13."),
+    /// bei Zugang/Umsetzen optionale Notiz. Nur die Kulturbuchungen füllen das Feld; Lieferschein- und
+    /// Wareneingangsbuchungen tragen ihre Herkunft über BelegPositionId.</summary>
+    public string? Bemerkung { get; set; }
 }

@@ -11,6 +11,7 @@
                 <ResourceDictionary Source="ms-appx:///Themes/Styles.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <conv:StringNotEmptyToBoolConverter x:Key="StringNotEmptyToBoolConverter" />
+            <conv:StringNotEmptyToVisibilityConverter x:Key="StringNotEmptyToVisibilityConverter" />
             <conv:DecimalToDoubleConverter x:Key="DecimalToDoubleConverter" />
             <conv:DateOnlyToDateTimeOffsetConverter x:Key="DateOnlyToDateTimeOffsetConverter" />
             <conv:NullableInt32ToDoubleConverter x:Key="NullableInt32ToDoubleConverter" />

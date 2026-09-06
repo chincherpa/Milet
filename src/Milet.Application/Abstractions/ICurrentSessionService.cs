@@ -15,7 +15,15 @@ public interface ICurrentSessionService : ICurrentUserService
 
     bool HatRecht(string rechtCode);
 
-    void Anmelden(int benutzerId, string benutzerName, string rollenName, IEnumerable<string> rechte);
+    /// <summary>Meldet einen Benutzer an. <paramref name="benutzerId"/> ist nullable für technische
+    /// Sitzungen ohne echten Benutzerdatensatz (Migrator) — 0 wäre dort eine Id, die auf niemanden zeigt
+    /// und in ErstelltVonId/AuditLog landen würde.
+    ///
+    /// Die Rechte werden hier eingefroren und nicht nachgelesen: entzieht ein Administrator einem bereits
+    /// angemeldeten Benutzer ein Recht, wirkt das erst nach dessen Neuanmeldung. Bewusste Entscheidung für
+    /// eine Desktop-Anwendung mit prozessweiter Sitzung — ein Nachlesen bei jedem HatRecht-Aufruf hieße eine
+    /// DB-Abfrage in einer synchronen Methode (Sync-over-Async, im Projekt durchgängig vermieden).</summary>
+    void Anmelden(int? benutzerId, string benutzerName, string rollenName, IEnumerable<string> rechte);
 
     void Abmelden();
 }

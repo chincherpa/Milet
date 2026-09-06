@@ -548,6 +548,68 @@ Windows-Build und der Smoke-Test aus dem Abschnitt darüber stehen unverändert 
    Reports). In Sommerzeit fällt jede Buchung zwischen 00:00 und 02:00 Ortszeit in den Vortagsbericht —
    dieselbe Inkonsistenz, die Befund 24 des Vorgänger-Reviews für die Belegdaten geschlossen hat.
 
+### Review-Fixes 2026-09-06 ⚠️ (Backend gebaut und getestet; Migration NICHT gegen eine DB gelaufen, WinUI unverifiziert) (Branch `claude/deep-code-review-u3j84m`)
+
+Abarbeitung aller 21 Befunde aus `REVIEW_2026-09-06.md`; die Tabelle „Umsetzungsstand" dort führt jeden
+einzelnen mit Stand. **Gebaut und getestet** (anders als bei den Review-Fixes vom 2026-08-29): alle fünf
+nicht-WinUI-Projekte 0 Warnungen/0 Fehler, `Milet.Domain.Tests` **81/81** (9 neue Tests),
+`Milet.Application.Tests` **66/66**, Integrationstests weiterhin 74/78 übersprungen (kein Docker-Daemon).
+
+**Schemaänderung — neue Migration `20260906093354_ReviewFixes20260906`:**
+- `Lagerbewegungen.Bemerkung` (nvarchar(500), null) — Befund 2.
+- `InventurPositionen.RowVersion` — Befund 15.
+- `Inventuren`: der Index auf `LagerortId` wird gefiltert und eindeutig (`WHERE [Status] = 0`) — Befund 7.
+  **Auf einer bestehenden Datenbank kann das Anlegen scheitern**, wenn dort schon zwei offene Inventuren
+  desselben Lagerorts liegen; Prüfabfrage im Kommentar der Migration.
+
+Die Migration ist mit `dotnet ef` erzeugt, aber **nie gegen eine Datenbank gelaufen** — kein SQL Server und
+kein Docker-Daemon in dieser Session. Ein Migratorlauf gegen eine frische **und** eine bestehende DB steht
+aus.
+
+**Verhaltensänderungen, die man wissen muss:**
+- **Testdaten sind jetzt Opt-in.** `dotnet run --project src/Milet.Tools.Migrator` legt **keine** Testdaten
+  mehr an; für Entwicklung/Demo `-- --mit-testdaten` anhängen oder `MILET_SEED_TESTDATEN=1` setzen.
+  Grund: der Seed bucht drei Rechnungen aus dem lückenlosen `RE`-Kreis, die GoBD-unveränderlich und mangels
+  Storno nicht mehr entfernbar sind — und sein Gate traf genau eine frische Produktiv-DB (`docs/deployment.md`).
+- **`Lagerbewegung.Zeitpunkt` ist lokal statt UTC** und trägt bei Kulturbuchungen das vom Benutzer erfasste
+  Datum statt der Buchungszeit. Bereits geschriebene Zeilen sind nicht migriert — im noch nicht produktiven
+  Stand folgenlos.
+- **Signaturänderungen** (alle Aufrufstellen angepasst, Build grün): `IDatevExportService.MarkiereAlsExportiertAsync`
+  (+`von`/`bis`), `IInventurService.ErfasseIstMengeAsync` (+`rowVersion`), `IGaertnereiplanService.SpeichereFeldAsync`
+  (liefert jetzt `FeldSpeichernErgebnisDto` mit Warnungen), `IKulturBestandService` (+Batch-Überladung),
+  `IKulturstufenService` (+`VerschiebeAsync`), `ICurrentSessionService.Anmelden` (`int` → `int?`),
+  `KulturHistorieZeileDto` (+`Bemerkung`), `InventurPositionDto` (+`RowVersion`),
+  `KulturRegeln.PruefeStufenwechsel` (+Feld-Ids). **Konstruktoränderung:** `DatevExportService` bekommt
+  zusätzlich `ICurrentUserService`.
+
+**Nicht umgesetzt, bewusst:** Befund 18 (Mahngebühr ist keine Forderung). `OffenerPosten.BelegId` ist nicht
+nullable — eine Gebührenforderung ohne Beleg ist im Modell nicht vorgesehen, und das zu ändern wäre ein
+Feature mit Buchhaltungsentscheidung (nullable Spalte, Null-Behandlung in drei Services, Erlöskonto in der
+FibuKonfiguration), kein Bugfix. Statt still falsch zu bleiben, sagt jetzt ein XML-Kommentar an
+`Mahnung.Gebuehr`, dass es ein Wert des Anschreibens und keine Forderung ist.
+
+**Zusätzlich behoben (nicht Teil des Reviews):**
+- `Microsoft.EntityFrameworkCore.Design` war in `Directory.Packages.props` gepinnt, aber von keinem Projekt
+  referenziert — `dotnet ef migrations add` scheiterte aus einem frischen Checkout. Jetzt in
+  `Milet.Infrastructure` referenziert (`PrivateAssets="all"`).
+- `BestandskorrekturDto.Grund` ist ein Pflichtfeld und wurde wie die Kultur-Bemerkung verworfen — wird jetzt
+  in `Lagerbewegung.Bemerkung` persistiert.
+
+**Ein Befund des Reviews war teilweise falsch** und ist dort korrigiert: Befund 10 behauptete,
+`MahnwesenService` speichere „ohne jeden RowVersion-Abgleich, als einziger Kleinstamm-Service". Tatsächlich
+hat **keine** Kleinstamm-Entität eine RowVersion; `Mahnstufe` folgt der Konvention exakt.
+
+**Vor der Abnahme dieses Branches zwingend (nichts davon war hier möglich):**
+1. `dotnet build src/Milet.App/Milet.App.csproj -p:Platform=x64` — die UI-Änderungen (Kulturhistorie-Bemerkung,
+   ▲/▼ im Kulturstufen-Tab, Geometriewarnung im Grundriss, neuer `StringNotEmptyToVisibilityConverter` samt
+   Registrierung in `App.xaml`) sind nie kompiliert worden.
+2. `Milet.Tools.Migrator` gegen eine **frische** DB (prüft Opt-in-Verhalten und die neue Migration) und gegen
+   eine **bestehende** (prüft den gefilterten Unique-Index gegen Altdaten).
+3. Integrationstests **mit Docker** — die Race-Tests sind auch diesmal nicht gelaufen.
+4. Manueller Smoke-Test: Kulturbuchung mit rückdatiertem Datum + Bemerkung (erscheinen beide in der
+   Historie), Umsetzen zwischen zwei Feldern ohne Sektionen (muss jetzt gehen), Kulturstufen umsortieren,
+   Inventur-Ist-Menge parallel in zwei Fenstern (muss den Neuladen-Dialog zeigen).
+
 ## Gefixt während UI-Test (2026-08-25)
 - LocalDB-Datenbank hieß nach Projekt-Rename noch "Nexus" (Connection String erwartet "Milet") → "Fehler beim Laden" beim Öffnen der Kunden-Liste. Per `ALTER DATABASE ... MODIFY NAME` umbenannt (Seed-Daten erhalten), App neu gestartet — Kunden-Liste lädt jetzt.
 - Listenpreis-Präzision 4→2 Nachkommastellen (s. oben, Phase-1-Abnahme).
@@ -555,16 +617,19 @@ Windows-Build und der Smoke-Test aus dem Abschnitt darüber stehen unverändert 
 - Phase 2: Positions-Bezeichnung + IsEnabled-Scoping (s. oben, Phase-2-Abnahme).
 
 ## Bekannte Risiken (aus Plan, weiterhin relevant)
-- **[Neu 2026-09-06, s. `REVIEW_2026-09-06.md` Befund 1]** Der Migrator führt `DummyDatenSeed`
+- **[Behoben am 2026-09-06]** Der Migrator führte `DummyDatenSeed`
   bedingungslos aus; dessen Gate ist „noch keine Artikel" und trifft damit genau eine frische
   Produktivdatenbank. Der Seed bucht drei Rechnungen aus dem lückenlosen `RE`-Kreis — gebucht, damit
   GoBD-unveränderlich, und mangels Storno über die Anwendung nicht mehr entfernbar. Vor dem nächsten
-  Produktiv-Deployment auf Opt-in (`--mit-testdaten`) umstellen.
-- **[Neu 2026-09-06, s. `REVIEW_2026-09-06.md` Befund 7]** Der Guard gegen eine zweite offene Inventur
+  Produktiv-Deployment auf Opt-in (`--mit-testdaten`) umstellen. **Umgesetzt:** Testdaten sind seither
+  Opt-in (`--mit-testdaten` / `MILET_SEED_TESTDATEN=1`), `docs/deployment.md` warnt entsprechend.
+- **[Behoben am 2026-09-06]** Der Guard gegen eine zweite offene Inventur
   je Lagerort (`InventurService.NeueInventurAsync`) ist ein ungeschützter Read-then-Insert — dieselbe
   READ-COMMITTED-Klasse wie die Überleitungs-Race unten. Er ist ausgerechnet der Fix für Befund 9 des
   Reviews vom 2026-08-29 (Inventur-Doppelzählung). Billig zu schließen über einen gefilterten
-  Unique-Index `WHERE Status = Offen`.
+  Unique-Index `WHERE Status = Offen`. **Umgesetzt** in Migration `20260906093354_ReviewFixes20260906`;
+  der Guard im Service bleibt für die schnelle Meldung, die harte Regel steht in der Datenbank. Noch nicht
+  gegen eine echte DB verifiziert (kein SQL Server in der Umsetzungssession).
 - **[Behoben am 2026-08-30, Phase 8]** Race beim Erstanlegen einer `ArtikelBestand`-Zeile in
   `BestandService.BucheBewegungAsync` (E4 aus dem Phase-8-Plan): das atomare `UPDATE`-Muster deckte nur den
   Fall einer bereits existierenden Zeile ab; traf `UPDATE` auf 0 Zeilen (Erstbuchung), folgte ein

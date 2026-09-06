@@ -120,8 +120,8 @@ public sealed class InventurServiceTests : IAsyncLifetime
 
         var posSektionAJp = inventur.Positionen.First(p => p.SektionId == _sektionAId && p.KulturstufeId == _stufeJpId);
         var posSektionATp = inventur.Positionen.First(p => p.SektionId == _sektionAId && p.KulturstufeId == _stufeTpId);
-        await service.ErfasseIstMengeAsync(posSektionAJp.Id, 480m, ct); // 20 Ausfall nicht erfasst
-        await service.ErfasseIstMengeAsync(posSektionATp.Id, 200m, ct); // unverändert
+        await service.ErfasseIstMengeAsync(posSektionAJp.Id, 480m, ct: ct); // 20 Ausfall nicht erfasst
+        await service.ErfasseIstMengeAsync(posSektionATp.Id, 200m, ct: ct); // unverändert
 
         await service.AbschliessenAsync(inventur.Id, ct);
 
@@ -142,7 +142,7 @@ public sealed class InventurServiceTests : IAsyncLifetime
         var inventur = await service.NeueInventurAsync(_feldId, ct);
 
         var posSektionAJp = inventur.Positionen.First(p => p.SektionId == _sektionAId && p.KulturstufeId == _stufeJpId);
-        await service.ErfasseIstMengeAsync(posSektionAJp.Id, 480m, ct);
+        await service.ErfasseIstMengeAsync(posSektionAJp.Id, 480m, ct: ct);
 
         // Während der Zählung wird zusätzlich umgebucht — Drift auf genau dieser Dimension.
         await using (var db = new MiletDbContext(_options))

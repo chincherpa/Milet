@@ -57,6 +57,11 @@ public sealed record GaertnereiplanDto
 /// <summary>Ergebnis eines Sektion-Speicherns — Überlappung ist bewusst eine Warnung, kein Abbruch (E11).</summary>
 public sealed record SektionSpeichernErgebnisDto(SektionDto Sektion, IReadOnlyList<string> Warnungen);
 
+/// <summary>Ergebnis eines Feld-Speicherns. Warnungen entstehen, wenn nach einer Geometrieänderung Sektionen
+/// außerhalb des Feldes liegen — wie bei der Sektionsüberlappung bewusst kein Abbruch (E11): im Grundriss
+/// wird oft erst grob gezogen und danach korrigiert.</summary>
+public sealed record FeldSpeichernErgebnisDto(FeldDto Feld, IReadOnlyList<string> Warnungen);
+
 public sealed record MengeJeStufeDto(int KulturstufeId, string StufeBezeichnung, string FarbeHex, decimal Menge);
 
 /// <summary>Eine Zeile der Pflanzenübersicht (links) — auch Kulturpflanzen ohne aktuellen Bestand erscheinen mit Menge 0.</summary>
@@ -111,7 +116,8 @@ public sealed record KulturHistorieZeileDto(
     string? FeldBezeichnung,
     string? SektionBezeichnung,
     string? StufeBezeichnung,
-    string? BelegNummer);
+    string? BelegNummer,
+    string? Bemerkung);
 
 public sealed record KulturZugangDto
 {

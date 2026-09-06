@@ -1049,6 +1049,37 @@ public sealed partial class KleinstammViewModel : ObservableObject
         }
     }
 
+    /// <summary>Umsortieren über eigene Befehle statt über das Reihenfolge-Feld: Kulturstufe.Reihenfolge ist
+    /// eindeutig indiziert, ein Tausch über zweimal Speichern scheitert schon am Zwischenstand. Der Dienst
+    /// erledigt den Tausch in einer Transaktion.</summary>
+    [RelayCommand]
+    private Task KulturstufeNachObenAsync() => KulturstufeVerschiebenAsync(nachOben: true);
+
+    [RelayCommand]
+    private Task KulturstufeNachUntenAsync() => KulturstufeVerschiebenAsync(nachOben: false);
+
+    private async Task KulturstufeVerschiebenAsync(bool nachOben)
+    {
+        if (KulturstufeAusgewaehlt is not { } stufe)
+        {
+            return;
+        }
+
+        KulturstufeFehler = null;
+        try
+        {
+            await _kulturstufenService.VerschiebeAsync(stufe.Id, nachOben);
+            await KulturstufenLadenAsync();
+            // Auswahl auf die (jetzt verschobene) Stufe zurücksetzen, sonst hinge das Formular an einer
+            // Instanz, die nicht mehr Teil der Liste ist — gleiche Konvention wie im Grundriss-Editor.
+            KulturstufeAusgewaehlt = KulturstufenListe.FirstOrDefault(k => k.Id == stufe.Id);
+        }
+        catch (Exception ex)
+        {
+            KulturstufeFehler = ex.Message;
+        }
+    }
+
     [RelayCommand]
     private async Task KulturstufeLoeschenAsync()
     {

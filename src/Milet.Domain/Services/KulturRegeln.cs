@@ -47,15 +47,23 @@ public static class KulturRegeln
             .FirstOrDefault();
     }
 
-    /// <summary>Verhindert Nulloperationen (gleiche Sektion und gleiche Stufe) und ungültige Mengen bei Stufenwechsel/Umsetzen.</summary>
-    public static void PruefeStufenwechsel(int vonStufeId, int nachStufeId, int? vonSektionId, int? nachSektionId, decimal menge)
+    /// <summary>Verhindert Nulloperationen (gleiches Feld, gleiche Sektion und gleiche Stufe) und ungültige
+    /// Mengen bei Stufenwechsel/Umsetzen.
+    ///
+    /// Das Feld gehört zwingend in den Vergleich: ohne es wurde ein Umsetzen zwischen zwei Feldern OHNE
+    /// Sektionen als Nulloperation abgewiesen — beide SektionIds sind dort null, und bei gleicher Stufe
+    /// (Umsetzen ist ein reiner Ortswechsel) war die Bedingung erfüllt, obwohl Quelle und Ziel verschiedene
+    /// Felder sind. Ein Feld ohne Sektionen ist ein regulärer Zustand, den PruefeDimensionen ausdrücklich
+    /// zulässt.</summary>
+    public static void PruefeStufenwechsel(
+        int vonFeldId, int nachFeldId, int vonStufeId, int nachStufeId, int? vonSektionId, int? nachSektionId, decimal menge)
     {
         if (menge <= 0)
         {
             throw new InvalidOperationException("Menge muss größer als 0 sein.");
         }
 
-        if (vonStufeId == nachStufeId && vonSektionId == nachSektionId)
+        if (vonFeldId == nachFeldId && vonStufeId == nachStufeId && vonSektionId == nachSektionId)
         {
             throw new InvalidOperationException("Quelle und Ziel sind identisch — das wäre keine Bewegung.");
         }
@@ -71,11 +79,33 @@ public static class KulturRegeln
             return false;
         }
 
-        return sektion.PosXMeter >= 0
-            && sektion.PosYMeter >= 0
-            && sektion.PosXMeter + sektion.BreiteMeter <= feld.BreiteMeter
-            && sektion.PosYMeter + sektion.HoeheMeter <= feld.HoeheMeter;
+        return LiegtInnerhalb(
+            sektion.PosXMeter, sektion.PosYMeter, sektion.BreiteMeter, sektion.HoeheMeter,
+            feld.BreiteMeter.Value, feld.HoeheMeter.Value);
     }
+
+    /// <summary>Feld muss vollständig im Gärtnereiplan liegen (Koordinaten relativ zum Plan) — dieselbe Regel
+    /// eine Ebene höher. Ein Feld ohne Geometrie (Lagerort ohne IstFeld-Maße) liegt nirgends drin.</summary>
+    public static bool LiegtInnerhalb(Lagerort feld, Gaertnereiplan plan)
+    {
+        ArgumentNullException.ThrowIfNull(feld);
+        ArgumentNullException.ThrowIfNull(plan);
+        if (feld.BreiteMeter is null || feld.HoeheMeter is null)
+        {
+            return false;
+        }
+
+        return LiegtInnerhalb(
+            feld.PosXMeter ?? 0m, feld.PosYMeter ?? 0m, feld.BreiteMeter.Value, feld.HoeheMeter.Value,
+            plan.BreiteMeter, plan.HoeheMeter);
+    }
+
+    private static bool LiegtInnerhalb(
+        decimal posX, decimal posY, decimal breite, decimal hoehe, decimal rahmenBreite, decimal rahmenHoehe)
+        => posX >= 0
+            && posY >= 0
+            && posX + breite <= rahmenBreite
+            && posY + hoehe <= rahmenHoehe;
 
     /// <summary>Rechteck-Schnitt zweier Sektionen — Grundlage für eine Überlappungs-Warnung (kein Fehler, s. E11).</summary>
     public static bool Ueberlappt(Sektion a, Sektion b)
