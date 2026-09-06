@@ -76,17 +76,17 @@ Console.WriteLine("Grunddaten (Einheiten, MwSt-Sätze, Zahlungsbedingungen, Numm
 await AdminSeed.ApplyAsync(db);
 Console.WriteLine($"RBAC-Grunddaten (Rechte, Administrator-Rolle, Erstbenutzer '{AdminSeed.StandardAdminBenutzername}') geprüft/angelegt.");
 
-// Das Initialpasswort steht im öffentlichen Quellcode (AdminSeed) und ist damit jedem bekannt. Erzwingen
-// lässt sich der Wechsel derzeit nicht (ein „Passwort muss geändert werden"-Flag auf Benutzer wäre eine
-// Schemaänderung, s. STATUS.md) — der Migrator weist bei jedem Lauf sichtbar darauf hin, solange es steht.
+// Das Initialpasswort steht im öffentlichen Quellcode (AdminSeed) und ist damit jedem bekannt. Der Wechsel
+// wird seit dem 2026-09-06 beim ersten Login ERZWUNGEN (Benutzer.PasswortAenderungErforderlich, gesetzt vom
+// AdminSeed) — der Hinweis bleibt trotzdem, weil er dem Betreiber sagt, dass der Erstlogin noch aussteht.
 var standardAdmin = await db.Benutzer.AsNoTracking()
     .FirstOrDefaultAsync(b => b.Benutzername == AdminSeed.StandardAdminBenutzername);
 if (standardAdmin is not null && PasswortHasher.Verify(AdminSeed.StandardAdminPasswort, standardAdmin.PasswortHash))
 {
     Console.WriteLine();
-    Console.WriteLine($"  ACHTUNG: Benutzer '{AdminSeed.StandardAdminBenutzername}' hat noch das dokumentierte "
-        + "Initialpasswort. Es ist über das Repository öffentlich bekannt und muss vor der Produktivsetzung "
-        + "geändert werden (Administration → Benutzer → Passwort zurücksetzen).");
+    Console.WriteLine($"  HINWEIS: Benutzer '{AdminSeed.StandardAdminBenutzername}' hat noch das dokumentierte "
+        + "Initialpasswort. Die Anmeldung verlangt beim ersten Login einen Wechsel, bevor die Anwendung "
+        + "nutzbar ist — bis dahin ist das Passwort über das Repository öffentlich bekannt.");
     Console.WriteLine();
 }
 

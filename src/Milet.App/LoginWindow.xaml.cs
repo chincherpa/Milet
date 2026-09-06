@@ -25,6 +25,16 @@ public sealed partial class LoginWindow : Window
         ViewModel.Passwort = PasswortBox.Password;
     }
 
+    private void NeuesPasswortBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        ViewModel.NeuesPasswort = NeuesPasswortBox.Password;
+    }
+
+    private void NeuesPasswortWiederholungBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        ViewModel.NeuesPasswortWiederholung = NeuesPasswortWiederholungBox.Password;
+    }
+
     private void OnAngemeldetErfolgreich()
     {
         ViewModel.AngemeldetErfolgreich -= OnAngemeldetErfolgreich;

@@ -70,11 +70,18 @@ Softwareverteilung ausrollbar. `appsettings.json` neben der `.exe` trägt den Co
 - Benutzername: `admin`
 - Passwort: `Milet!Admin1`
 
-**Nach dem ersten Login umgehend über Administration → Benutzer das Passwort ändern**
-(Feld "Neues Passwort" ausfüllen und speichern) — der Seed-Wert ist öffentlich in diesem
-Repository dokumentiert und darf nie produktiv stehen bleiben. Es gibt bewusst keinen
-erzwungenen Passwortwechsel-Flow in v1 (wie bei der noch offenen GoBD-Vollzertifizierung,
-s. `PLAN.md` Risiko 7 — Basics abgedeckt, kein Anspruch auf vollständige Härtung).
+**Der Wechsel wird beim ersten Login erzwungen.** Der Anmeldedialog zeigt nach korrekter Eingabe
+des Initialpassworts eine zweite Stufe („Neues Passwort" + Wiederholung); die Anwendung öffnet sich
+erst danach. Der Seed-Wert ist öffentlich in diesem Repository dokumentiert und darf nie produktiv
+stehen bleiben. Mindestlänge des neuen Passworts: 10 Zeichen (`PasswortRegeln`).
+
+Dasselbe gilt nach einem administrativen Zurücksetzen (Administration → Benutzer → „Neues
+Passwort"): der Administrator kennt den gesetzten Wert, der Benutzer muss ihn beim nächsten Login
+wechseln.
+
+**Anmeldesperre:** Nach 5 aufeinanderfolgenden Fehlversuchen ist der Zugang 15 Minuten gesperrt.
+Ein Zurücksetzen des Passworts hebt die Sperre auf. Die Sperre wird dem Anmeldenden nur genannt,
+wenn sein Passwort stimmt — andernfalls verriete die Meldung, dass es den Benutzernamen gibt.
 
 Rechte sind modulweise vergeben (ein `Recht` je Top-Level-Menüpunkt: Stammdaten, Verkauf,
 Einkauf, Lager, Finanzen, Reporting, Administration). Neue Rollen unter Administration → Rollen

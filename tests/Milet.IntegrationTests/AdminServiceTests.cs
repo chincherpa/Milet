@@ -67,7 +67,22 @@ public sealed class AdminServiceTests : IAsyncLifetime
             Rolle = rolle,
             Aktiv = false,
         };
-        db.AddRange(benutzer, inaktiverBenutzer);
+        // Je Testfall ein eigener Benutzer: Fehlversuchszähler und Sperre sind Zustand auf der Zeile, ein
+        // geteilter Benutzer würde die Tests voneinander abhängig machen (xUnit parallelisiert je Klasse).
+        Benutzer Weiterer(string name, bool wechselErforderlich = false) => new()
+        {
+            Benutzername = name,
+            Anzeigename = name,
+            PasswortHash = PasswortHasher.Hash("korrektes-passwort"),
+            Rolle = rolle,
+            Aktiv = true,
+            PasswortAenderungErforderlich = wechselErforderlich,
+        };
+
+        db.AddRange(
+            benutzer, inaktiverBenutzer,
+            Weiterer("sperrbar"), Weiterer("zaehler"),
+            Weiterer("wechsler", wechselErforderlich: true), Weiterer("ruecksetzbar"));
         await db.SaveChangesAsync();
         _rolleId = rolle.Id;
     }
@@ -90,45 +105,164 @@ public sealed class AdminServiceTests : IAsyncLifetime
         var ct = TestContext.Current.CancellationToken;
         var service = new AuthService(_factory);
 
-        var session = await service.AnmeldenAsync("tuser", "korrektes-passwort", ct);
+        var ergebnis = await service.AnmeldenAsync("tuser", "korrektes-passwort", ct);
 
+        var session = ergebnis.Session;
         Assert.NotNull(session);
+        Assert.Null(ergebnis.GesperrtBis);
+        Assert.False(ergebnis.PasswortAenderungErforderlich);
         Assert.Equal("Test User", session!.BenutzerName);
         Assert.Equal("Testrolle", session.RollenName);
         Assert.Contains(RechtCodes.Administration, session.Rechte);
     }
 
     [Fact]
-    public async Task AnmeldenAsync_FalschesPasswort_LiefertNull()
+    public async Task AnmeldenAsync_FalschesPasswort_LiefertKeineSession()
     {
         var ct = TestContext.Current.CancellationToken;
         var service = new AuthService(_factory);
 
-        var session = await service.AnmeldenAsync("tuser", "falsches-passwort", ct);
+        var ergebnis = await service.AnmeldenAsync("tuser", "falsches-passwort", ct);
 
-        Assert.Null(session);
+        Assert.Null(ergebnis.Session);
+        // Die Sperre wird bei falschem Passwort NIE offengelegt — sonst verriete die Meldung, dass es den
+        // Benutzernamen gibt (genau das, was der Dummy-Hash verhindern soll).
+        Assert.Null(ergebnis.GesperrtBis);
+    }
+
+    // ---- Lockout und erzwungener Passwortwechsel (Befunde 13/30 aus REVIEW_2026-08-29.md) ----
+
+    [Fact]
+    public async Task AnmeldenAsync_FuenfFehlversuche_SperrtUndLegtSperreErstBeiKorrektemPasswortOffen()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var service = new AuthService(_factory);
+
+        for (var i = 0; i < 5; i++)
+        {
+            var fehlversuch = await service.AnmeldenAsync("sperrbar", "falsch-falsch", ct);
+            Assert.Null(fehlversuch.Session);
+            // Während des Sperrens darf nach außen nichts anders aussehen als bei einem unbekannten Benutzer.
+            Assert.Null(fehlversuch.GesperrtBis);
+        }
+
+        // Jetzt mit dem RICHTIGEN Passwort: der Zugang bleibt zu, und erst hier wird die Sperre benannt.
+        var gesperrt = await service.AnmeldenAsync("sperrbar", "korrektes-passwort", ct);
+        Assert.Null(gesperrt.Session);
+        Assert.NotNull(gesperrt.GesperrtBis);
+        Assert.True(gesperrt.GesperrtBis > DateTime.Now);
+
+        await using var db = new MiletDbContext(_options);
+        var benutzer = await db.Benutzer.AsNoTracking().FirstAsync(b => b.Benutzername == "sperrbar", ct);
+        Assert.Equal(5, benutzer.FehlversuchZaehler);
+        Assert.NotNull(benutzer.GesperrtBis);
     }
 
     [Fact]
-    public async Task AnmeldenAsync_DeaktivierterBenutzer_LiefertNull()
+    public async Task AnmeldenAsync_ErfolgNachFehlversuchen_SetztZaehlerZurueck()
     {
         var ct = TestContext.Current.CancellationToken;
         var service = new AuthService(_factory);
 
-        var session = await service.AnmeldenAsync("inaktiv", "korrektes-passwort", ct);
+        // Unter der Schwelle bleiben, sonst greift die Sperre und der Erfolgspfad wird gar nicht erreicht.
+        await service.AnmeldenAsync("zaehler", "falsch-falsch", ct);
+        await service.AnmeldenAsync("zaehler", "falsch-falsch", ct);
 
-        Assert.Null(session);
+        var ergebnis = await service.AnmeldenAsync("zaehler", "korrektes-passwort", ct);
+        Assert.NotNull(ergebnis.Session);
+
+        await using var db = new MiletDbContext(_options);
+        var benutzer = await db.Benutzer.AsNoTracking().FirstAsync(b => b.Benutzername == "zaehler", ct);
+        Assert.Equal(0, benutzer.FehlversuchZaehler);
+        Assert.Null(benutzer.GesperrtBis);
     }
 
     [Fact]
-    public async Task AnmeldenAsync_UnbekannterBenutzer_LiefertNull()
+    public async Task AnmeldenAsync_FlagGesetzt_MeldetPasswortwechselErforderlich()
     {
         var ct = TestContext.Current.CancellationToken;
         var service = new AuthService(_factory);
 
-        var session = await service.AnmeldenAsync("gibt-es-nicht", "irgendwas1", ct);
+        var ergebnis = await service.AnmeldenAsync("wechsler", "korrektes-passwort", ct);
 
-        Assert.Null(session);
+        Assert.NotNull(ergebnis.Session);
+        Assert.True(ergebnis.PasswortAenderungErforderlich);
+    }
+
+    [Fact]
+    public async Task PasswortAendernAsync_LoeschtFlagUndSperreUndSetztNeuesPasswort()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var service = new AuthService(_factory);
+
+        await service.PasswortAendernAsync("wechsler", "korrektes-passwort", "ein-langes-neues-Passwort", ct);
+
+        var mitNeuem = await service.AnmeldenAsync("wechsler", "ein-langes-neues-Passwort", ct);
+        Assert.NotNull(mitNeuem.Session);
+        Assert.False(mitNeuem.PasswortAenderungErforderlich);
+
+        var mitAltem = await service.AnmeldenAsync("wechsler", "korrektes-passwort", ct);
+        Assert.Null(mitAltem.Session);
+    }
+
+    [Fact]
+    public async Task PasswortAendernAsync_FalschesAltesPasswort_Wirft()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var service = new AuthService(_factory);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.PasswortAendernAsync("tuser", "falsch-falsch", "ein-langes-neues-Passwort", ct));
+    }
+
+    [Fact]
+    public async Task PasswortAendernAsync_ZuKurzesPasswort_Wirft()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var service = new AuthService(_factory);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.PasswortAendernAsync("tuser", "korrektes-passwort", "kurz", ct));
+    }
+
+    [Fact]
+    public async Task PasswortZuruecksetzenAsync_ErzwingtWechselBeimNaechstenLogin()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var verwaltung = new BenutzerverwaltungService(
+            _factory, new BerechtigungsService(AngemeldeteSession(RechtCodes.Administration)));
+
+        await using (var db = new MiletDbContext(_options))
+        {
+            var benutzer = await db.Benutzer.AsNoTracking().FirstAsync(b => b.Benutzername == "ruecksetzbar", ct);
+            await verwaltung.PasswortZuruecksetzenAsync(benutzer.Id, "vom-Admin-gesetzt-lang", ct);
+        }
+
+        var ergebnis = await new AuthService(_factory).AnmeldenAsync("ruecksetzbar", "vom-Admin-gesetzt-lang", ct);
+        Assert.NotNull(ergebnis.Session);
+        Assert.True(ergebnis.PasswortAenderungErforderlich);
+    }
+
+    [Fact]
+    public async Task AnmeldenAsync_DeaktivierterBenutzer_LiefertKeineSession()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var service = new AuthService(_factory);
+
+        var ergebnis = await service.AnmeldenAsync("inaktiv", "korrektes-passwort", ct);
+
+        Assert.Null(ergebnis.Session);
+    }
+
+    [Fact]
+    public async Task AnmeldenAsync_UnbekannterBenutzer_LiefertKeineSession()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var service = new AuthService(_factory);
+
+        var ergebnis = await service.AnmeldenAsync("gibt-es-nicht", "irgendwas1", ct);
+
+        Assert.Null(ergebnis.Session);
     }
 
     [Fact]

@@ -266,8 +266,12 @@ public sealed class BelegService(
 
         // Alle bereits gespeicherten Folgepositionen dieser Quellen, ohne die Positionen DIESES Belegs —
         // die stehen im Change-Tracker mit ihren neuen Mengen und werden separat addiert.
+        // Storno-Filter wie überall, wo OffeneMenge gerechnet wird (s. BelegUeberleitungService).
         var fremdeFolgepositionen = await db.BelegPositionen.AsNoTracking()
-            .Where(p => p.UrsprungsPositionId != null && ursprungsIds.Contains(p.UrsprungsPositionId.Value) && p.BelegId != beleg.Id)
+            .Where(p => p.UrsprungsPositionId != null
+                && ursprungsIds.Contains(p.UrsprungsPositionId.Value)
+                && p.BelegId != beleg.Id
+                && p.Beleg!.Status != BelegStatus.Storniert)
             .ToListAsync(ct);
 
         foreach (var quellPosition in quellPositionen)
@@ -342,7 +346,9 @@ public sealed class BelegService(
         // Die Positionen des zu löschenden Belegs zählen nach dem Löschen nicht mehr als übernommen.
         var zuLoeschendeIds = zuLoeschen.Positionen.Select(p => p.Id).ToHashSet();
         var verbleibendeFolgepositionen = await db.BelegPositionen.AsNoTracking()
-            .Where(p => p.UrsprungsPositionId != null && quellPositionIds.Contains(p.UrsprungsPositionId.Value))
+            .Where(p => p.UrsprungsPositionId != null
+                && quellPositionIds.Contains(p.UrsprungsPositionId.Value)
+                && p.Beleg!.Status != BelegStatus.Storniert)
             .ToListAsync(ct);
         verbleibendeFolgepositionen.RemoveAll(p => zuLoeschendeIds.Contains(p.Id));
 

@@ -38,12 +38,12 @@ public sealed class DatevExportService(
         // Finanzen-Recht existiert. Ohne die Prüfung wäre sie der offene Seiteneingang zum Export daneben.
         berechtigung.PruefeRecht(RechtCodes.Finanzen);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
-        var (rechnungen, eingangsrechnungen, zahlungen, mwStKonten, bankkonto, kontenrahmen) = await LadeAsync(db, von, bis, ct);
+        var (rechnungen, eingangsrechnungen, zahlungen, mwStKonten, bankkonto, kontenrahmen, skontoKonten) = await LadeAsync(db, von, bis, ct);
 
         var zeilen = new List<DatevBuchungszeile>();
         BuildeRechnungszeilen(rechnungen, mwStKonten, zeilen);
         BuildeEingangsrechnungszeilen(eingangsrechnungen, mwStKonten, zeilen);
-        BuildeZahlungszeilen(zahlungen, bankkonto, kontenrahmen, zeilen);
+        BuildeZahlungszeilen(zahlungen, bankkonto, kontenrahmen, skontoKonten, zeilen);
 
         var summeUmsatz = zeilen.Sum(z => z.Umsatz);
         return new DatevExportVorschauDto(rechnungen.Count, eingangsrechnungen.Count, zahlungen.Count, zeilen.Count, summeUmsatz);
@@ -54,7 +54,7 @@ public sealed class DatevExportService(
         berechtigung.PruefeRecht(RechtCodes.Finanzen);
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
 
-        var (rechnungen, eingangsrechnungen, zahlungen, mwStKonten, bankkonto, kontenrahmen) = await LadeAsync(db, von, bis, ct);
+        var (rechnungen, eingangsrechnungen, zahlungen, mwStKonten, bankkonto, kontenrahmen, skontoKonten) = await LadeAsync(db, von, bis, ct);
 
         var zeilen = new List<DatevBuchungszeile>();
         var exportierteBelegIds = new List<int>();
@@ -77,7 +77,7 @@ public sealed class DatevExportService(
         foreach (var zahlung in zahlungen)
         {
             var vorher = zeilen.Count;
-            BuildeZahlungszeilen([zahlung], bankkonto, kontenrahmen, zeilen);
+            BuildeZahlungszeilen([zahlung], bankkonto, kontenrahmen, skontoKonten, zeilen);
             if (zeilen.Count > vorher) exportierteZahlungIds.Add(zahlung.Id);
         }
 
@@ -156,7 +156,8 @@ public sealed class DatevExportService(
 
     private static async Task<(
         List<Rechnung> Rechnungen, List<Eingangsrechnung> Eingangsrechnungen, List<Zahlung> Zahlungen,
-        Dictionary<int, (int? Erloes, int? Aufwand)> MwStKonten, int Bankkonto, Kontenrahmen Kontenrahmen)>
+        Dictionary<int, (int? Erloes, int? Aufwand)> MwStKonten, int Bankkonto, Kontenrahmen Kontenrahmen,
+        SkontoKonten SkontoKonten)>
         LadeAsync(MiletDbContext db, DateOnly von, DateOnly bis, CancellationToken ct)
     {
         var rechnungen = await db.Rechnungen.AsNoTracking()
@@ -187,7 +188,8 @@ public sealed class DatevExportService(
         var konfiguration = await db.FibuKonfiguration.AsNoTracking().FirstOrDefaultAsync(f => f.Id == 1, ct);
 
         return (rechnungen, eingangsrechnungen, zahlungen, mwStKonten, konfiguration?.BankkontoNr ?? 0,
-            konfiguration?.Kontenrahmen ?? Kontenrahmen.Skr03);
+            konfiguration?.Kontenrahmen ?? Kontenrahmen.Skr03,
+            new SkontoKonten(konfiguration?.SkontoKontoDebitorNr ?? 0, konfiguration?.SkontoKontoKreditorNr ?? 0));
     }
 
     private static void BuildeRechnungszeilen(
@@ -263,7 +265,8 @@ public sealed class DatevExportService(
     /// Debitor würde um 100 entlastet, die Bank aber nur um 98 belastet.
     /// </summary>
     private static void BuildeZahlungszeilen(
-        IReadOnlyList<Zahlung> zahlungen, int bankkonto, Kontenrahmen kontenrahmen, List<DatevBuchungszeile> zeilen)
+        IReadOnlyList<Zahlung> zahlungen, int bankkonto, Kontenrahmen kontenrahmen, SkontoKonten skontoKonten,
+        List<DatevBuchungszeile> zeilen)
     {
         if (bankkonto <= 0) return;
 
@@ -295,7 +298,7 @@ public sealed class DatevExportService(
 
             if (skontoGesamt == 0) continue;
 
-            var skontokonto = SkontoKonto(kontenrahmen, zahlung.Typ);
+            var skontokonto = SkontoKonto(skontoKonten, kontenrahmen, zahlung.Typ);
             foreach (var zuordnung in zahlung.Zuordnungen.Where(z => z.SkontoBetrag > 0))
             {
                 var steuergruppen = (zuordnung.OffenerPosten?.Beleg?.Steuersummen ?? [])
@@ -325,19 +328,29 @@ public sealed class DatevExportService(
     }
 
     /// <summary>
-    /// Sammelkonto für gewährte/erhaltene Skonti im jeweiligen Standardkontenrahmen (SKR03: 8736/3736,
-    /// SKR04: 4736/5736).
+    /// Sachkonto für gewährte/erhaltene Skonti. Bevorzugt das in der <c>FibuKonfiguration</c> gepflegte
+    /// Konto (neben <c>BankkontoNr</c>, dorthin gehört es fachlich); steht dort 0, greift das Sammelkonto
+    /// des jeweiligen Standardkontenrahmens (SKR03 8736/3736, SKR04 4736/5736).
     ///
-    /// Bewusst hier verdrahtet und nicht konfigurierbar: die Skontokonten gehören fachlich neben
-    /// <c>BankkontoNr</c> in die FibuKonfiguration, das ist aber eine Schemaänderung. Bis dahin ist ein
-    /// Standardkonto, das der Steuerberater umschlüsseln kann, die deutlich kleinere Übel-Variante
-    /// gegenüber einem unausgeglichenen Buchungsstapel (s. STATUS.md, offene Punkte).
+    /// Der Fallback bleibt bewusst erhalten: eine bereits migrierte Datenbank bekommt den Seed-Wert nicht
+    /// nachgetragen (der Seed legt die Konfiguration nur an, wenn sie fehlt), und ein ausgeglichener Stapel
+    /// mit einem umschlüsselbaren Standardkonto ist deutlich besser als ein unausgeglichener.
     /// </summary>
-    private static int SkontoKonto(Kontenrahmen kontenrahmen, OffenerPostenTyp typ) => (kontenrahmen, typ) switch
+    private static int SkontoKonto(SkontoKonten konten, Kontenrahmen kontenrahmen, OffenerPostenTyp typ)
     {
-        (Kontenrahmen.Skr04, OffenerPostenTyp.Debitor) => 4736,
-        (Kontenrahmen.Skr04, _) => 5736,
-        (_, OffenerPostenTyp.Debitor) => 8736,
-        (_, _) => 3736,
-    };
+        var konfiguriert = typ == OffenerPostenTyp.Debitor ? konten.DebitorNr : konten.KreditorNr;
+        if (konfiguriert > 0) return konfiguriert;
+
+        return (kontenrahmen, typ) switch
+        {
+            (Kontenrahmen.Skr04, OffenerPostenTyp.Debitor) => 4736,
+            (Kontenrahmen.Skr04, _) => 5736,
+            (_, OffenerPostenTyp.Debitor) => 8736,
+            (_, _) => 3736,
+        };
+    }
+
+    /// <summary>Die konfigurierten Skontokonten (0 = nicht gepflegt). Eigener Typ statt zweier int-Parameter,
+    /// damit an den Aufrufstellen nicht Debitor und Kreditor vertauscht werden können.</summary>
+    private readonly record struct SkontoKonten(int DebitorNr, int KreditorNr);
 }

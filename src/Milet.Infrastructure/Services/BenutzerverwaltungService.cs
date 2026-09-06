@@ -118,10 +118,17 @@ public sealed class BenutzerverwaltungService(
     {
         berechtigung.PruefeRecht(RechtCodes.Administration);
 
-        if (string.IsNullOrWhiteSpace(neuesPasswort) || neuesPasswort.Length < 8)
+        // Dieselbe Regel wie beim Selbstbedienungswechsel (PasswortRegeln) statt einer zweiten, abweichenden
+        // Längenprüfung an dieser Stelle. Als ValidationException verpackt, weil der Aufrufer (ViewModel)
+        // Validierungsfehler gesammelt anzeigt.
+        try
+        {
+            PasswortRegeln.Pruefe(neuesPasswort);
+        }
+        catch (InvalidOperationException ex)
         {
             throw new ValidationException(
-                [new FluentValidation.Results.ValidationFailure(nameof(neuesPasswort), "Das Passwort muss mindestens 8 Zeichen lang sein.")]);
+                [new FluentValidation.Results.ValidationFailure(nameof(neuesPasswort), ex.Message)]);
         }
 
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
@@ -129,6 +136,11 @@ public sealed class BenutzerverwaltungService(
             ?? throw new NotFoundException(nameof(Benutzer), benutzerId);
 
         benutzer.PasswortHash = PasswortHasher.Hash(neuesPasswort);
+        // Der Administrator kennt das gesetzte Passwort — der Benutzer muss es beim nächsten Login wechseln.
+        benutzer.PasswortAenderungErforderlich = true;
+        // Ein Zurücksetzen hebt eine laufende Sperre auf: der übliche Anlass ist genau der ausgesperrte Benutzer.
+        benutzer.FehlversuchZaehler = 0;
+        benutzer.GesperrtBis = null;
         await db.SaveChangesAsync(ct);
     }
 

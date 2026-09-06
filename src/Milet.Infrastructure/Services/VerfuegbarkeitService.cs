@@ -126,7 +126,9 @@ public sealed class VerfuegbarkeitService(
 
         var quellIds = auftragsPositionen.Select(p => p.Id).ToList();
         var folgepositionen = await db.BelegPositionen.AsNoTracking()
-            .Where(p => p.UrsprungsPositionId != null && quellIds.Contains(p.UrsprungsPositionId.Value))
+            .Where(p => p.UrsprungsPositionId != null
+                && quellIds.Contains(p.UrsprungsPositionId.Value)
+                && p.Beleg!.Status != BelegStatus.Storniert)
             .ToListAsync(ct);
 
         return auftragsPositionen

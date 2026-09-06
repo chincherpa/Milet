@@ -61,8 +61,27 @@ public static class AdminSeed
                 PasswortHash = PasswortHasher.Hash(StandardAdminPasswort),
                 RolleId = administratorRolle.Id,
                 Aktiv = true,
+                // Das Initialpasswort steht im öffentlichen Quellcode — der erste Login erzwingt den Wechsel,
+                // bevor irgendetwas anderes möglich ist.
+                PasswortAenderungErforderlich = true,
             });
             await db.SaveChangesAsync(ct);
+        }
+        else
+        {
+            // Nachtrag für bereits migrierte Datenbanken: die Spalte kommt mit Default false, ein dort
+            // existierender Erstbenutzer würde also nie zum Wechsel gezwungen. Gesetzt wird das Flag nur,
+            // wenn das Passwort tatsächlich noch das dokumentierte ist — wer es längst geändert hat, wird
+            // nicht grundlos zu einem weiteren Wechsel genötigt.
+            var standardAdmin = await db.Benutzer
+                .FirstOrDefaultAsync(b => b.Benutzername == StandardAdminBenutzername, ct);
+            if (standardAdmin is not null
+                && !standardAdmin.PasswortAenderungErforderlich
+                && PasswortHasher.Verify(StandardAdminPasswort, standardAdmin.PasswortHash))
+            {
+                standardAdmin.PasswortAenderungErforderlich = true;
+                await db.SaveChangesAsync(ct);
+            }
         }
     }
 }
