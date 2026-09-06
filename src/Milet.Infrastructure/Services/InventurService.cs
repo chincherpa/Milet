@@ -41,6 +41,11 @@ public sealed class InventurService(
 
         // Zwei gleichzeitig offene Inventuren desselben Lagerorts würden nacheinander gegen denselben
         // eingefrorenen Sollstand korrigieren und den Bestand doppelt verschieben.
+        //
+        // Diese Vorabprüfung liefert nur die schnelle, sprechende Meldung im Normalfall — verlassen darf man
+        // sich auf sie nicht: Lesen und Einfügen laufen ohne Sperre, unter READ COMMITTED sehen zwei parallele
+        // Aufrufer beide "keine offene Inventur". Die harte Regel steht als gefilterter Unique-Index in
+        // InventurConfiguration; der Verlierer des Rennens bekommt unten dieselbe Meldung.
         if (await db.Inventuren.AnyAsync(i => i.LagerortId == lagerortId && i.Status == InventurStatus.Offen, ct))
             throw new InvalidOperationException(
                 $"Für Lagerort '{lagerort.Code}' läuft bereits eine Inventur — sie muss erst abgeschlossen werden.");
@@ -106,11 +111,13 @@ public sealed class InventurService(
         }
 
         db.Add(inventur);
-        await db.SaveChangesAsync(ct);
+        await db.SaveChangesTranslatingUniqueAsync(
+            $"Für Lagerort '{lagerort.Code}' läuft bereits eine Inventur — sie muss erst abgeschlossen werden.", ct);
         return inventur.ToDto(mitPositionen: true);
     }
 
-    public async Task ErfasseIstMengeAsync(int inventurPositionId, decimal istMenge, CancellationToken ct = default)
+    public async Task ErfasseIstMengeAsync(
+        int inventurPositionId, decimal istMenge, byte[]? rowVersion = null, CancellationToken ct = default)
     {
         berechtigung.PruefeRecht(RechtCodes.Lager);
         if (istMenge < 0)
@@ -123,8 +130,13 @@ public sealed class InventurService(
         if (position.Inventur!.Status != InventurStatus.Offen)
             throw new InvalidOperationException("Inventur ist bereits abgeschlossen.");
 
+        // Eine Inventur wird zu mehreren gezählt: ohne diesen Abgleich überschreibt die zuletzt gespeicherte
+        // Zählung die andere stillschweigend. Der Aufrufer bekommt stattdessen den Standard-Neuladen-Dialog.
+        if (rowVersion is { Length: > 0 })
+            db.Entry(position).Property(p => p.RowVersion).OriginalValue = rowVersion;
+
         position.IstMenge = istMenge;
-        await db.SaveChangesAsync(ct);
+        await db.SaveChangesTranslatingConcurrencyAsync(nameof(InventurPosition), inventurPositionId, ct);
     }
 
     public async Task<InventurDto> AbschliessenAsync(int inventurId, CancellationToken ct = default)

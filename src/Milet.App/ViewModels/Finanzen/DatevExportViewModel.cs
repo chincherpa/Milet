@@ -76,7 +76,7 @@ public sealed partial class DatevExportViewModel : ObservableObject
             // (volle Platte, Netzlaufwerk weg, Datei gesperrt), landet das im catch unten — und die Belege
             // gelten weiterhin als nicht exportiert, tauchen also im nächsten Lauf wieder auf.
             await Windows.Storage.FileIO.WriteBytesAsync(datei, ergebnis.CsvBytes);
-            await _datevExportService.MarkiereAlsExportiertAsync(ergebnis.BelegIds, ergebnis.ZahlungIds);
+            await _datevExportService.MarkiereAlsExportiertAsync(ergebnis.BelegIds, ergebnis.ZahlungIds, Von, Bis);
             Erfolgsmeldung = $"{ergebnis.AnzahlBuchungszeilen} Buchungszeilen exportiert und gespeichert.";
             await VorschauLadenAsync();
         }

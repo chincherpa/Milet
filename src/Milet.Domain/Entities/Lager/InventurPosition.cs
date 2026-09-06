@@ -1,9 +1,10 @@
+using Milet.Domain.Common;
 using Milet.Domain.Entities.Gaertnerei;
 using Milet.Domain.Entities.Stammdaten;
 
 namespace Milet.Domain.Entities.Lager;
 
-public class InventurPosition
+public class InventurPosition : IHasRowVersion
 {
     public int Id { get; set; }
     public int InventurId { get; set; }
@@ -22,4 +23,9 @@ public class InventurPosition
 
     /// <summary>Null solange nicht gezählt.</summary>
     public decimal? IstMenge { get; set; }
+
+    /// <summary>Eine Inventur wird typischerweise zu mehreren gezählt. Ohne Concurrency-Schutz überschreibt
+    /// die zuletzt gespeicherte Zählung die andere stillschweigend — bei einer Inventur genau der Fall, den
+    /// man sehen will.</summary>
+    public byte[] RowVersion { get; set; } = [];
 }

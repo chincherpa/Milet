@@ -79,7 +79,7 @@ public sealed class DatevExportServiceTests : IAsyncLifetime
         var heute = DateOnly.FromDateTime(DateTime.Today);
         var rechnungId = await NeueGebuchteRechnungAsync(_kundeMitKontoId, heute, ct);
 
-        var service = new DatevExportService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new DatevExportService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestBenutzerService.Instanz);
         var vorschau = await service.VorschauAsync(heute.AddDays(-1), heute.AddDays(1), ct);
 
         Assert.Equal(1, vorschau.AnzahlRechnungen);
@@ -98,7 +98,7 @@ public sealed class DatevExportServiceTests : IAsyncLifetime
         var heute = DateOnly.FromDateTime(DateTime.Today);
         var rechnungId = await NeueGebuchteRechnungAsync(_kundeMitKontoId, heute, ct);
 
-        var service = new DatevExportService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new DatevExportService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestBenutzerService.Instanz);
         var ergebnis = await service.ExportierenAsync(heute.AddDays(-1), heute.AddDays(1), ct);
 
         Assert.Equal(1, ergebnis.AnzahlBuchungszeilen);
@@ -116,7 +116,7 @@ public sealed class DatevExportServiceTests : IAsyncLifetime
         var vorschauVorMarkierung = await service.VorschauAsync(heute.AddDays(-1), heute.AddDays(1), ct);
         Assert.Equal(1, vorschauVorMarkierung.AnzahlBuchungszeilen);
 
-        await service.MarkiereAlsExportiertAsync(ergebnis.BelegIds, ergebnis.ZahlungIds, ct);
+        await service.MarkiereAlsExportiertAsync(ergebnis.BelegIds, ergebnis.ZahlungIds, heute.AddDays(-1), heute.AddDays(1), ct);
 
         await using (var db = new MiletDbContext(_options))
         {
@@ -135,7 +135,7 @@ public sealed class DatevExportServiceTests : IAsyncLifetime
         var heute = DateOnly.FromDateTime(DateTime.Today);
         var rechnungId = await NeueGebuchteRechnungAsync(_kundeOhneKontoId, heute, ct);
 
-        var service = new DatevExportService(_factory, AllesErlaubtBerechtigungsService.Instanz);
+        var service = new DatevExportService(_factory, AllesErlaubtBerechtigungsService.Instanz, TestBenutzerService.Instanz);
         var ergebnis = await service.ExportierenAsync(heute.AddDays(-1), heute.AddDays(1), ct);
 
         Assert.Equal(0, ergebnis.AnzahlBuchungszeilen);

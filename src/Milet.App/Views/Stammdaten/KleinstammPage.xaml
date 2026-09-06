@@ -373,6 +373,8 @@
                             <Button Content="Neu" Command="{x:Bind ViewModel.KulturstufeNeuCommand}" />
                             <Button Content="Speichern" Style="{StaticResource AccentButtonStyle}" Command="{x:Bind ViewModel.KulturstufeSpeichernCommand}" />
                             <Button Content="Löschen" Command="{x:Bind ViewModel.KulturstufeLoeschenCommand}" />
+                            <Button Content="▲" ToolTipService.ToolTip="Reihenfolge nach oben" Command="{x:Bind ViewModel.KulturstufeNachObenCommand}" />
+                            <Button Content="▼" ToolTipService.ToolTip="Reihenfolge nach unten" Command="{x:Bind ViewModel.KulturstufeNachUntenCommand}" />
                         </StackPanel>
                     </StackPanel>
                 </Grid>

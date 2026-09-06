@@ -17,6 +17,9 @@ setzen, oder per Umgebungsvariable `MILET_CONNECTIONSTRING` / CLI-Argument `--co
 
 ```
 dotnet run --project src/Milet.Tools.Migrator
+
+# Nur für Entwicklung/Demo — legt Testdaten inkl. gebuchter Rechnungen an, s. Warnung unten:
+dotnet run --project src/Milet.Tools.Migrator -- --mit-testdaten
 ```
 
 Der Migrator:
@@ -26,8 +29,16 @@ Der Migrator:
    ergänzen", nie destruktiv),
 3. führt `AdminSeed` aus (RBAC: fester Rechte-Katalog, Rolle "Administrator" mit allen Rechten,
    Erstbenutzer — s. § 4 unten),
-4. führt `DummyDatenSeed` aus (nur wenn die DB noch leer ist — Testdaten, nicht für Produktion
-   gedacht, aber harmlos idempotent).
+4. führt `DummyDatenSeed` **nur auf ausdrückliche Anforderung** aus — mit `--mit-testdaten` oder
+   `MILET_SEED_TESTDATEN=1`. Ohne das passiert nichts, und der Migrator sagt es auch.
+
+> **Testdaten gehören nicht in eine Produktivdatenbank.** Der Seed legt nicht nur erfundene Stammdaten
+> an, er durchläuft die echte Buchungspipeline und **bucht drei Rechnungen**. Die verbrauchen
+> `RE-{Jahr}-0001` bis `-0003` aus dem lückenlosen Rechnungsnummernkreis (§14 UStG), sind als gebuchte
+> Belege durch den `BelegImmutabilityInterceptor` unveränderlich und mangels Storno-Funktion über die
+> Anwendung **nie wieder zu entfernen**. Sein eigenes Gate („noch keine Artikel vorhanden") trifft genau
+> den Zustand einer frischen Produktivdatenbank — deshalb ist er seit dem 2026-09-06 Opt-in und nicht
+> mehr Opt-out.
 
 **Nur der Migrator darf das Schema ändern.** Die WinUI-App selbst migriert nie (kann auch
 nicht — kein EF-Core-Design-Time-Startprojekt, s. `PLAN.md` Risiko 1) und **prüft beim Start

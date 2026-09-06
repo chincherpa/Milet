@@ -77,7 +77,7 @@ public sealed partial class InventurEditViewModel : ObservableObject, INavigatio
         try
         {
             foreach (var zeile in Positionen.Where(z => z.IstMenge.HasValue))
-                await _inventurService.ErfasseIstMengeAsync(zeile.Id, zeile.IstMenge!.Value);
+                await _inventurService.ErfasseIstMengeAsync(zeile.Id, zeile.IstMenge!.Value, zeile.RowVersion);
             return true;
         }
         catch (Exception ex)

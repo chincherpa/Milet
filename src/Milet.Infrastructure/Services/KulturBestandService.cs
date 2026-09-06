@@ -56,12 +56,24 @@ public sealed class KulturBestandService(IDbContextFactory<MiletDbContext> dbCon
 
     public async Task<IReadOnlyList<PflanzenVorkommenDto>> LadeVorkommenAsync(int artikelId, CancellationToken ct = default)
     {
+        var jeArtikel = await LadeVorkommenAsync([artikelId], ct);
+        return jeArtikel[artikelId].ToList();
+    }
+
+    /// <summary>Eine Abfrage für beliebig viele Artikel — die Einzelvariante delegiert hierher, damit es nur
+    /// eine Projektion und eine Sortierregel gibt.</summary>
+    public async Task<ILookup<int, PflanzenVorkommenDto>> LadeVorkommenAsync(IReadOnlyList<int> artikelIds, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(artikelIds);
+        if (artikelIds.Count == 0) return Enumerable.Empty<PflanzenVorkommenDto>().ToLookup(_ => 0);
+
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
 
         var fundstellen = await db.ArtikelBestaende.AsNoTracking()
-            .Where(b => b.ArtikelId == artikelId && b.SektionId != null && b.KulturstufeId != null && b.Menge > 0)
+            .Where(b => artikelIds.Contains(b.ArtikelId) && b.SektionId != null && b.KulturstufeId != null && b.Menge > 0)
             .Select(b => new
             {
+                b.ArtikelId,
                 FeldId = b.LagerortId,
                 FeldBezeichnung = b.Lagerort!.Bezeichnung,
                 SektionId = b.SektionId!.Value,
@@ -76,8 +88,9 @@ public sealed class KulturBestandService(IDbContextFactory<MiletDbContext> dbCon
 
         return fundstellen
             .OrderBy(f => f.Reihenfolge).ThenBy(f => f.FeldBezeichnung).ThenBy(f => f.SektionBezeichnung)
-            .Select(f => new PflanzenVorkommenDto(f.FeldId, f.FeldBezeichnung, f.SektionId, f.SektionBezeichnung, f.KulturstufeId, f.StufeBezeichnung, f.FarbeHex, f.Menge))
-            .ToList();
+            .ToLookup(
+                f => f.ArtikelId,
+                f => new PflanzenVorkommenDto(f.FeldId, f.FeldBezeichnung, f.SektionId, f.SektionBezeichnung, f.KulturstufeId, f.StufeBezeichnung, f.FarbeHex, f.Menge));
     }
 
     public async Task<IReadOnlyList<KulturHistorieZeileDto>> LadeHistorieAsync(int artikelId, int? sektionId, DateOnly? von, DateOnly? bis, CancellationToken ct = default)
@@ -110,11 +123,14 @@ public sealed class KulturBestandService(IDbContextFactory<MiletDbContext> dbCon
                 SektionBezeichnung = l.Sektion != null ? l.Sektion.Bezeichnung : null,
                 StufeBezeichnung = l.Kulturstufe != null ? l.Kulturstufe.Bezeichnung : null,
                 BelegNummer = l.BelegPosition != null ? l.BelegPosition.Beleg!.BelegNummer : null,
+                l.Bemerkung,
             })
             .ToListAsync(ct);
 
         return bewegungen
-            .Select(b => new KulturHistorieZeileDto(b.Zeitpunkt, b.Typ.ToString(), b.Menge, b.FeldBezeichnung, b.SektionBezeichnung, b.StufeBezeichnung, b.BelegNummer))
+            .Select(b => new KulturHistorieZeileDto(
+                b.Zeitpunkt, b.Typ.ToString(), b.Menge, b.FeldBezeichnung, b.SektionBezeichnung, b.StufeBezeichnung,
+                b.BelegNummer, b.Bemerkung))
             .ToList();
     }
 }

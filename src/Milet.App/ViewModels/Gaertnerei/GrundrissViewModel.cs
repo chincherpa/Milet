@@ -44,7 +44,7 @@ public sealed partial class GrundrissViewModel : ObservableObject
     public partial string? Fehler { get; set; }
 
     [ObservableProperty]
-    public partial string? UeberlappungsWarnung { get; set; }
+    public partial string? Geometriewarnung { get; set; }
 
     // ---- Flache Editor-Felder für das ausgewählte Element ----
     // Dieselbe Konvention wie KleinstammViewModel: das Formular bindet an flache Properties statt an
@@ -265,7 +265,7 @@ public sealed partial class GrundrissViewModel : ObservableObject
     private async Task SpeichernAsync()
     {
         Fehler = null;
-        UeberlappungsWarnung = null;
+        Geometriewarnung = null;
         if (AusgewaehltesElement is not { } element)
         {
             return;
@@ -288,7 +288,11 @@ public sealed partial class GrundrissViewModel : ObservableObject
                 };
                 // Id ist init-only — nach dem Speichern lädt LadenAsync() unten ohnehin die komplette Liste
                 // mit den serverseitig vergebenen Ids neu, ein Nachtragen hier wäre überflüssig.
-                await _planService.SpeichereFeldAsync(_planId, dto);
+                var ergebnis = await _planService.SpeichereFeldAsync(_planId, dto);
+                if (ergebnis.Warnungen.Count > 0)
+                {
+                    Geometriewarnung = string.Join(" ", ergebnis.Warnungen);
+                }
             }
             else
             {
@@ -308,7 +312,7 @@ public sealed partial class GrundrissViewModel : ObservableObject
                 element.RowVersion = ergebnis.Sektion.RowVersion;
                 if (ergebnis.Warnungen.Count > 0)
                 {
-                    UeberlappungsWarnung = string.Join(" ", ergebnis.Warnungen);
+                    Geometriewarnung = string.Join(" ", ergebnis.Warnungen);
                 }
             }
 

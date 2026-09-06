@@ -70,7 +70,7 @@ public sealed class GaertnereiplanService(
         return plan.ToDto(dto.Felder);
     }
 
-    public async Task<FeldDto> SpeichereFeldAsync(int gaertnereiplanId, FeldDto dto, CancellationToken ct = default)
+    public async Task<FeldSpeichernErgebnisDto> SpeichereFeldAsync(int gaertnereiplanId, FeldDto dto, CancellationToken ct = default)
     {
         berechtigung.PruefeRecht(RechtCodes.Gaertnerei);
         await FeldValidator.ValidateAndThrowAsync(dto, ct);
@@ -89,6 +89,12 @@ public sealed class GaertnereiplanService(
             db.Entry(feld).Property(l => l.RowVersion).OriginalValue = dto.RowVersion;
         }
 
+        // Beim Update gilt der Plan, an dem das Feld tatsächlich hängt — nicht der vom Aufrufer übergebene.
+        // Ein Feld wechselt hier nie den Plan; gegen den falschen Rahmen zu prüfen wäre schlimmer als gar nicht.
+        var planId = feld.GaertnereiplanId ?? gaertnereiplanId;
+        var plan = await db.Gaertnereiplaene.AsNoTracking().FirstOrDefaultAsync(p => p.Id == planId, ct)
+            ?? throw new NotFoundException(nameof(Gaertnereiplan), planId);
+
         feld.Code = dto.Code;
         feld.Bezeichnung = dto.Bezeichnung;
         feld.PosXMeter = dto.PosXMeter;
@@ -97,8 +103,28 @@ public sealed class GaertnereiplanService(
         feld.HoeheMeter = dto.HoeheMeter;
         feld.Aktiv = dto.Aktiv;
 
+        // Analog zur Prüfung "Sektion liegt im Feld" eine Ebene tiefer: ein Feld muss in seinen Plan passen.
+        if (!KulturRegeln.LiegtInnerhalb(feld, plan))
+        {
+            throw new InvalidOperationException(
+                $"Feld '{dto.Bezeichnung}' liegt nicht vollständig innerhalb des Plans '{plan.Bezeichnung}' "
+                + $"({plan.BreiteMeter:0.##} × {plan.HoeheMeter:0.##} m).");
+        }
+
+        // Wird ein Feld verkleinert oder verschoben, können vorhandene Sektionen herausfallen — LiegtInnerhalb
+        // greift sonst nur, wenn die SEKTION gespeichert wird. Bewusst eine Warnung und kein Abbruch, wie bei
+        // der Überlappung (E11): der Nutzer zieht das Feld im Grundriss oft erst grob und korrigiert danach,
+        // ein harter Abbruch mitten im Ziehen wäre unbrauchbar.
+        var sektionen = await db.Sektionen.AsNoTracking()
+            .Where(x => x.LagerortId == feld.Id && x.Aktiv)
+            .ToListAsync(ct);
+        var warnungen = sektionen
+            .Where(sektion => !KulturRegeln.LiegtInnerhalb(sektion, feld))
+            .Select(sektion => $"Sektion '{sektion.Bezeichnung}' liegt jetzt außerhalb des Feldes.")
+            .ToList();
+
         await db.SaveChangesTranslatingConcurrencyAsync(nameof(Lagerort), feld.Id, ct);
-        return feld.ToDto([]);
+        return new FeldSpeichernErgebnisDto(feld.ToDto([]), warnungen);
     }
 
     public async Task LoescheFeldAsync(int feldId, CancellationToken ct = default)
@@ -109,14 +135,8 @@ public sealed class GaertnereiplanService(
             ?? throw new NotFoundException(nameof(Lagerort), feldId);
 
         db.Remove(feld);
-        try
-        {
-            await db.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateException ex)
-        {
-            throw new InvalidOperationException($"Feld '{feld.Bezeichnung}' enthält noch Sektionen oder Bestand und kann nicht gelöscht werden.", ex);
-        }
+        await db.SaveChangesDeletingAsync(
+            $"Feld '{feld.Bezeichnung}' enthält noch Sektionen oder Bestand und kann nicht gelöscht werden.", ct);
     }
 
     public async Task<SektionSpeichernErgebnisDto> SpeichereSektionAsync(SektionDto dto, CancellationToken ct = default)
@@ -176,13 +196,7 @@ public sealed class GaertnereiplanService(
             ?? throw new NotFoundException(nameof(Sektion), sektionId);
 
         db.Remove(sektion);
-        try
-        {
-            await db.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateException ex)
-        {
-            throw new InvalidOperationException($"Sektion '{sektion.Bezeichnung}' enthält noch Bestand und kann nicht gelöscht werden.", ex);
-        }
+        await db.SaveChangesDeletingAsync(
+            $"Sektion '{sektion.Bezeichnung}' enthält noch Bestand und kann nicht gelöscht werden.", ct);
     }
 }

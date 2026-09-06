@@ -7,6 +7,9 @@ namespace Milet.Infrastructure.Services;
 /// (und für Migrator/Hintergrunddienste ohne UI) meldet sie einen technischen "System"-Benutzer
 /// ohne Rechte — genau das Verhalten, das vorher der reine Platzhalter <c>SystemCurrentUserService</c>
 /// aus Phase 1 hatte.
+///
+/// Die Rechte sind ein Schnappschuss des Anmeldezeitpunkts (s. <see cref="ICurrentSessionService.Anmelden"/>)
+/// — bewusst, nicht vergessen.
 /// </summary>
 public sealed class CurrentSessionService : ICurrentSessionService
 {
@@ -31,7 +34,7 @@ public sealed class CurrentSessionService : ICurrentSessionService
         }
     }
 
-    public void Anmelden(int benutzerId, string benutzerName, string rollenName, IEnumerable<string> rechte)
+    public void Anmelden(int? benutzerId, string benutzerName, string rollenName, IEnumerable<string> rechte)
     {
         lock (_sperre)
         {

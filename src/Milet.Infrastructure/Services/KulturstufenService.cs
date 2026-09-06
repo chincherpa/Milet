@@ -50,8 +50,51 @@ public sealed class KulturstufenService(
         stufe.FarbeHex = dto.FarbeHex;
         stufe.Aktiv = dto.Aktiv;
 
-        await db.SaveChangesTranslatingConcurrencyAsync(nameof(Kulturstufe), stufe.Id, ct);
+        await db.SaveChangesTranslatingConcurrencyAsync(
+            nameof(Kulturstufe), stufe.Id,
+            $"Code '{dto.Code}' oder Reihenfolge {dto.Reihenfolge} ist bereits an eine andere Kulturstufe vergeben. "
+            + "Zum Umsortieren die Pfeiltasten verwenden (Reihenfolge ist eindeutig).", ct);
         return stufe.ToDto();
+    }
+
+    /// <summary>
+    /// Tauscht die Reihenfolge mit der nächsten aktiven Stufe in der gewünschten Richtung — in EINER
+    /// Transaktion, weil Reihenfolge eindeutig indiziert ist: nacheinander gespeichert verletzt schon der
+    /// Zwischenstand den Index, ein Umsortieren über SpeichereAsync ist also gar nicht möglich.
+    ///
+    /// Der Tausch läuft über einen freien Zwischenwert, weil SQL Server den Unique-Index je Anweisung prüft,
+    /// nicht erst beim Commit: A→B, B→A in einem SaveChanges wäre zwischenzeitlich doppelt belegt.
+    /// </summary>
+    public async Task VerschiebeAsync(int id, bool nachOben, CancellationToken ct = default)
+    {
+        berechtigung.PruefeRecht(RechtCodes.Gaertnerei);
+        await using var db = await dbContextFactory.CreateDbContextAsync(ct);
+        await using var transaktion = await db.Database.BeginTransactionAsync(ct);
+
+        var stufe = await db.Kulturstufen.FirstOrDefaultAsync(k => k.Id == id, ct)
+            ?? throw new NotFoundException(nameof(Kulturstufe), id);
+
+        var nachbar = nachOben
+            ? await db.Kulturstufen.Where(k => k.Reihenfolge < stufe.Reihenfolge).OrderByDescending(k => k.Reihenfolge).FirstOrDefaultAsync(ct)
+            : await db.Kulturstufen.Where(k => k.Reihenfolge > stufe.Reihenfolge).OrderBy(k => k.Reihenfolge).FirstOrDefaultAsync(ct);
+        if (nachbar is null) return;
+
+        var eigene = stufe.Reihenfolge;
+        var fremde = nachbar.Reihenfolge;
+        var freierWert = (await db.Kulturstufen.MaxAsync(k => (int?)k.Reihenfolge, ct) ?? 0) + 1;
+
+        // Drei Schritte statt zwei: die eigene Zeile zuerst auf einen garantiert freien Wert parken, dann
+        // ist der Zielwert für den Nachbarn frei, dann die geparkte Zeile auf den Wert des Nachbarn setzen.
+        stufe.Reihenfolge = freierWert;
+        await db.SaveChangesAsync(ct);
+
+        nachbar.Reihenfolge = eigene;
+        await db.SaveChangesAsync(ct);
+
+        stufe.Reihenfolge = fremde;
+        await db.SaveChangesAsync(ct);
+
+        await transaktion.CommitAsync(ct);
     }
 
     public async Task LoescheAsync(int id, CancellationToken ct = default)
@@ -62,14 +105,8 @@ public sealed class KulturstufenService(
             ?? throw new NotFoundException(nameof(Kulturstufe), id);
 
         db.Remove(stufe);
-        try
-        {
-            await db.SaveChangesAsync(ct);
-        }
-        catch (DbUpdateException ex)
-        {
-            throw new InvalidOperationException(
-                "Kulturstufe wird noch von Bestand oder Bewegungen verwendet und kann nicht gelöscht werden — stattdessen auf 'inaktiv' setzen.", ex);
-        }
+        await db.SaveChangesDeletingAsync(
+            "Kulturstufe wird noch von Bestand oder Bewegungen verwendet und kann nicht gelöscht werden — "
+            + "stattdessen auf 'inaktiv' setzen.", ct);
     }
 }

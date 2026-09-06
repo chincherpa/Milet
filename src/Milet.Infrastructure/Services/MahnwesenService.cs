@@ -43,7 +43,11 @@ public sealed class MahnwesenService(
             db.Mahnstufen.Add(entity);
         }
 
-        await db.SaveChangesAsync(ct);
+        // Mahnstufe.Stufe ist eindeutig indiziert; ohne Übersetzung erreicht den Benutzer die rohe
+        // SQL-Meldung. (Keine RowVersion — Mahnstufe folgt der Kleinstamm-Konvention wie
+        // Zahlungsbedingung/Versandart, s. Kommentar am Entity.)
+        await db.SaveChangesTranslatingUniqueAsync(
+            $"Mahnstufe {dto.Stufe} ist bereits angelegt.", ct);
         return dto with { Id = entity.Id };
     }
 

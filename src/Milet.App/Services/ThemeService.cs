@@ -50,7 +50,10 @@ public sealed class ThemeService : IThemeService
     public void Anwenden(ElementTheme theme)
     {
         Aktuell = theme;
-        _einstellungen.Speichern(new AppEinstellungen { Theme = theme.ToString() });
+        // Bestehende Einstellungen fortschreiben statt ein frisches Objekt zu speichern: heute hat
+        // AppEinstellungen nur diese eine Property, aber sobald eine zweite hinzukommt (Fenstergröße,
+        // zuletzt geöffnete Seite), würde jeder Themewechsel sie löschen.
+        _einstellungen.Speichern(_einstellungen.Laden() with { Theme = theme.ToString() });
 
         // Geschlossene Fenster (das LoginWindow nach der Anmeldung) fallen hier heraus, statt vom Dienst
         // am Leben gehalten zu werden.
