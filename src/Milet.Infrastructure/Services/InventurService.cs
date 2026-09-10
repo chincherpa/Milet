@@ -116,7 +116,7 @@ public sealed class InventurService(
         return inventur.ToDto(mitPositionen: true);
     }
 
-    public async Task ErfasseIstMengeAsync(
+    public async Task<byte[]> ErfasseIstMengeAsync(
         int inventurPositionId, decimal istMenge, byte[]? rowVersion = null, CancellationToken ct = default)
     {
         berechtigung.PruefeRecht(RechtCodes.Lager);
@@ -137,6 +137,7 @@ public sealed class InventurService(
 
         position.IstMenge = istMenge;
         await db.SaveChangesTranslatingConcurrencyAsync(nameof(InventurPosition), inventurPositionId, ct);
+        return position.RowVersion;
     }
 
     public async Task<InventurDto> AbschliessenAsync(int inventurId, CancellationToken ct = default)

@@ -135,6 +135,20 @@ public sealed class InventurServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ErfasseIstMengeAsync_MitAktualisierterRowVersion_ErlaubtFolgespeicherung()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var service = NeuerService();
+        var inventur = await service.NeueInventurAsync(_feldId, ct);
+        var position = inventur.Positionen.First(p => p.SektionId == _sektionAId && p.KulturstufeId == _stufeJpId);
+
+        var aktualisierteRowVersion = await service.ErfasseIstMengeAsync(position.Id, 480m, position.RowVersion, ct);
+        var erneuteRowVersion = await service.ErfasseIstMengeAsync(position.Id, 470m, aktualisierteRowVersion, ct);
+
+        Assert.NotEqual(aktualisierteRowVersion, erneuteRowVersion);
+    }
+
+    [Fact]
     public async Task AbschliessenAsync_BestandHatSichSeitBeginnGeaendert_WirftMitSektionsUndStufenbezug()
     {
         var ct = TestContext.Current.CancellationToken;

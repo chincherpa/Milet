@@ -36,7 +36,7 @@ public interface IInventurService
     /// geladen hat — hat jemand anders dieselbe Position zwischenzeitlich gezählt, schlägt das Speichern mit
     /// einer ConcurrencyConflictException fehl, statt die andere Zählung stillschweigend zu überschreiben.
     /// Null überspringt die Prüfung (Aufrufer ohne geladenen Stand).</summary>
-    Task ErfasseIstMengeAsync(int inventurPositionId, decimal istMenge, byte[]? rowVersion = null, CancellationToken ct = default);
+    Task<byte[]> ErfasseIstMengeAsync(int inventurPositionId, decimal istMenge, byte[]? rowVersion = null, CancellationToken ct = default);
 
     /// <summary>Bucht für jede Position mit Ist≠Soll eine Korrekturbuchung (InventurKorrektur) und setzt Status Abgeschlossen — eine Transaktion.</summary>
     Task<InventurDto> AbschliessenAsync(int inventurId, CancellationToken ct = default);

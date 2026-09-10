@@ -14,7 +14,7 @@ public sealed partial class InventurPositionZeile : ObservableObject
     public string Artikelnummer { get; }
     public string ArtikelBezeichnung { get; }
     public decimal SollMenge { get; }
-    public byte[]? RowVersion { get; }
+    public byte[]? RowVersion { get; private set; }
 
     [ObservableProperty]
     public partial decimal? IstMenge { get; set; }
@@ -28,6 +28,8 @@ public sealed partial class InventurPositionZeile : ObservableObject
         IstMenge = dto.IstMenge;
         RowVersion = dto.RowVersion;
     }
+
+    public void AktualisiereRowVersion(byte[] rowVersion) => RowVersion = rowVersion;
 }
 
 public sealed partial class InventurEditViewModel : ObservableObject, INavigationAware
@@ -79,7 +81,10 @@ public sealed partial class InventurEditViewModel : ObservableObject, INavigatio
         try
         {
             foreach (var zeile in Positionen.Where(z => z.IstMenge.HasValue))
-                await _inventurService.ErfasseIstMengeAsync(zeile.Id, zeile.IstMenge!.Value, zeile.RowVersion);
+            {
+                var rowVersion = await _inventurService.ErfasseIstMengeAsync(zeile.Id, zeile.IstMenge!.Value, zeile.RowVersion);
+                zeile.AktualisiereRowVersion(rowVersion);
+            }
             return true;
         }
         catch (Exception ex)
