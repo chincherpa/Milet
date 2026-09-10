@@ -9,9 +9,10 @@ using Milet.Infrastructure.Services;
 namespace Milet.Infrastructure.Persistence.Seed;
 
 /// <summary>
-/// Testdaten für Entwicklung/Demo: Kunden, Lieferanten, Artikel, Preisliste + Staffelpreise
-/// sowie ein paar Angebote/Aufträge/Rechnungen in unterschiedlichen Status. Läuft über die
-/// echten Application-Services (nicht direkt gegen den DbContext), damit Nummernkreise,
+/// Testdaten für Entwicklung/Demo: Stauden-Sortiment über alle Kulturstufen (Jungpflanze/Teenagerpflanze/
+/// Verkaufspflanze) verteilt auf die Felder/Sektionen des Gärtnereiplans, dazu Kunden, Lieferanten,
+/// Preisliste + Staffelpreise sowie ein paar Angebote/Aufträge/Rechnungen in unterschiedlichen Status.
+/// Läuft über die echten Application-Services (nicht direkt gegen den DbContext), damit Nummernkreise,
 /// Preisfindung, Steuerberechnung und Buchungspipeline exakt wie im UI durchlaufen werden.
 /// Idempotent — überspringt sich selbst, sobald bereits Kunden vorhanden sind.
 /// </summary>
@@ -59,61 +60,166 @@ public static class DummyDatenSeed
         var ueberleitungService = services.GetRequiredService<IBelegUeberleitungService>();
         var buchenService = services.GetRequiredService<IRechnungBuchenService>();
 
-        // --- Artikel ---------------------------------------------------------------
-        var artikelDefs = new (string Bez, string Einheit, int MwStId, decimal Ek, decimal Vk, decimal? Mindestbestand, bool Lagerartikel)[]
+        // --- Gärtnereiplan: Felder + Sektionen --------------------------------------
+        var felderDefs = new (string Code, string Bezeichnung, decimal X, decimal Y, decimal Breite, decimal Hoehe, string[] SektionsCodes)[]
         {
-            ("Kopierpapier A4 80g (500 Blatt)", "Pak", mwst19Id, 2.80m, 4.50m, 20, true),
-            ("Ordner A4 breit", "Stk", mwst19Id, 1.60m, 3.20m, 30, true),
-            ("Kugelschreiber blau (10er-Pack)", "Pak", mwst19Id, 3.10m, 5.90m, 15, true),
-            ("USB-Stick 32GB", "Stk", mwst19Id, 4.50m, 8.90m, 25, true),
-            ("Netzwerkkabel Cat6 5m", "Stk", mwst19Id, 3.20m, 6.50m, 20, true),
-            ("Kabelkanal (Meterware)", "m", mwst19Id, 1.10m, 2.20m, 50, true),
-            ("LED-Schreibtischlampe", "Stk", mwst19Id, 19.00m, 34.90m, 10, true),
-            ("Aktenvernichter P4", "Stk", mwst19Id, 120.00m, 189.00m, 2, true),
-            ("Versandkarton 40x30x20 (20er-Pack)", "Pak", mwst19Id, 7.50m, 12.90m, 15, true),
-            ("Luftpolsterfolie 50m Rolle", "Stk", mwst19Id, 9.20m, 15.90m, 10, true),
-            ("Bürostuhl ergonomisch", "Stk", mwst19Id, 140.00m, 249.00m, 1, true),
-            ("Schrauben-Sortiment lose", "kg", mwst19Id, 5.50m, 9.90m, 5, true),
-            ("Fachbuch Buchführung Grundlagen", "Stk", mwst7Id, 14.00m, 24.90m, null, true),
-            ("Montage/Einrichtung vor Ort", "h", mwst19Id, 0m, 65.00m, null, false),
+            ("F1", "Feld Nord", 5m, 5m, 30m, 20m, ["A1", "A2", "A3", "A4", "A5", "A6"]),
+            ("F2", "Feld Süd", 5m, 30m, 30m, 20m, ["B1", "B2", "B3", "B4", "B5"]),
+            ("F3", "Folientunnel", 45m, 5m, 20m, 10m, ["C1", "C2", "C3", "C4"]),
         };
 
-        var artikelIds = new List<int>();
-        foreach (var a in artikelDefs)
+        // Relative Rasterpositionen (Meter) für bis zu 6 Sektionen à 5x5m je Feld — bewusst großzügig
+        // beabstandet, damit sie in jedem der drei unterschiedlich großen Felder aus felderDefs passen.
+        var rasterPositionen = new (decimal X, decimal Y)[] { (0, 0), (6, 0), (12, 0), (0, 6), (6, 6), (12, 6) };
+
+        var sektionenJeCode = new Dictionary<string, int>();
+        var feldIdJeSektionsCode = new Dictionary<string, int>();
+        int stufeJpId, stufeTpId, stufeVpId;
+        await using (var db = await dbFactory.CreateDbContextAsync(ct))
         {
-            var dto = new ArtikelDto
+            var plan = await db.Gaertnereiplaene.FirstAsync(ct);
+
+            foreach (var f in felderDefs)
             {
-                Bezeichnung = a.Bez,
-                EinheitId = einheiten[a.Einheit],
-                MwStSatzId = a.MwStId,
-                Einkaufspreis = a.Ek,
-                Listenpreis = a.Vk,
-                Mindestbestand = a.Mindestbestand,
-                IstLagerartikel = a.Lagerartikel,
-            };
-            var gespeichert = await artikelService.SpeichereAsync(dto, ct);
-            artikelIds.Add(gespeichert.Id);
+                var feld = new Lagerort
+                {
+                    Code = f.Code,
+                    Bezeichnung = f.Bezeichnung,
+                    IstFeld = true,
+                    GaertnereiplanId = plan.Id,
+                    PosXMeter = f.X,
+                    PosYMeter = f.Y,
+                    BreiteMeter = f.Breite,
+                    HoeheMeter = f.Hoehe,
+                };
+                db.Lagerorte.Add(feld);
+                await db.SaveChangesAsync(ct);
+
+                for (var i = 0; i < f.SektionsCodes.Length; i++)
+                {
+                    var pos = rasterPositionen[i];
+                    var sektion = new Milet.Domain.Entities.Gaertnerei.Sektion
+                    {
+                        LagerortId = feld.Id,
+                        Code = f.SektionsCodes[i],
+                        Bezeichnung = $"Sektion {f.SektionsCodes[i]}",
+                        PosXMeter = pos.X,
+                        PosYMeter = pos.Y,
+                        BreiteMeter = 5m,
+                        HoeheMeter = 5m,
+                    };
+                    db.Sektionen.Add(sektion);
+                    await db.SaveChangesAsync(ct);
+                    sektionenJeCode[f.SektionsCodes[i]] = sektion.Id;
+                    // Jede Sektion gehört genau zu ihrem Feld — die Bestandsbuchung unten muss die LagerortId
+                    // aus DIESER Zuordnung nehmen, nicht aus einer festen Feldannahme, sonst entstünde eine
+                    // ArtikelBestand-Zeile mit LagerortId≠dem Feld der referenzierten Sektion.
+                    feldIdJeSektionsCode[f.SektionsCodes[i]] = feld.Id;
+                }
+            }
+
+            stufeJpId = (await db.Kulturstufen.FirstAsync(k => k.Code == "JP", ct)).Id;
+            stufeTpId = (await db.Kulturstufen.FirstAsync(k => k.Code == "TP", ct)).Id;
+            stufeVpId = (await db.Kulturstufen.FirstAsync(k => k.Code == "VP", ct)).Id;
         }
 
-        // Kurzreferenzen für die Belegpositionen weiter unten.
-        var papier = artikelIds[0];
-        var ordner = artikelIds[1];
-        var kulis = artikelIds[2];
-        var usbStick = artikelIds[3];
-        var netzwerkkabel = artikelIds[4];
-        var kabelkanal = artikelIds[5];
-        var ledLampe = artikelIds[6];
-        var aktenvernichter = artikelIds[7];
-        var versandkarton = artikelIds[8];
-        var buerostuhl = artikelIds[10];
-        var fachbuch = artikelIds[12];
-        var montage = artikelIds[13];
+        // --- Artikel: Stauden-Sortiment ----------------------------------------------
+        // Jede Staude durchläuft die drei Kulturstufen (Jungpflanze -> Teenagerpflanze -> Verkaufspflanze,
+        // s. StammdatenSeed) mit sinkenden Stückzahlen je Stufe (Anzucht-Schwund, je Art unterschiedlich
+        // stark) und wird über alle drei Felder verteilt: Anzucht (Jung-/Teenagerpflanzen) in Feld Nord +
+        // Folientunnel, verkaufsfertige Ware in Feld Süd. Pflanzen unterliegen dem ermäßigten Steuersatz
+        // (§12 Abs. 2 UStG, Anlage 2), daher mwst7Id statt mwst19Id.
+        var growSektionsCodes = new[] { "A1", "A2", "A3", "A4", "A5", "A6", "C1", "C2", "C3", "C4" };
+        var verkaufsSektionsCodes = new[] { "B1", "B2", "B3", "B4", "B5" };
+
+        var staudenDefs = new (string Bez, string BotanischerName, decimal Ek, decimal Vk, decimal MengeJp, decimal MengeTp, decimal MengeVp)[]
+        {
+            ("Lavendel 'Hidcote'", "Lavandula angustifolia 'Hidcote'", 0.45m, 4.50m, 600, 250, 90),
+            ("Steppensalbei 'Caradonna'", "Salvia nemorosa 'Caradonna'", 0.40m, 3.90m, 550, 220, 80),
+            ("Storchschnabel 'Rozanne'", "Geranium 'Rozanne'", 0.55m, 5.90m, 450, 180, 70),
+            ("Purpur-Sonnenhut", "Echinacea purpurea", 0.50m, 4.90m, 500, 200, 75),
+            ("Sonnenhut 'Goldsturm'", "Rudbeckia fulgida 'Goldsturm'", 0.45m, 4.50m, 480, 190, 65),
+            ("Katzenminze 'Walker's Low'", "Nepeta faassenii 'Walker's Low'", 0.35m, 3.50m, 700, 300, 110),
+            ("Fetthenne 'Herbstfreude'", "Sedum spectabile 'Herbstfreude'", 0.40m, 3.90m, 400, 160, 55),
+            ("Glattblattaster", "Aster novi-belgii", 0.40m, 3.90m, 420, 170, 60),
+            ("Flammenblume", "Phlox paniculata", 0.60m, 6.50m, 300, 120, 45),
+            ("Taglilie 'Stella de Oro'", "Hemerocallis 'Stella de Oro'", 0.90m, 7.90m, 260, 100, 35),
+            ("Purpurglöckchen 'Palace Purple'", "Heuchera 'Palace Purple'", 0.70m, 6.90m, 320, 130, 50),
+            ("Frauenmantel", "Alchemilla mollis", 0.30m, 3.20m, 650, 280, 100),
+            ("Funkie 'Blue Angel'", "Hosta 'Blue Angel'", 0.80m, 7.50m, 280, 110, 40),
+            ("Prachtspiere", "Astilbe arendsii", 0.55m, 5.50m, 350, 140, 50),
+        };
+
+        var stkEinheitId = einheiten["Stk"];
+        var staudenIds = new List<int>();
+        await using (var db = await dbFactory.CreateDbContextAsync(ct))
+        {
+            for (var i = 0; i < staudenDefs.Length; i++)
+            {
+                var p = staudenDefs[i];
+                var artikelDto = new ArtikelDto
+                {
+                    Bezeichnung = p.Bez,
+                    BotanischerName = p.BotanischerName,
+                    IstKulturpflanze = true,
+                    EinheitId = stkEinheitId,
+                    MwStSatzId = mwst7Id,
+                    Einkaufspreis = p.Ek,
+                    Listenpreis = p.Vk,
+                    IstLagerartikel = true,
+                };
+                var gespeichert = await artikelService.SpeichereAsync(artikelDto, ct);
+                staudenIds.Add(gespeichert.Id);
+
+                var jpCode = growSektionsCodes[i % growSektionsCodes.Length];
+                var tpCode = growSektionsCodes[(i + 5) % growSektionsCodes.Length];
+                var vpCode = verkaufsSektionsCodes[i % verkaufsSektionsCodes.Length];
+
+                await using var transaction = await db.Database.BeginTransactionAsync(ct);
+                await BestandService.BucheBewegungAsync(
+                    db, gespeichert.Id, feldIdJeSektionsCode[jpCode], p.MengeJp, LagerbewegungTyp.Kulturzugang, null, ct,
+                    sektionenJeCode[jpCode], stufeJpId);
+                await BestandService.BucheBewegungAsync(
+                    db, gespeichert.Id, feldIdJeSektionsCode[tpCode], p.MengeTp, LagerbewegungTyp.Kulturzugang, null, ct,
+                    sektionenJeCode[tpCode], stufeTpId);
+                await BestandService.BucheBewegungAsync(
+                    db, gespeichert.Id, feldIdJeSektionsCode[vpCode], p.MengeVp, LagerbewegungTyp.Kulturzugang, null, ct,
+                    sektionenJeCode[vpCode], stufeVpId);
+                await transaction.CommitAsync(ct);
+            }
+        }
+
+        // Kurzreferenzen für Preisliste/Belegpositionen weiter unten.
+        var lavendel = staudenIds[0];
+        var storchschnabel = staudenIds[2];
+        var sonnenhut = staudenIds[3];
+        var goldsturm = staudenIds[4];
+        var katzenminze = staudenIds[5];
+        var fetthenne = staudenIds[6];
+        var phlox = staudenIds[8];
+        var taglilie = staudenIds[9];
+        var purpurgloeckchen = staudenIds[10];
+        var frauenmantel = staudenIds[11];
+        var funkie = staudenIds[12];
+        var prachtspiere = staudenIds[13];
+
+        // Dienstleistung (kein Lagerartikel) — deckt weiterhin den Freitext/Nicht-Lagerartikel-Pfad in
+        // Belegpositionen ab, jetzt thematisch passend zur Staudengärtnerei statt "Montage/Einrichtung".
+        var pflanzservice = (await artikelService.SpeichereAsync(new ArtikelDto
+        {
+            Bezeichnung = "Pflanzung vor Ort",
+            EinheitId = einheiten["h"],
+            MwStSatzId = mwst19Id,
+            Einkaufspreis = 0m,
+            Listenpreis = 45.00m,
+            IstLagerartikel = false,
+        }, ct)).Id;
 
         // --- Preisliste + Staffelpreise ---------------------------------------------
-        var preisliste = await preislistenService.SpeichereAsync(new PreislisteDto { Name = "Vertriebspartner Staffelpreise" }, ct);
-        await artikelPreiseService.SpeichereAsync(new ArtikelPreisDto { PreislisteId = preisliste.Id, ArtikelId = usbStick, AbMenge = 20, Preis = 7.90m }, ct);
-        await artikelPreiseService.SpeichereAsync(new ArtikelPreisDto { PreislisteId = preisliste.Id, ArtikelId = papier, AbMenge = 10, Preis = 4.00m }, ct);
-        await artikelPreiseService.SpeichereAsync(new ArtikelPreisDto { PreislisteId = preisliste.Id, ArtikelId = papier, AbMenge = 50, Preis = 3.60m }, ct);
+        var preisliste = await preislistenService.SpeichereAsync(new PreislisteDto { Name = "Landschaftsbau Staffelpreise" }, ct);
+        await artikelPreiseService.SpeichereAsync(new ArtikelPreisDto { PreislisteId = preisliste.Id, ArtikelId = katzenminze, AbMenge = 50, Preis = 2.90m }, ct);
+        await artikelPreiseService.SpeichereAsync(new ArtikelPreisDto { PreislisteId = preisliste.Id, ArtikelId = frauenmantel, AbMenge = 30, Preis = 2.60m }, ct);
+        await artikelPreiseService.SpeichereAsync(new ArtikelPreisDto { PreislisteId = preisliste.Id, ArtikelId = frauenmantel, AbMenge = 100, Preis = 2.20m }, ct);
 
         // --- Kunden --------------------------------------------------------------
         var kundenDefs = new (string Name, string Strasse, string Plz, string Ort, string Ansprechpartner, string Email, int ZbId, decimal Rabatt, int? PreislisteId)[]
@@ -210,161 +316,58 @@ public static class DummyDatenSeed
         // 1) Bäckerei Sonnenschein: Angebot -> Auftrag -> Rechnung (gebucht)
         var kunde1 = kundenIds[0];
         var angebot1 = await AngebotAnlegenAsync(kunde1, heute.AddDays(-24), [
-            await PositionAsync(1, papier, 20, kunde1),
-            await PositionAsync(2, ordner, 10, kunde1),
-            await PositionAsync(3, kulis, 5, kunde1),
+            await PositionAsync(1, lavendel, 20, kunde1),
+            await PositionAsync(2, storchschnabel, 10, kunde1),
+            await PositionAsync(3, katzenminze, 5, kunde1),
         ]);
         var auftrag1 = await ueberleitungService.UeberleitenAsync(angebot1.Id, BelegTyp.Auftrag, ct);
         var rechnung1 = await ueberleitungService.UeberleitenAsync(auftrag1.Id, BelegTyp.Rechnung, ct);
         await buchenService.BuchenAsync(rechnung1.Id, ct);
 
-        // 2) Autohaus Krüger: Angebot bleibt offen (Staffelpreis USB-Sticks greift)
+        // 2) Autohaus Krüger: Angebot bleibt offen (Staffelpreis Katzenminze greift)
         var kunde2 = kundenIds[1];
         await AngebotAnlegenAsync(kunde2, heute.AddDays(-6), [
-            await PositionAsync(1, usbStick, 30, kunde2),
-            await PositionAsync(2, netzwerkkabel, 10, kunde2),
+            await PositionAsync(1, katzenminze, 60, kunde2),
+            await PositionAsync(2, frauenmantel, 10, kunde2),
         ]);
 
         // 3) Café Mocca: Angebot -> Auftrag (noch nicht fakturiert)
         var kunde3 = kundenIds[2];
         var angebot3 = await AngebotAnlegenAsync(kunde3, heute.AddDays(-10), [
-            await PositionAsync(1, ledLampe, 2, kunde3),
-            await PositionAsync(2, versandkarton, 3, kunde3),
+            await PositionAsync(1, phlox, 24, kunde3),
+            await PositionAsync(2, taglilie, 12, kunde3),
         ]);
         await ueberleitungService.UeberleitenAsync(angebot3.Id, BelegTyp.Auftrag, ct);
 
         // 4) Fischer & Söhne: Angebot -> Auftrag -> Rechnung (gebucht), inkl. Dienstleistung
         var kunde4 = kundenIds[3];
         var angebot4 = await AngebotAnlegenAsync(kunde4, heute.AddDays(-18), [
-            await PositionAsync(1, aktenvernichter, 1, kunde4),
-            await PositionAsync(2, buerostuhl, 2, kunde4),
-            await PositionAsync(3, montage, 4, kunde4),
+            await PositionAsync(1, purpurgloeckchen, 15, kunde4),
+            await PositionAsync(2, funkie, 8, kunde4),
+            await PositionAsync(3, pflanzservice, 3, kunde4),
         ]);
         var auftrag4 = await ueberleitungService.UeberleitenAsync(angebot4.Id, BelegTyp.Auftrag, ct);
         var rechnung4 = await ueberleitungService.UeberleitenAsync(auftrag4.Id, BelegTyp.Rechnung, ct);
         await buchenService.BuchenAsync(rechnung4.Id, ct);
 
-        // 5) IT-Systemhaus Nordlicht: Angebot -> Auftrag -> Rechnung (gebucht), Staffelpreise
+        // 5) IT-Systemhaus Nordlicht: Angebot -> Auftrag -> Rechnung (gebucht), Staffelpreise Frauenmantel
         var kunde5 = kundenIds[4];
         var angebot5 = await AngebotAnlegenAsync(kunde5, heute.AddDays(-14), [
-            await PositionAsync(1, usbStick, 25, kunde5),
-            await PositionAsync(2, netzwerkkabel, 15, kunde5),
-            await PositionAsync(3, kabelkanal, 50, kunde5),
+            await PositionAsync(1, frauenmantel, 120, kunde5),
+            await PositionAsync(2, goldsturm, 20, kunde5),
+            await PositionAsync(3, sonnenhut, 15, kunde5),
         ]);
         var auftrag5 = await ueberleitungService.UeberleitenAsync(angebot5.Id, BelegTyp.Auftrag, ct);
         var rechnung5 = await ueberleitungService.UeberleitenAsync(auftrag5.Id, BelegTyp.Rechnung, ct);
         await buchenService.BuchenAsync(rechnung5.Id, ct);
 
-        // 6) Praxis Dr. Wagner: Angebot mit reduziertem Steuersatz + Freitextposition
+        // 6) Praxis Dr. Wagner: Angebot mit gemischtem Steuersatz (Pflanzen 7% + Fracht 19%) + Freitextposition
         var kunde6 = kundenIds[5];
         await AngebotAnlegenAsync(kunde6, heute.AddDays(-2), [
-            await PositionAsync(1, fachbuch, 3, kunde6),
-            await PositionAsync(2, ordner, 5, kunde6),
+            await PositionAsync(1, prachtspiere, 3, kunde6),
+            await PositionAsync(2, fetthenne, 5, kunde6),
             Freitext(3, "Lieferung & Versand", 9.90m),
         ]);
-
-        // --- Gärtnerei/Kulturführung (Phase 8) --------------------------------------
-        // Bewusst über den echten Schreibpfad BestandService.BucheBewegungAsync gebucht (nicht per
-        // direktem Insert) — der Seed durchläuft damit dieselben Regeln (KulturRegeln.PruefeDimensionen,
-        // Upsert-Race-Fix) wie jede spätere Buchung aus der UI, und Ledger/Snapshot bleiben konsistent.
-        await using (var db = await dbFactory.CreateDbContextAsync(ct))
-        {
-            var plan = await db.Gaertnereiplaene.FirstAsync(ct);
-
-            var felderDefs = new (string Code, string Bezeichnung, decimal X, decimal Y, decimal Breite, decimal Hoehe, string[] SektionsCodes)[]
-            {
-                ("F1", "Feld Nord", 5m, 5m, 30m, 20m, ["A1", "A2", "A3", "A4", "A5", "A6"]),
-                ("F2", "Feld Süd", 5m, 30m, 30m, 20m, ["B1", "B2", "B3", "B4", "B5"]),
-                ("F3", "Folientunnel", 45m, 5m, 20m, 10m, ["C1", "C2", "C3", "C4"]),
-            };
-
-            // Relative Rasterpositionen (Meter) für bis zu 6 Sektionen à 5x5m je Feld — bewusst großzügig
-            // beabstandet, damit sie in jedem der drei unterschiedlich großen Felder aus felderDefs passen.
-            var rasterPositionen = new (decimal X, decimal Y)[] { (0, 0), (6, 0), (12, 0), (0, 6), (6, 6), (12, 6) };
-
-            var sektionenJeCode = new Dictionary<string, int>();
-            var feldIdJeSektionsCode = new Dictionary<string, int>();
-            foreach (var f in felderDefs)
-            {
-                var feld = new Lagerort
-                {
-                    Code = f.Code,
-                    Bezeichnung = f.Bezeichnung,
-                    IstFeld = true,
-                    GaertnereiplanId = plan.Id,
-                    PosXMeter = f.X,
-                    PosYMeter = f.Y,
-                    BreiteMeter = f.Breite,
-                    HoeheMeter = f.Hoehe,
-                };
-                db.Lagerorte.Add(feld);
-                await db.SaveChangesAsync(ct);
-
-                for (var i = 0; i < f.SektionsCodes.Length; i++)
-                {
-                    var pos = rasterPositionen[i];
-                    var sektion = new Milet.Domain.Entities.Gaertnerei.Sektion
-                    {
-                        LagerortId = feld.Id,
-                        Code = f.SektionsCodes[i],
-                        Bezeichnung = $"Sektion {f.SektionsCodes[i]}",
-                        PosXMeter = pos.X,
-                        PosYMeter = pos.Y,
-                        BreiteMeter = 5m,
-                        HoeheMeter = 5m,
-                    };
-                    db.Sektionen.Add(sektion);
-                    await db.SaveChangesAsync(ct);
-                    sektionenJeCode[f.SektionsCodes[i]] = sektion.Id;
-                    // Jede Sektion gehört genau zu ihrem Feld — die Bestandsbuchung unten muss die LagerortId
-                    // aus DIESER Zuordnung nehmen, nicht aus einer festen Feldannahme, sonst entstünde eine
-                    // ArtikelBestand-Zeile mit LagerortId≠dem Feld der referenzierten Sektion.
-                    feldIdJeSektionsCode[f.SektionsCodes[i]] = feld.Id;
-                }
-            }
-
-            var stufeJpId = (await db.Kulturstufen.FirstAsync(k => k.Code == "JP", ct)).Id;
-            var stufeTpId = (await db.Kulturstufen.FirstAsync(k => k.Code == "TP", ct)).Id;
-            var stufeVpId = (await db.Kulturstufen.FirstAsync(k => k.Code == "VP", ct)).Id;
-
-            var kulturpflanzenDefs = new (string Bez, string BotanischerName, string JpSektion, string TpSektion, string VpSektion)[]
-            {
-                ("Salvia nemorosa 'Caradonna'", "Salvia nemorosa 'Caradonna'", "A1", "A4", "B1"),
-                ("Geranium 'Rozanne'", "Geranium 'Rozanne'", "A2", "A5", "B2"),
-                ("Echinacea purpurea", "Echinacea purpurea", "A3", "A6", "B3"),
-                ("Hosta 'Blue Angel'", "Hosta 'Blue Angel'", "C1", "C3", "B4"),
-                ("Astilbe arendsii", "Astilbe arendsii", "C2", "C4", "B5"),
-            };
-
-            var stkEinheitId = einheiten["Stk"];
-            foreach (var p in kulturpflanzenDefs)
-            {
-                var artikelDto = new ArtikelDto
-                {
-                    Bezeichnung = p.Bez,
-                    BotanischerName = p.BotanischerName,
-                    IstKulturpflanze = true,
-                    EinheitId = stkEinheitId,
-                    MwStSatzId = mwst19Id,
-                    Einkaufspreis = 0.80m,
-                    Listenpreis = 4.90m,
-                    IstLagerartikel = true,
-                };
-                var gespeichert = await artikelService.SpeichereAsync(artikelDto, ct);
-
-                await using var transaction = await db.Database.BeginTransactionAsync(ct);
-                await BestandService.BucheBewegungAsync(
-                    db, gespeichert.Id, feldIdJeSektionsCode[p.JpSektion], 500m, LagerbewegungTyp.Kulturzugang, null, ct,
-                    sektionenJeCode[p.JpSektion], stufeJpId);
-                await BestandService.BucheBewegungAsync(
-                    db, gespeichert.Id, feldIdJeSektionsCode[p.TpSektion], 200m, LagerbewegungTyp.Kulturzugang, null, ct,
-                    sektionenJeCode[p.TpSektion], stufeTpId);
-                await BestandService.BucheBewegungAsync(
-                    db, gespeichert.Id, feldIdJeSektionsCode[p.VpSektion], 100m, LagerbewegungTyp.Kulturzugang, null, ct,
-                    sektionenJeCode[p.VpSektion], stufeVpId);
-                await transaction.CommitAsync(ct);
-            }
-        }
 
         return true;
     }

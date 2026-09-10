@@ -1,0 +1,45 @@
+<UserControl
+    x:Class="Milet.App.Views.LoginView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <StackPanel
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Width="360"
+            Spacing="12">
+            <TextBlock Text="Milet Warenwirtschaft" Style="{StaticResource TitleTextBlockStyle}" HorizontalAlignment="Center" Margin="0,0,0,12" />
+            <TextBox x:Name="BenutzernameBox" Header="Benutzername" Text="{x:Bind ViewModel.Benutzername, Mode=TwoWay}" IsEnabled="{x:Bind ViewModel.SchemaAktuell, Mode=OneWay}" />
+            <PasswordBox x:Name="PasswortBox" Header="Passwort" PasswordChanged="PasswortBox_PasswordChanged" IsEnabled="{x:Bind ViewModel.SchemaAktuell, Mode=OneWay}" />
+            <InfoBar
+                IsOpen="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay, Converter={StaticResource StringNotEmptyToBoolConverter}}"
+                Severity="Error"
+                Message="{x:Bind ViewModel.Fehlermeldung, Mode=OneWay}" />
+            <Button
+                Content="Anmelden"
+                Style="{StaticResource AccentButtonStyle}"
+                HorizontalAlignment="Stretch"
+                Command="{x:Bind ViewModel.AnmeldenCommand}"
+                IsEnabled="{x:Bind ViewModel.SchemaAktuell, Mode=OneWay}"
+                Visibility="{x:Bind ViewModel.PasswortwechselErforderlich, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=invers}" />
+
+            <!-- Zweite Stufe: erzwungener Passwortwechsel. Kein eigener Dialog, weil zu diesem Zeitpunkt noch
+                 keine Sitzung und kein sichtbares Hauptfenster (und damit kein XamlRoot) existiert.
+                 PasswordBox.Password ist keine bindbare Abhängigkeitseigenschaft — deshalb hier dasselbe
+                 PasswordChanged-Muster wie oben beim Anmelde-Passwort. -->
+            <StackPanel
+                Spacing="12"
+                Visibility="{x:Bind ViewModel.PasswortwechselErforderlich, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <PasswordBox x:Name="NeuesPasswortBox" Header="Neues Passwort" PasswordChanged="NeuesPasswortBox_PasswordChanged" />
+                <PasswordBox x:Name="NeuesPasswortWiederholungBox" Header="Neues Passwort wiederholen" PasswordChanged="NeuesPasswortWiederholungBox_PasswordChanged" />
+                <Button
+                    Content="Passwort ändern und anmelden"
+                    Style="{StaticResource AccentButtonStyle}"
+                    HorizontalAlignment="Stretch"
+                    Command="{x:Bind ViewModel.PasswortWechselnCommand}" />
+            </StackPanel>
+
+            <ProgressRing IsActive="{x:Bind ViewModel.AnmeldungLaeuft, Mode=OneWay}" HorizontalAlignment="Center" />
+        </StackPanel>
+    </Grid>
+</UserControl>

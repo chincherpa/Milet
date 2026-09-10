@@ -41,10 +41,15 @@ internal static class ThemeRessourcen
 
     private static ResourceDictionary FarbenDictionary()
     {
-        // Farben.xaml ist das einzige gemergte Dictionary mit ThemeDictionaries — danach wird gesucht,
-        // damit die Reihenfolge der MergedDictionaries in App.xaml frei bleibt.
-        return _farben ??= Application.Current.Resources.MergedDictionaries
-            .FirstOrDefault(d => d.ThemeDictionaries.ContainsKey("Light"))
+        // Nicht nur nach "hat einen Light-Zweig" suchen — App.xaml mergt XamlControlsResources VOR
+        // Farben.xaml, und das bringt selbst ThemeDictionaries mit einem "Light"-Zweig mit. Ohne die
+        // Probe auf einen Milet-eigenen Schlüssel landet man auf dem WinUI-Dictionary statt auf Farben.xaml
+        // und jede Abfrage wirft KeyNotFoundException (genau das ließ Grundriss/Pflanzenübersicht beim
+        // ersten Zeichnen abstürzen).
+        return _farben ??= Microsoft.UI.Xaml.Application.Current.Resources.MergedDictionaries
+            .FirstOrDefault(d => d.ThemeDictionaries.TryGetValue("Light", out var zweig)
+                && zweig is ResourceDictionary rd
+                && rd.ContainsKey("MiletAmpelGruenBrush"))
             ?? throw new InvalidOperationException(
                 "Themes/Farben.xaml ist nicht in App.xaml gemergt — Theme-Farben sind nicht auflösbar.");
     }

@@ -14,6 +14,7 @@ public sealed partial class InventurPositionZeile : ObservableObject
     public string Artikelnummer { get; }
     public string ArtikelBezeichnung { get; }
     public decimal SollMenge { get; }
+    public byte[]? RowVersion { get; }
 
     [ObservableProperty]
     public partial decimal? IstMenge { get; set; }
@@ -25,6 +26,7 @@ public sealed partial class InventurPositionZeile : ObservableObject
         ArtikelBezeichnung = dto.ArtikelBezeichnung;
         SollMenge = dto.SollMenge;
         IstMenge = dto.IstMenge;
+        RowVersion = dto.RowVersion;
     }
 }
 

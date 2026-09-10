@@ -29,6 +29,25 @@ public partial class App : Microsoft.UI.Xaml.Application
     public App()
     {
         InitializeComponent();
+        UnhandledException += OnUnhandledException;
+    }
+
+    private void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
+    {
+        // Ohne diesen Handler beendet eine nicht abgefangene Exception in einem UI-Callback (PropertyChanged,
+        // CollectionChanged, Click, ...) den kompletten Prozess sofort per STATUS_STOWED_EXCEPTION — ohne
+        // jede Diagnose (kein Log, kein verwertbarer Crash-Dump). Hier wenigstens vollständig protokollieren,
+        // bevor der Prozess unweigerlich stirbt (e.Handled bleibt bewusst false: der App-Zustand nach einer
+        // Exception mitten im UI-Callback ist nicht vertrauenswürdig genug, um weiterzumachen).
+        try
+        {
+            Log.Fatal(e.Exception, "Unbehandelte Exception in UI-Callback — Prozess wird beendet");
+            Log.CloseAndFlush();
+        }
+        catch
+        {
+            // Logging darf das eigentliche Fail-Fast nicht verhindern oder verschleiern.
+        }
     }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
